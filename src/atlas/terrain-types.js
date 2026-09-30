@@ -1,0 +1,52 @@
+// Terrain types used by the hand-authored atlas. Heights are rough placeholders
+// in metres; `rough` is how much noise relief is added on top.
+
+export const TERRAIN = {
+  ice_cap: { name: 'Ice cap', color: [0.93, 0.95, 0.97], height: 1800, rough: 300 },
+  glacier: { name: 'Glacier / ice field', color: [0.86, 0.9, 0.95], height: 2600, rough: 600 },
+  tundra: { name: 'Tundra', color: [0.58, 0.58, 0.5], height: 200, rough: 150 },
+  taiga: { name: 'Taiga', color: [0.2, 0.34, 0.26], height: 350, rough: 250 },
+  conifer: { name: 'Conifer forest', color: [0.18, 0.33, 0.22], height: 250, rough: 200 },
+  temperate_forest: { name: 'Temperate forest', color: [0.22, 0.44, 0.2], height: 300, rough: 200 },
+  old_growth: { name: 'Old-growth forest', color: [0.13, 0.33, 0.15], height: 450, rough: 250 },
+  temperate_rainforest: { name: 'Temperate rainforest', color: [0.11, 0.37, 0.22], height: 350, rough: 350 },
+  jungle: { name: 'Jungle', color: [0.06, 0.33, 0.11], height: 150, rough: 100 },
+  river_jungle: { name: 'River jungle', color: [0.09, 0.37, 0.15], height: 50, rough: 30 },
+  seasonal_tropical: { name: 'Seasonal tropical forest', color: [0.3, 0.45, 0.18], height: 250, rough: 150 },
+  cloud_forest: { name: 'Cloud forest', color: [0.15, 0.4, 0.27], height: 2000, rough: 700 },
+  grassland: { name: 'Grassland', color: [0.46, 0.62, 0.3], height: 250, rough: 120 },
+  steppe: { name: 'Dry grassland (steppe)', color: [0.63, 0.63, 0.4], height: 450, rough: 120 },
+  savanna: { name: 'Savanna', color: [0.68, 0.64, 0.36], height: 400, rough: 150 },
+  scrubland: { name: 'Mediterranean scrubland', color: [0.58, 0.56, 0.36], height: 450, rough: 300 },
+  dry_scrub: { name: 'Dry scrub', color: [0.66, 0.58, 0.4], height: 800, rough: 300 },
+  farmland: { name: 'Farmland', color: [0.56, 0.63, 0.32], height: 200, rough: 100 },
+  wine_country: { name: 'Wine country', color: [0.54, 0.52, 0.3], height: 400, rough: 250 },
+  valley: { name: 'River valleys', color: [0.42, 0.6, 0.27], height: 200, rough: 100 },
+  hills: { name: 'Rolling hills', color: [0.42, 0.56, 0.28], height: 650, rough: 350 },
+  desert: { name: 'Hot desert', color: [0.87, 0.74, 0.48], height: 450, rough: 200 },
+  dunes: { name: 'Dunes', color: [0.91, 0.8, 0.55], height: 120, rough: 80 },
+  salt_flats: { name: 'Salt flats and lagoons', color: [0.9, 0.88, 0.82], height: 15, rough: 5 },
+  marsh: { name: 'Marsh', color: [0.35, 0.47, 0.33], height: 10, rough: 5 },
+  mangrove: { name: 'Mangroves', color: [0.17, 0.35, 0.24], height: 5, rough: 3 },
+  wetland: { name: 'Seasonal wetlands', color: [0.4, 0.52, 0.35], height: 60, rough: 20 },
+  lake_basin: { name: 'Lake basin (marsh and savanna)', color: [0.4, 0.55, 0.4], height: 250, rough: 40 },
+  moorland: { name: 'Lake district (moorland, bogs)', color: [0.42, 0.46, 0.36], height: 300, rough: 200 },
+  bog_forest: { name: 'Taiga with lakes and bogs', color: [0.26, 0.38, 0.3], height: 300, rough: 150 },
+  peat_tussock: { name: 'Peat and tussock grass', color: [0.55, 0.54, 0.4], height: 150, rough: 80 },
+  tableland: { name: 'High tableland with gorges', color: [0.6, 0.58, 0.38], height: 1500, rough: 250 },
+  highlands: { name: 'Highlands', color: [0.38, 0.52, 0.3], height: 1500, rough: 500 },
+  alpine_meadow: { name: 'Alpine meadows and lakes', color: [0.5, 0.6, 0.36], height: 2400, rough: 700 },
+  mountains: { name: 'Mountains', color: [0.46, 0.41, 0.37], height: 3200, rough: 1500 },
+  volcanic: { name: 'Volcanic mountains', color: [0.32, 0.29, 0.27], height: 2600, rough: 1200 },
+  lava_field: { name: 'Lava fields', color: [0.24, 0.23, 0.23], height: 350, rough: 150 },
+};
+
+// Narrow bands along the coastline. `fjords` also roughens the coastline.
+export const COAST = {
+  beach: { name: 'Beaches', color: [0.86, 0.8, 0.6] },
+  black_sand: { name: 'Black sand beaches', color: [0.2, 0.2, 0.21] },
+  mangrove: { name: 'Mangroves', color: [0.17, 0.35, 0.24] },
+  cliffs: { name: 'Rocky cliffs', color: [0.5, 0.47, 0.44] },
+  rocky: { name: 'Rocky shores', color: [0.46, 0.45, 0.43] },
+  fjords: { name: 'Fjords', color: null },
+};

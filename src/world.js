@@ -3,6 +3,7 @@
 // module is pure data so later iterations (rivers, regions, labels) can reuse it.
 
 import { createNoise3D, fbm, ridged, hashString, mulberry32 } from './noise.js';
+import { vecToLatLon } from './geo.js';
 
 export const DEFAULT_SETTINGS = {
   seed: 'aelsewhere',
@@ -105,12 +106,29 @@ export function createWorld(settings = {}) {
   }
 
   // Everything known about one point on the unit sphere.
+  // Everything known about one point on the unit sphere. Shares its shape
+  // with the atlas world (height in metres, colour, nation) so the renderer
+  // can draw either.
   function sample(x, y, z) {
+    const len = Math.hypot(x, y, z);
+    x /= len; y /= len; z /= len;
     const e = elevation(x, y, z);
     const t = temperature(x, y, z, e);
     const m = moisture(x, y, z, e);
-    return { elevation: e, temperature: t, moisture: m, biome: biome(e, t, m) };
+    const b = biome(e, t, m);
+    // Slight brightness variation by elevation so flat biomes aren't uniform.
+    const shade = e >= 0 ? 0.9 + e * 0.3 : 1 + e * 0.25;
+    return {
+      height: e * 8000,
+      color: b.color.map((c) => c * shade),
+      nationIndex: -1,
+      foundingIndex: -1,
+      terrain: b.name,
+      temperature: t,
+      moisture: m,
+      ...vecToLatLon(x, y, z),
+    };
   }
 
-  return { settings: s, sample, elevation };
+  return { kind: 'random', settings: s, sample, elevation, nations: [], founding: [], rivers: [] };
 }

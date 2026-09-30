@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "map": "node scripts/render-map.mjs",
+    "check": "node scripts/check-atlas.mjs"
   },
   "dependencies": {
     "three": "^0.186.1"
