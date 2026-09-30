@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "map": "node scripts/render-map.mjs",
-    "check": "node scripts/check-atlas.mjs"
+    "import-sketch": "node scripts/import-sketch.mjs"
   },
   "dependencies": {
     "three": "^0.186.1"

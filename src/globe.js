@@ -157,7 +157,10 @@ export function createStarfield(count = 4000, seedRandom = Math.random) {
 // along great circles so it follows the curve of the planet.
 export function createRivers(world, resolution) {
   const group = new THREE.Group();
-  const material = new LineMaterial({ color: 0x3f8fe0, linewidth: 2.5, resolution });
+  const materials = {
+    major: new LineMaterial({ color: 0x3f8fe0, linewidth: 2.6, resolution }),
+    minor: new LineMaterial({ color: 0x3f8fe0, linewidth: 1.6, resolution }),
+  };
   const a = new THREE.Vector3();
   const b = new THREE.Vector3();
   const p = new THREE.Vector3();
@@ -166,7 +169,7 @@ export function createRivers(world, resolution) {
     for (let i = 0; i < river.points.length - 1; i++) {
       a.fromArray(latLonToVec(...river.points[i]));
       b.fromArray(latLonToVec(...river.points[i + 1]));
-      const steps = Math.max(2, Math.ceil(a.angleTo(b) / THREE.MathUtils.degToRad(0.3)));
+      const steps = Math.max(1, Math.ceil(a.angleTo(b) / THREE.MathUtils.degToRad(0.3)));
       for (let k = 0; k < steps; k++) {
         p.copy(a).lerp(b, k / steps).normalize();
         const r = surfaceRadius(world.sample(p.x, p.y, p.z).height) + 0.0015;
@@ -179,11 +182,11 @@ export function createRivers(world, resolution) {
 
     const geo = new LineGeometry();
     geo.setPositions(positions);
-    const line = new Line2(geo, material);
+    const line = new Line2(geo, materials[river.kind] || materials.major);
     line.userData.river = river;
     group.add(line);
   }
-  group.userData.material = material;
+  group.userData.materials = Object.values(materials);
   return group;
 }
 
@@ -198,8 +201,9 @@ export function createEquator(radius = 1.002) {
   return new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xffd35a, transparent: true, opacity: 0.55 }));
 }
 
-// HTML labels placed at the centre of each region's land. `ids` is the
-// per-vertex region index array from buildTerrain.
+// HTML labels, at each region's `label` [lat, lon] when it has one, otherwise
+// at the centre of its land. `ids` is the per-vertex region index array from
+// buildTerrain.
 export function createLabels(geometry, ids, regions, className) {
   const pos = geometry.attributes.position;
   const sums = regions.map(() => new THREE.Vector3());
@@ -210,6 +214,7 @@ export function createLabels(geometry, ids, regions, className) {
   }
   const group = new THREE.Group();
   regions.forEach((region, idx) => {
+    if (region.label) sums[idx].fromArray(latLonToVec(...region.label));
     if (sums[idx].lengthSq() === 0) return;
     const el = document.createElement('div');
     el.className = className;

@@ -1,4 +1,4 @@
-// Renders the Naropa & Nalanda atlas as a flat equirectangular PNG.
+// Renders Naropa & Nalanda (from the hand-drawn map) as a flat equirectangular PNG.
 //
 //   node scripts/render-map.mjs [terrain|nations|founding] [out.png] [width] [west,east,south,north]
 //
@@ -6,10 +6,9 @@
 // argument crops to a lon/lat box, e.g. -90,70,-80,90. Continent A is on top
 // because north is up.
 
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
-import * as atlas from '../src/atlas/naropa-nalanda.js';
-import { createAtlasWorld } from '../src/atlas/atlas-world.js';
+import { createSketchWorld } from '../src/atlas/sketch-world.js';
 import { latLonToVec } from '../src/geo.js';
 
 const view = process.argv[2] || 'terrain';
@@ -18,7 +17,8 @@ const width = parseInt(process.argv[4] || '1440', 10);
 const [west, east, south, north] = (process.argv[5] || '-180,180,-90,90').split(',').map(Number);
 const height = Math.round((width * (north - south)) / (east - west));
 
-const world = createAtlasWorld(atlas);
+const world = createSketchWorld(JSON.parse(readFileSync(new URL('../src/atlas/sketch-data.json', import.meta.url))));
+console.log('grid', world.stats);
 
 function crc32(buf) {
   let c, crc = 0xffffffff;
@@ -107,7 +107,7 @@ for (let py = 0; py < height; py++) {
 }
 
 // Rivers.
-for (const river of atlas.RIVERS) {
+for (const river of world.rivers) {
   const pts = river.points;
   for (let i = 0; i < pts.length - 1; i++) {
     for (let k = 0; k <= 200; k++) {

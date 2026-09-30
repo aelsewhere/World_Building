@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import { createWorld, DEFAULT_SETTINGS } from './world.js';
-import { createAtlasWorld } from './atlas/atlas-world.js';
-import * as naropaNalanda from './atlas/naropa-nalanda.js';
+import { createSketchWorld } from './atlas/sketch-world.js';
+import sketchData from './atlas/sketch-data.json';
 import {
   buildTerrain,
   applyView,
@@ -111,7 +111,7 @@ function writeHash() {
 }
 
 function makeWorld() {
-  if (ui.worldSelect.value === 'naropa-nalanda') return createAtlasWorld(naropaNalanda);
+  if (ui.worldSelect.value === 'naropa-nalanda') return createSketchWorld(sketchData);
   return createWorld({
     seed: ui.seed.value.trim() || DEFAULT_SETTINGS.seed,
     seaLevel: parseFloat(ui.seaLevel.value),
@@ -212,7 +212,7 @@ if (hash.get('view')) ui.view.value = hash.get('view');
 
 ui.worldSelect.addEventListener('change', () => {
   generate();
-  if (ui.worldSelect.value !== 'random') lookAtLatLon(10, -20, 3.3);
+  if (ui.worldSelect.value !== 'random') lookAtLatLon(8, -8, 3.3);
 });
 ui.generate.addEventListener('click', generate);
 ui.seed.addEventListener('keydown', (e) => e.key === 'Enter' && generate());
@@ -272,7 +272,7 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
   labelRenderer.setSize(window.innerWidth, window.innerHeight);
-  rivers?.userData.material.resolution.set(window.innerWidth, window.innerHeight);
+  rivers?.userData.materials.forEach((m) => m.resolution.set(window.innerWidth, window.innerHeight));
 });
 
 const camDir = new THREE.Vector3();
@@ -308,5 +308,5 @@ renderer.setAnimationLoop((time) => {
 });
 
 updateModeControls();
-lookAtLatLon(10, -20, 3.3);
+lookAtLatLon(8, -8, 3.3);
 generate();
