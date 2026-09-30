@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "map": "node scripts/render-map.mjs",
-    "import-sketch": "node scripts/import-sketch.mjs"
+    "import-sketch": "node scripts/import-sketch.mjs",
+    "build:artifact": "vite build && node scripts/build-artifact.mjs"
   },
   "dependencies": {
     "three": "^0.186.1"

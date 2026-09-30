@@ -62,6 +62,13 @@ const equator = createEquator();
 planet.add(equator);
 scene.add(createStarfield(4000, mulberry32(7)));
 
+// Far enough back that the whole globe fits, including on portrait phones.
+function fitDistance() {
+  const vHalf = THREE.MathUtils.degToRad(camera.fov / 2);
+  const hHalf = Math.atan(Math.tan(vHalf) * camera.aspect);
+  return Math.max(3.3, 1.12 / Math.sin(Math.min(vHalf, hHalf)));
+}
+
 function lookAtLatLon(lat, lon, distance) {
   const [x, y, z] = latLonToVec(lat, lon);
   camera.position.set(x, y, z).multiplyScalar(distance);
@@ -94,6 +101,10 @@ const ui = {
   status: $('status'),
   info: $('info'),
   legend: $('legend'),
+  legendTitle: $('legend-title'),
+  legendItems: $('legend-items'),
+  panel: $('panel'),
+  togglePanel: $('toggle-panel'),
 };
 
 let world = null;
@@ -116,7 +127,12 @@ function writeHash() {
     params.set('shift', ui.gap.value);
     params.set('natural', ui.natural.value);
   }
-  history.replaceState(null, '', `#${params}`);
+  // Some embedded viewers refuse URL changes; the page works without them.
+  try {
+    history.replaceState(null, '', `#${params}`);
+  } catch {
+    /* ignore */
+  }
 }
 
 function naropaShift() {
@@ -131,7 +147,7 @@ function updateGapLabel() {
 
 // Keeps the view centred between the continents as Naropa moves.
 function lookAtContinents() {
-  lookAtLatLon(8, -8 - naropaShift() / 2, 3.3);
+  lookAtLatLon(8, -8 - naropaShift() / 2, fitDistance());
 }
 
 function makeWorld() {
@@ -219,13 +235,29 @@ function applyCurrentView() {
 function renderLegend(view) {
   const items = view === 'nations' ? world.nations : view === 'founding' ? world.founding : [];
   ui.legend.hidden = items.length === 0;
-  ui.legend.innerHTML = items
+  ui.legendTitle.textContent = view === 'founding' ? 'Founding nations' : 'Nations';
+  ui.legendItems.innerHTML = items
     .map((n) => {
       const [r, g, b] = n.color.map((c) => Math.round(c * 255));
       return `<div><i style="background:rgb(${r},${g},${b})"></i>${n.code} ${n.name}${n.prominent ? ' ★' : ''}</div>`;
     })
     .join('');
 }
+
+// ---------- Phone-friendly defaults ----------
+const isSmallScreen = window.matchMedia('(max-width: 600px)').matches;
+const isTouch = window.matchMedia('(pointer: coarse)').matches;
+if (isTouch) ui.detail.value = '96'; // lighter mesh for phones and tablets
+
+function setPanelCollapsed(collapsed) {
+  ui.panel.dataset.collapsed = String(collapsed);
+  ui.togglePanel.textContent = collapsed ? 'Controls' : 'Hide';
+  ui.togglePanel.setAttribute('aria-expanded', String(!collapsed));
+  if (!collapsed && isSmallScreen) ui.info.hidden = true; // don't stack on a phone
+}
+ui.togglePanel.addEventListener('click', () => setPanelCollapsed(ui.panel.dataset.collapsed !== 'true'));
+setPanelCollapsed(isSmallScreen);
+ui.legend.open = !isSmallScreen;
 
 // Initial state from the URL.
 const hash = readHash();
@@ -273,9 +305,9 @@ const sphere = new THREE.Sphere(new THREE.Vector3(), 1.0);
 const hit = new THREE.Vector3();
 const local = new THREE.Vector3();
 
-renderer.domElement.addEventListener('pointermove', (e) => {
+function showInfoAt(clientX, clientY) {
   if (!world) return;
-  pointer.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
+  pointer.set((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1);
   raycaster.setFromCamera(pointer, camera);
   if (!raycaster.ray.intersectSphere(sphere, hit)) {
     ui.info.hidden = true;
@@ -300,8 +332,27 @@ renderer.domElement.addEventListener('pointermove', (e) => {
   }
   ui.info.hidden = false;
   ui.info.innerHTML = lines.join('<br>');
+}
+
+// Mouse: hover. Touch: tap (a touch that doesn't move) shows the readout.
+let downAt = null;
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (e.pointerType === 'mouse') showInfoAt(e.clientX, e.clientY);
 });
-renderer.domElement.addEventListener('pointerleave', () => (ui.info.hidden = true));
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  downAt = [e.clientX, e.clientY];
+});
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (e.pointerType === 'mouse' || !downAt) return;
+  if (Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 8) {
+    if (isSmallScreen) setPanelCollapsed(true);
+    showInfoAt(e.clientX, e.clientY);
+  }
+  downAt = null;
+});
+renderer.domElement.addEventListener('pointerleave', (e) => {
+  if (e.pointerType === 'mouse') ui.info.hidden = true;
+});
 
 // ---------- Loop ----------
 window.addEventListener('resize', () => {

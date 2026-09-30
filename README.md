@@ -18,12 +18,27 @@ Other commands:
 | `npm run import-sketch` | Re-imports `reference/Naropa_and_Nalanda_Map.html` into `src/atlas/sketch-data.json`. Run this after updating the hand-drawn map |
 | `npm run map -- nations out.png 1200 -145,95,-78,88 15 1` | Flat (equirectangular) PNG. View is `terrain`, `nations` or `founding`; then the crop box `west,east,south,north`, how far to move Naropa west (default 0) and the natural-shapes strength (default 1; 0 = as drawn) |
 
+## On your phone
+
+The globe is published as a private page on claude.ai:
+https://claude.ai/artifact/L7whJqNWZTLpeYRk4BkMQd. It opens in any phone
+browser once you're signed in. Share it from the page's Share menu if others
+should see it.
+
+On a phone, the controls start folded behind a **Controls** button. Tap the
+globe to see what's there, drag with one finger to turn it, and pinch to
+zoom. Phones default to Medium mesh detail.
+
+To update the page after changing the code, run `npm run build:artifact`,
+then republish `dist/artifact.html` together with the script it names under
+`dist/assets/`.
+
 ## Controls
 
 - **Drag** to orbit and **scroll** to zoom. North is up, so Naropa sits above Nalanda.
 - **World**: *Naropa & Nalanda* (the hand-authored atlas) or *Random (seeded)*.
 - **Map view**: terrain, the 19 modern nations, or the 5 founding nations. A legend appears for the political views; ★ marks prominent nations.
-- **Hover** to see the nation, founding nation, terrain class, coordinates and elevation under the cursor.
+- **Hover** (or tap on a touch screen) to see the nation, founding nation, terrain class, coordinates and elevation under the cursor.
 - **Move Naropa west** (0–40°, default 15°): slides all of Naropa west in
   longitude to widen the ocean between the continents. Latitudes stay as in
   the tracker. The panel shows the closest coast-to-coast distance: about
