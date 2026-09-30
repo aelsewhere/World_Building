@@ -73,6 +73,9 @@ const $ = (id) => document.getElementById(id);
 const ui = {
   worldSelect: $('world'),
   view: $('view'),
+  gap: $('gap'),
+  gapValue: $('gap-value'),
+  gapKm: $('gap-km'),
   randomControls: $('random-controls'),
   atlasControls: $('atlas-controls'),
   seed: $('seed'),
@@ -107,11 +110,25 @@ function writeHash() {
   if (ui.worldSelect.value === 'random') params.set('seed', ui.seed.value.trim() || DEFAULT_SETTINGS.seed);
   else params.set('world', ui.worldSelect.value);
   if (ui.view.value !== 'terrain') params.set('view', ui.view.value);
+  if (ui.worldSelect.value !== 'random') params.set('shift', ui.gap.value);
   history.replaceState(null, '', `#${params}`);
 }
 
+function naropaShift() {
+  return parseFloat(ui.gap.value);
+}
+
+function updateGapLabel() {
+  ui.gapValue.textContent = `${ui.gap.value}° west`;
+}
+
+// Keeps the view centred between the continents as Naropa moves.
+function lookAtContinents() {
+  lookAtLatLon(8, -8 - naropaShift() / 2, 3.3);
+}
+
 function makeWorld() {
-  if (ui.worldSelect.value === 'naropa-nalanda') return createSketchWorld(sketchData);
+  if (ui.worldSelect.value === 'naropa-nalanda') return createSketchWorld(sketchData, { naropaShift: naropaShift() });
   return createWorld({
     seed: ui.seed.value.trim() || DEFAULT_SETTINGS.seed,
     seaLevel: parseFloat(ui.seaLevel.value),
@@ -174,6 +191,9 @@ function generate() {
       applyCurrentView();
       const ms = Math.round(performance.now() - t0);
       ui.status.textContent = `${terrain.geometry.attributes.position.count.toLocaleString()} vertices · ${ms} ms`;
+      ui.gapKm.textContent = world.stats?.gapKm
+        ? `Closest coasts ≈ ${world.stats.gapKm.toLocaleString()} km (Earth-sized planet)`
+        : '';
     }, 0),
   );
 }
@@ -209,16 +229,23 @@ if (hash.get('seed')) {
   ui.seed.value = DEFAULT_SETTINGS.seed;
 }
 if (hash.get('view')) ui.view.value = hash.get('view');
+if (hash.get('shift') !== null) ui.gap.value = hash.get('shift');
+updateGapLabel();
 
 ui.worldSelect.addEventListener('change', () => {
   generate();
-  if (ui.worldSelect.value !== 'random') lookAtLatLon(8, -8, 3.3);
+  if (ui.worldSelect.value !== 'random') lookAtContinents();
 });
 ui.generate.addEventListener('click', generate);
 ui.seed.addEventListener('keydown', (e) => e.key === 'Enter' && generate());
 ui.randomSeed.addEventListener('click', () => {
   ui.seed.value = Math.random().toString(36).slice(2, 8);
   generate();
+});
+ui.gap.addEventListener('input', updateGapLabel);
+ui.gap.addEventListener('change', () => {
+  generate();
+  lookAtContinents();
 });
 for (const input of [ui.seaLevel, ui.continentScale, ui.mountains, ui.detail]) {
   input.addEventListener('change', generate);
@@ -308,5 +335,5 @@ renderer.setAnimationLoop((time) => {
 });
 
 updateModeControls();
-lookAtLatLon(8, -8, 3.3);
+lookAtContinents();
 generate();

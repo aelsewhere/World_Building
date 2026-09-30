@@ -16,7 +16,7 @@ Other commands:
 | --- | --- |
 | `npm run build` | Static site in `dist/` |
 | `npm run import-sketch` | Re-imports `reference/Naropa_and_Nalanda_Map.html` into `src/atlas/sketch-data.json`. Run this after updating the hand-drawn map |
-| `npm run map -- nations out.png 1200 -120,95,-78,88` | Flat (equirectangular) PNG. View is `terrain`, `nations` or `founding`; the last argument crops to `west,east,south,north` |
+| `npm run map -- nations out.png 1200 -145,95,-78,88 15` | Flat (equirectangular) PNG. View is `terrain`, `nations` or `founding`; then the crop box `west,east,south,north` and how far to move Naropa west (default 0, as drawn) |
 
 ## Controls
 
@@ -24,8 +24,13 @@ Other commands:
 - **World**: *Naropa & Nalanda* (the hand-authored atlas) or *Random (seeded)*.
 - **Map view**: terrain, the 19 modern nations, or the 5 founding nations. A legend appears for the political views; ★ marks prominent nations.
 - **Hover** to see the nation, founding nation, terrain class, coordinates and elevation under the cursor.
+- **Move Naropa west** (0–40°, default 15°): slides all of Naropa west in
+  longitude to widen the ocean between the continents. Latitudes stay as in
+  the tracker. The panel shows the closest coast-to-coast distance: about
+  1,335 km as drawn (0°), about 2,770 km at 15° and about 4,275 km at 30°. It
+  grows by roughly 1,000 km per 10°.
 - **Labels / Rivers / Grid / Rotate** toggles. The equator is always drawn on the atlas.
-- The URL keeps the world and view (`#world=naropa-nalanda&view=nations`, or `#seed=...` for random worlds).
+- The URL keeps the world and view (`#world=naropa-nalanda&view=nations&shift=15`, or `#seed=...` for random worlds).
 
 ## The Naropa & Nalanda atlas
 
@@ -61,15 +66,19 @@ the coast. Coastlines stay exactly as drawn.
 
 ### Open questions
 
-1. **East–west scale:** keep plate carrée (above), or should Naropa keep its
+1. **Closest crossing:** on the drawn map, Naropa's nearest coast is
+   Abocara's (BD's) northern tip at about 1,335 km, with Nalu (BA) close
+   behind at about 1,410 km. The tracker names AF–BA as the closest point.
+   Moving Naropa west keeps that ordering.
+2. **East–west scale:** keep plate carrée (above), or should Naropa keep its
    drawn width even at high latitudes? Keeping the width would stretch it
    around the pole, so the map's longitudes would change.
-2. **River names:** the map only marks rivers as major or minor. The tracker
+3. **River names:** the map only marks rivers as major or minor. The tracker
    names the wetland, equatorial, desert and twin rivers, and the BK/BL
    border river. Should these names go on the globe?
-3. **Heights:** replace the placeholder heights with real ones wherever you
+4. **Heights:** replace the placeholder heights with real ones wherever you
    have them (for example, Mount Firmamenta is set to 9,500 m).
-4. The pasted tracker text stopped mid-sentence at "People spread from".
+5. The pasted tracker text stopped mid-sentence at "People spread from".
 
 ## How it works
 

@@ -71,7 +71,10 @@
           <option value="nations">Modern nations (19)</option>
           <option value="founding">Founding nations (5)</option>
         </select>
-        <div class="note">Coastlines, borders, terrain and rivers from the hand-drawn map. Heights are rough placeholders per terrain type.</div>
+        <label for="gap">Move Naropa west: <span id="gap-value"></span></label>
+        <input id="gap" type="range" min="0" max="40" step="1" value="15" />
+        <div class="note" id="gap-km"></div>
+        <div class="note">Coastlines, borders, terrain and rivers from the hand-drawn map. Heights are rough placeholders per terrain type. 0° is the map as drawn.</div>
       </div>
 
       <div id="random-controls" hidden>

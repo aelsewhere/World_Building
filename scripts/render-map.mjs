@@ -1,9 +1,10 @@
 // Renders Naropa & Nalanda (from the hand-drawn map) as a flat equirectangular PNG.
 //
-//   node scripts/render-map.mjs [terrain|nations|founding] [out.png] [width] [west,east,south,north]
+//   node scripts/render-map.mjs [terrain|nations|founding] [out.png] [width] [west,east,south,north] [naropaShift]
 //
 // By default it renders the whole planet (360° × 180°). The optional last
-// argument crops to a lon/lat box, e.g. -90,70,-80,90. Continent A is on top
+// argument crops to a lon/lat box, e.g. -90,70,-80,90. naropaShift moves
+// Naropa that many degrees west (0 = as drawn). Continent A is on top
 // because north is up.
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -17,7 +18,8 @@ const width = parseInt(process.argv[4] || '1440', 10);
 const [west, east, south, north] = (process.argv[5] || '-180,180,-90,90').split(',').map(Number);
 const height = Math.round((width * (north - south)) / (east - west));
 
-const world = createSketchWorld(JSON.parse(readFileSync(new URL('../src/atlas/sketch-data.json', import.meta.url))));
+const naropaShift = Number(process.argv[6] || 0);
+const world = createSketchWorld(JSON.parse(readFileSync(new URL('../src/atlas/sketch-data.json', import.meta.url))), { naropaShift });
 console.log('grid', world.stats);
 
 function crc32(buf) {

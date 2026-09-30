@@ -147,11 +147,44 @@ for (const [kind, list] of Object.entries(JSON.parse(block('rivers')))) {
   for (const d of list) rivers.push({ kind, points: bezierLine(d) });
 }
 
-// Coast keys A/B/BA are the continents and Nalu; i1-i3 are Moiran's islands.
+// Which continent each feature belongs to, so a continent can be moved as a
+// whole. Coast keys: cA is Naropa, i1-i3 are Moiran's islands (also Naropa);
+// cB is Nalanda and cBA is Nalu.
+const NAROPA_COASTS = ['cA', 'i1', 'i2', 'i3'];
+function inRing([lat, lon], ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [aLat, aLon] = ring[i], [bLat, bLon] = ring[j];
+    if ((aLat > lat) !== (bLat > lat) && lon < aLon + ((lat - aLat) * (bLon - aLon)) / (bLat - aLat)) inside = !inside;
+  }
+  return inside;
+}
+// Votes only with points that fall on some land; shapes drawn wider than
+// small islands would otherwise be mostly sea.
+function continentOf(points) {
+  let a = 0, b = 0;
+  for (const p of points) {
+    if (NAROPA_COASTS.some((k) => inRing(p, coasts[k]))) a++;
+    else if (Object.keys(coasts).some((k) => !NAROPA_COASTS.includes(k) && inRing(p, coasts[k]))) b++;
+  }
+  if (a || b) return a >= b ? 'A' : 'B';
+  // No point on land: use the nearest coast.
+  let best = Infinity, cont = 'B';
+  for (const [k, ring] of Object.entries(coasts)) {
+    for (const q of ring) for (const p of points) {
+      const d = (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2;
+      if (d < best) { best = d; cont = NAROPA_COASTS.includes(k) ? 'A' : 'B'; }
+    }
+  }
+  return cont;
+}
+for (const t of terrain) t.continent = continentOf(t.rings.flat());
+for (const r of rivers) r.continent = continentOf(r.points);
+
 const data = {
   source: 'reference/Naropa_and_Nalanda_Map.html',
   projection: { rotationDeg: R, center: [CX, CY], equatorY: EQ_Y, unitsPerDegree: +PER.toFixed(4), longitude: 'plate carrée from x = center' },
-  coasts: Object.values(coasts),
+  coasts: Object.entries(coasts).map(([id, ring]) => ({ id, continent: NAROPA_COASTS.includes(id) ? 'A' : 'B', ring })),
   founding,
   nations,
   terrain,
@@ -159,8 +192,9 @@ const data = {
 };
 writeFileSync(out, JSON.stringify(data));
 
-const all = [...data.coasts.flat()];
+const all = data.coasts.flatMap((c) => c.ring);
 const lats = all.map((p) => p[0]), lons = all.map((p) => p[1]);
 console.log(`wrote ${out}`);
 console.log(`  ${data.coasts.length} coasts, ${Object.keys(nations).length} nations, ${terrain.length} terrain polygons (${new Set(terrain.map((t) => t.type)).size} types), ${rivers.length} rivers`);
+console.log(`  Naropa features: ${terrain.filter((t) => t.continent === 'A').length} terrain, ${rivers.filter((r) => r.continent === 'A').length} rivers`);
 console.log(`  land spans lat ${Math.min(...lats).toFixed(1)}..${Math.max(...lats).toFixed(1)}, lon ${Math.min(...lons).toFixed(1)}..${Math.max(...lons).toFixed(1)}`);

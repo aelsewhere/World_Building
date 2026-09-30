@@ -28,10 +28,52 @@ function hexToRgb(hex) {
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 }
 
-export function createSketchWorld(data, { seed = 'naropa' } = {}) {
+// Moves every Naropa (continent A) feature `shiftDeg` degrees of longitude
+// west. Latitudes are untouched, so the tracker's 9–83°N still holds.
+export function shiftNaropa(data, shiftDeg) {
+  if (!shiftDeg) return data;
+  const ring = (r) => r.map(([lat, lon]) => [lat, lon - shiftDeg]);
+  const pt = (p) => (p ? [p[0], p[1] - shiftDeg] : p);
+  const nations = {};
+  for (const [code, n] of Object.entries(data.nations)) {
+    nations[code] = code[0] === 'A' ? { ...n, rings: n.rings.map(ring), label: pt(n.label) } : n;
+  }
+  const founding = {};
+  for (const [code, f] of Object.entries(data.founding)) {
+    founding[code] = code === 'F1' ? { ...f, label: pt(f.label) } : f;
+  }
+  return {
+    ...data,
+    coasts: data.coasts.map((c) => (c.continent === 'A' ? { ...c, ring: ring(c.ring) } : c)),
+    nations,
+    founding,
+    terrain: data.terrain.map((t) => (t.continent === 'A' ? { ...t, rings: t.rings.map(ring) } : t)),
+    rivers: data.rivers.map((r) => (r.continent === 'A' ? { ...r, points: ring(r.points) } : r)),
+  };
+}
+
+// Shortest coast-to-coast distance between the two continents, in km on an
+// Earth-sized planet.
+function continentGapKm(data) {
+  const R = 6371, D = Math.PI / 180;
+  const A = data.coasts.filter((c) => c.continent === 'A').flatMap((c) => c.ring);
+  const B = data.coasts.filter((c) => c.continent === 'B').flatMap((c) => c.ring);
+  let best = Infinity;
+  for (const [a, b] of A) {
+    const ca = Math.cos(a * D);
+    for (const [c, e] of B) {
+      const h = Math.sin((c - a) * D / 2) ** 2 + ca * Math.cos(c * D) * Math.sin((e - b) * D / 2) ** 2;
+      if (h < best) best = h;
+    }
+  }
+  return 2 * R * Math.asin(Math.sqrt(best));
+}
+
+export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0 } = {}) {
+  const data = shiftNaropa(sourceData, naropaShift);
   // ---------- Grid ----------
   let north = -90, south = 90, west = 180, east = -180;
-  for (const ring of data.coasts) {
+  for (const { ring } of data.coasts) {
     for (const [lat, lon] of ring) {
       north = Math.max(north, lat); south = Math.min(south, lat);
       east = Math.max(east, lon); west = Math.min(west, lon);
@@ -93,7 +135,7 @@ export function createSketchWorld(data, { seed = 'naropa' } = {}) {
 
   // ---------- Land, nations, terrain ----------
   const land = new Uint8Array(N);
-  for (const ring of data.coasts) fill([ring], (i) => (land[i] = 1));
+  for (const { ring } of data.coasts) fill([ring], (i) => (land[i] = 1));
 
   const codes = NATION_ORDER.filter((c) => data.nations[c]);
   const foundingCodes = Object.keys(data.founding);
@@ -330,6 +372,8 @@ export function createSketchWorld(data, { seed = 'naropa' } = {}) {
     nationGapCells: nationGaps,
     terrainGapCells: terrainGaps,
     landCells: land.reduce((a, b) => a + b, 0),
+    naropaShift,
+    gapKm: Math.round(continentGapKm(data)),
   };
 
   return {
