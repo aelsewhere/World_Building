@@ -2,13 +2,23 @@
 // (sketch-data.json, produced by scripts/import-sketch.mjs).
 //
 // The map's polygons are rasterised once onto a lat/lon grid: land, nation,
-// terrain. From those come smoothed height and colour fields (terrain zone
-// edges softened, as in the satellite draft) and distances to the coast.
-// Coastlines are kept exactly as drawn. Pure data, no Three.js, so it also
-// runs in Node for the flat-map script.
+// terrain. From those come smoothed height and colour fields and a signed
+// distance to the drawn coastline.
+//
+// `natural` (0 = exactly as drawn) layers noise on top when sampling:
+// - coastlines: fractal noise on the signed distance adds bays, headlands and
+//   small islands; areas drawn as fjords get deeper, finer cuts;
+// - terrain zones and borders: the lookup position is warped, so straight
+//   polygon edges become organic;
+// - relief and colour: ridged relief and exposed rock on mountainous
+//   terrain, and gentle colour variation within each zone.
+// Noise for Naropa is evaluated at its drawn position, so moving Naropa west
+// doesn't change its shapes.
+//
+// Pure data, no Three.js, so it also runs in Node for the flat-map script.
 
-import { createNoise3D, fbm, hashString, mulberry32 } from '../noise.js';
-import { vecToLatLon } from '../geo.js';
+import { createNoise3D, fbm, ridged, hashString, mulberry32 } from '../noise.js';
+import { vecToLatLon, latLonToVec } from '../geo.js';
 import { TERRAIN, PEAK_HEIGHTS } from './terrain-types.js';
 import { CONTINENTS, NATION_ORDER, PROMINENT } from './naropa-nalanda.js';
 
@@ -17,6 +27,8 @@ const RES = 0.125; // grid cell size in degrees (~14 km)
 const SNOW = [0.95, 0.96, 0.98];
 const DEEP = [0.03, 0.1, 0.28];
 const SHALLOW = [0.13, 0.42, 0.62];
+const ROCK = [0.43, 0.39, 0.35];
+const BANKS = [0.24, 0.42, 0.2];
 
 function smoothstep(a, b, x) {
   const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
@@ -69,8 +81,9 @@ function continentGapKm(data) {
   return 2 * R * Math.asin(Math.sqrt(best));
 }
 
-export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0 } = {}) {
+export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0, natural = 1 } = {}) {
   const data = shiftNaropa(sourceData, naropaShift);
+
   // ---------- Grid ----------
   let north = -90, south = 90, west = 180, east = -180;
   for (const { ring } of data.coasts) {
@@ -86,6 +99,13 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
   const rows = Math.ceil((north - south) / RES);
   const N = cols * rows;
   const rowLat = (r) => north - (r + 0.5) * RES;
+
+  function cellIndex(lat, lon) {
+    const r = Math.floor((north - lat) / RES);
+    const c = Math.floor((lon - west) / RES);
+    if (r < 0 || c < 0 || r >= rows || c >= cols) return -1;
+    return r * cols + c;
+  }
 
   // Even-odd scanline fill of a set of rings; calls fn(cellIndex).
   function fill(rings, fn) {
@@ -113,24 +133,24 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
     }
   }
 
-  // Assigns every land cell with no value the value of its nearest assigned
-  // land cell (breadth-first). Returns how many cells were filled this way.
-  function fillGaps(values, empty) {
+  // Gives every empty cell (land and sea) the value of its nearest assigned
+  // cell, so noise-grown coastline has a nation and terrain. Returns how many
+  // drawn-land cells had no value of their own.
+  function fillEverywhere(values, empty) {
+    let landGaps = 0;
+    for (let i = 0; i < N; i++) if (land[i] && values[i] === empty) landGaps++;
     const queue = new Int32Array(N);
-    let head = 0, tail = 0, filled = 0;
-    for (let i = 0; i < N; i++) if (land[i] && values[i] !== empty) queue[tail++] = i;
+    let head = 0, tail = 0;
+    for (let i = 0; i < N; i++) if (values[i] !== empty) queue[tail++] = i;
     while (head < tail) {
       const i = queue[head++];
       const r = (i / cols) | 0, c = i - r * cols;
-      for (const j of [c > 0 ? i - 1 : -1, c < cols - 1 ? i + 1 : -1, r > 0 ? i - cols : -1, r < rows - 1 ? i + cols : -1]) {
-        if (j >= 0 && land[j] && values[j] === empty) {
-          values[j] = values[i];
-          queue[tail++] = j;
-          filled++;
-        }
-      }
+      if (c > 0 && values[i - 1] === empty) { values[i - 1] = values[i]; queue[tail++] = i - 1; }
+      if (c < cols - 1 && values[i + 1] === empty) { values[i + 1] = values[i]; queue[tail++] = i + 1; }
+      if (r > 0 && values[i - cols] === empty) { values[i - cols] = values[i]; queue[tail++] = i - cols; }
+      if (r < rows - 1 && values[i + cols] === empty) { values[i + cols] = values[i]; queue[tail++] = i + cols; }
     }
-    return filled;
+    return landGaps;
   }
 
   // ---------- Land, nations, terrain ----------
@@ -160,7 +180,7 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
 
   const nation = new Int8Array(N).fill(-1);
   codes.forEach((code, ni) => fill(data.nations[code].rings, (i) => { if (land[i]) nation[i] = ni; }));
-  const nationGaps = fillGaps(nation, -1);
+  const nationGaps = fillEverywhere(nation, -1);
 
   const typeKeys = Object.keys(TERRAIN);
   const terrain = new Uint8Array(N).fill(255);
@@ -169,10 +189,10 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
     if (ti < 0) throw new Error(`unknown terrain type "${t.type}"`);
     fill(t.rings, (i) => { if (land[i]) terrain[i] = ti; });
   }
-  const terrainGaps = fillGaps(terrain, 255);
+  const terrainGaps = fillEverywhere(terrain, 255);
 
-  // ---------- Distance to coast (in km-ish cells, chamfer) ----------
-  // Horizontal steps shrink with latitude on a lat/lon grid.
+  // ---------- Signed distance to the drawn coast ----------
+  // In latitude cells (~14 km); horizontal steps shrink with latitude.
   function distanceField(inside) {
     const d = new Float32Array(N);
     for (let i = 0; i < N; i++) d[i] = inside(i) ? 1e9 : 0;
@@ -211,49 +231,70 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
   }
   const toSea = distanceField((i) => land[i] === 1);
   const toLand = distanceField((i) => land[i] === 0);
+  const sdf = new Float32Array(N);
+  for (let i = 0; i < N; i++) sdf[i] = land[i] ? toSea[i] - 0.5 : 0.5 - toLand[i];
 
-  // ---------- Height, roughness, colour ----------
+  // Distance to the nearest drawn river, for valleys and greener banks.
+  const riverCell = new Uint8Array(N);
+  for (const river of data.rivers) {
+    const pts = river.points;
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const steps = Math.ceil(Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]) / (RES / 2)) || 1;
+      for (let k = 0; k <= steps; k++) {
+        const ci = cellIndex(
+          pts[i][0] + ((pts[i + 1][0] - pts[i][0]) * k) / steps,
+          pts[i][1] + ((pts[i + 1][1] - pts[i][1]) * k) / steps,
+        );
+        if (ci >= 0) riverCell[ci] = river.kind === 'major' ? 2 : 1;
+      }
+    }
+  }
+  const toRiver = distanceField((i) => riverCell[i] === 0);
+
+  // ---------- Base fields (defined everywhere) ----------
   const height = new Float32Array(N);
   const rough = new Float32Array(N);
+  const ridge = new Float32Array(N);
+  const fjord = new Float32Array(N);
   const cr = new Float32Array(N), cg = new Float32Array(N), cb = new Float32Array(N);
-  const water = new Uint8Array(N);
   for (let i = 0; i < N; i++) {
-    if (!land[i]) continue;
     const t = TERRAIN[typeKeys[terrain[i]]];
     height[i] = t.height;
     rough[i] = t.rough;
+    ridge[i] = t.ridge || 0;
+    fjord[i] = typeKeys[terrain[i]] === 'fjords' ? 1 : 0;
     [cr[i], cg[i], cb[i]] = t.color;
-    if (t.water) water[i] = 1;
   }
 
-  // Box blur over land cells only, so the ocean doesn't bleed into the coast.
+  // Separable box blur.
   function blur(field, radius, passes) {
     const tmp = new Float32Array(N);
+    const w = 2 * radius + 1;
     for (let p = 0; p < passes; p++) {
       for (let r = 0; r < rows; r++) {
-        let sum = 0, cnt = 0;
         const base = r * cols;
-        for (let c = -radius; c < cols; c++) {
-          const add = c + radius, sub = c - radius - 1;
-          if (add < cols && land[base + add]) { sum += field[base + add]; cnt++; }
-          if (sub >= 0 && land[base + sub]) { sum -= field[base + sub]; cnt--; }
-          if (c >= 0) tmp[base + c] = land[base + c] && cnt ? sum / cnt : field[base + c];
+        let sum = 0;
+        for (let c = -radius; c <= radius; c++) sum += field[base + Math.min(cols - 1, Math.max(0, c))];
+        for (let c = 0; c < cols; c++) {
+          tmp[base + c] = sum / w;
+          sum += field[base + Math.min(cols - 1, c + radius + 1)] - field[base + Math.max(0, c - radius)];
         }
       }
       for (let c = 0; c < cols; c++) {
-        let sum = 0, cnt = 0;
-        for (let r = -radius; r < rows; r++) {
-          const add = r + radius, sub = r - radius - 1;
-          if (add < rows && land[add * cols + c]) { sum += tmp[add * cols + c]; cnt++; }
-          if (sub >= 0 && land[sub * cols + c]) { sum -= tmp[sub * cols + c]; cnt--; }
-          if (r >= 0) field[r * cols + c] = land[r * cols + c] && cnt ? sum / cnt : tmp[r * cols + c];
+        let sum = 0;
+        for (let r = -radius; r <= radius; r++) sum += tmp[Math.min(rows - 1, Math.max(0, r)) * cols + c];
+        for (let r = 0; r < rows; r++) {
+          field[r * cols + c] = sum / w;
+          sum += tmp[Math.min(rows - 1, r + radius + 1) * cols + c] - tmp[Math.max(0, r - radius) * cols + c];
         }
       }
     }
   }
   blur(height, 3, 2);
   blur(rough, 3, 2);
-  for (const ch of [cr, cg, cb]) blur(ch, 1, 2);
+  blur(ridge, 3, 2);
+  blur(fjord, 4, 2);
+  for (const ch of [cr, cg, cb]) blur(ch, 2, 2);
 
   // Peaks: a cone per volcano polygon, and Mount Firmamenta on BJ's central
   // mountain (the largest mountain/volcano polygon inside BJ).
@@ -272,7 +313,7 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
     area = Math.abs(area / 2) * Math.cos(lat * DEG);
     const r = Math.max(0.5, Math.sqrt(area / Math.PI));
     const ci = cellIndex(lat, lon);
-    if (ci >= 0 && nation[ci] === bjIndex && (!firmamenta || area > firmamenta.area)) {
+    if (ci >= 0 && land[ci] && nation[ci] === bjIndex && (!firmamenta || area > firmamenta.area)) {
       firmamenta = { lat, lon, r, area };
     }
     if (t.type === 'volcanoes') peaks.push({ lat, lon, r, height: PEAK_HEIGHTS.volcanoes, name: 'Volcano' });
@@ -292,7 +333,7 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
       const c1 = Math.min(cols - 1, Math.ceil((pk.lon + span - west) / RES));
       for (let c = c0; c <= c1; c++) {
         const i = r * cols + c;
-        if (!land[i] || water[i]) continue;
+        if (TERRAIN[typeKeys[terrain[i]]].water) continue;
         const dLat = lat - pk.lat, dLon = (west + (c + 0.5) * RES - pk.lon) * k;
         const d = Math.hypot(dLat, dLon) / pk.r;
         height[i] += pk.height * Math.exp(-d * d * 1.6);
@@ -300,25 +341,10 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
     }
   }
 
-  // Land slopes to the sea; ocean deepens away from the coast. Lakes sit flat.
-  for (let i = 0; i < N; i++) {
-    if (land[i]) {
-      height[i] = water[i] ? 0 : Math.max(3, height[i] * smoothstep(0, 6, toSea[i]));
-      rough[i] *= smoothstep(0, 6, toSea[i]);
-    } else {
-      height[i] = -(60 + 4800 * smoothstep(0, 22, toLand[i]));
-    }
-  }
-
-  function cellIndex(lat, lon) {
-    const r = Math.floor((north - lat) / RES);
-    const c = Math.floor((lon - west) / RES);
-    if (r < 0 || c < 0 || r >= rows || c >= cols) return -1;
-    return r * cols + c;
-  }
-
-  // Bilinear lookup of a float field at fractional grid coordinates.
-  function bilinear(field, fr, fc) {
+  // Bilinear lookup of a float field at a lat/lon.
+  function bilinear(field, lat, lon) {
+    const fr = (north - lat) / RES - 0.5;
+    const fc = (lon - west) / RES - 0.5;
     const r0 = Math.max(0, Math.min(rows - 2, Math.floor(fr)));
     const c0 = Math.max(0, Math.min(cols - 2, Math.floor(fc)));
     const tr = Math.max(0, Math.min(1, fr - r0)), tc = Math.max(0, Math.min(1, fc - c0));
@@ -328,40 +354,100 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
 
   // ---------- Sampling ----------
   const rand = mulberry32(hashString(seed));
+  const coastNoise = createNoise3D(rand);
+  const fjordNoise = createNoise3D(rand);
+  const warpLat = createNoise3D(rand);
+  const warpLon = createNoise3D(rand);
   const reliefNoise = createNoise3D(rand);
+  const ridgeNoise = createNoise3D(rand);
+  const tintNoise = createNoise3D(rand);
+  const snowNoise = createNoise3D(rand);
+
+  function ocean(h, lat, lon) {
+    const depth = smoothstep(60, 4860, -h);
+    const color = SHALLOW.map((s, k) => s + (DEEP[k] - s) * Math.sqrt(depth));
+    return { height: h, color, nationIndex: -1, foundingIndex: -1, lat, lon, terrain: 'Ocean' };
+  }
 
   function sample(x, y, z) {
     const len = Math.hypot(x, y, z);
     x /= len; y /= len; z /= len;
     const { lat, lon } = vecToLatLon(x, y, z);
-    const fr = (north - lat) / RES - 0.5;
-    const fc = (lon - west) / RES - 0.5;
     const ci = cellIndex(lat, lon);
+    if (ci < 0) return ocean(-4860, lat, lon);
 
-    if (ci < 0 || !land[ci]) {
-      const h = ci < 0 ? -4860 : bilinear(height, fr, fc);
-      const depth = smoothstep(60, 4860, -h);
-      const color = SHALLOW.map((s, k) => s + (DEEP[k] - s) * Math.sqrt(depth));
-      return { height: h, color, nationIndex: -1, foundingIndex: -1, lat, lon, terrain: 'Ocean' };
+    // Noise is evaluated where the land was drawn, so shifting Naropa moves
+    // its details with it.
+    const [nx, ny, nz] = nations[nation[ci]].continent === 'A' ? latLonToVec(lat, lon + naropaShift) : [x, y, z];
+
+    // Coastline: signed distance (in ~14 km cells) plus noise.
+    const fj = bilinear(fjord, lat, lon);
+    let s = bilinear(sdf, lat, lon);
+    if (natural > 0 && s > -20 && s < 20) {
+      s += natural * (8 + 3 * fj) * fbm(coastNoise, nx, ny, nz, { octaves: 6, frequency: 10 });
+      s += natural * (2 + 3.5 * fj) * fbm(fjordNoise, nx, ny, nz, { octaves: 4, frequency: 55 });
     }
+    if (s <= 0) return ocean(-(60 + 4800 * smoothstep(0, 22, -s)), lat, lon);
 
-    const ni = nation[ci];
+    // Warped lookup: organic edges between terrain zones and nations.
+    let wlat = lat, wlon = lon;
+    if (natural > 0) {
+      // Three scales: broad bends (~700 km), meanders (~200 km), fine fringe.
+      const warp = (n, off) =>
+        1.6 * n(nx * 4 + off, ny * 4, nz * 4) +
+        0.6 * fbm(n, nx + off, ny, nz, { octaves: 2, frequency: 16 }) +
+        0.2 * fbm(n, nx + off, ny, nz, { octaves: 2, frequency: 60 });
+      wlat += natural * warp(warpLat, 0);
+      wlon += (natural * warp(warpLon, 3.1)) / Math.max(0.2, Math.cos(lat * DEG));
+    }
+    let wi = cellIndex(wlat, wlon);
+    if (wi < 0) wi = ci;
+    const ni = nation[wi];
     const fi = foundingCodes.indexOf(nations[ni].founding);
-    const t = TERRAIN[typeKeys[terrain[ci]]];
+    const t = TERRAIN[typeKeys[terrain[wi]]];
 
-    if (water[ci]) {
+    if (t.water) {
       return { height: 0, color: t.color, nationIndex: ni, foundingIndex: fi, lat, lon, terrain: t.name };
     }
 
-    let h = bilinear(height, fr, fc);
-    h += bilinear(rough, fr, fc) * fbm(reliefNoise, x, y, z, { octaves: 5, frequency: 14 }) * 1.3;
+    // Relief: rolling noise, ridged on mountainous terrain.
+    const base = bilinear(height, wlat, wlon);
+    const rgh = bilinear(rough, wlat, wlon);
+    const rdg = bilinear(ridge, wlat, wlon);
+    const rolling = fbm(reliefNoise, nx, ny, nz, { octaves: 5, frequency: 14 });
+    let crest = 0;
+    if (rdg > 0.02) crest = ridged(ridgeNoise, nx, ny, nz, { octaves: 5, frequency: 11 });
+    let h = base + rgh * ((1 - rdg) * rolling * 1.3 + rdg * (crest * 2.4 - 1));
+    const dr = bilinear(toRiver, lat, lon); // in ~14 km cells
+    const valley = Math.exp(-((dr / 3) ** 2));
+    h *= 1 - 0.45 * valley; // rivers run in valleys
+    h *= smoothstep(0, 5 * (1 - 0.7 * fj), s); // slope to the sea; fjords stay steep
     h = Math.max(3, h);
 
-    let color = [bilinear(cr, fr, fc), bilinear(cg, fr, fc), bilinear(cb, fr, fc)];
-    const snowline = 5200 * Math.pow(Math.cos(lat * DEG), 1.4) + 150;
+    let color = [bilinear(cr, wlat, wlon), bilinear(cg, wlat, wlon), bilinear(cb, wlat, wlon)];
+    if (natural > 0) {
+      // Gentle variation within a zone: brightness and a warm/cool shift.
+      const v = fbm(tintNoise, nx, ny, nz, { octaves: 4, frequency: 30 });
+      const w = fbm(tintNoise, nx + 7.3, ny, nz, { octaves: 3, frequency: 7 });
+      const k = Math.min(1, natural);
+      color = [
+        color[0] * (1 + k * (0.1 * v + 0.07 * w)),
+        color[1] * (1 + k * 0.1 * v),
+        color[2] * (1 + k * (0.1 * v - 0.07 * w)),
+      ];
+      // Bare rock on the crests of mountainous terrain.
+      const rock = rdg * smoothstep(0.45, 0.85, crest) * k;
+      color = color.map((c, i) => c + (ROCK[i] - c) * rock * 0.75);
+    }
+
+    // Greener banks along rivers.
+    const banks = 0.4 * Math.exp(-((dr / 1.3) ** 2)) * Math.min(1, natural + 0.5);
+    color = color.map((c, i) => c + (BANKS[i] - c) * banks);
+
+    const snowline = 5200 * Math.pow(Math.cos(lat * DEG), 1.4) + 150 + natural * 300 * fbm(snowNoise, nx, ny, nz, { octaves: 3, frequency: 20 });
     if (h > snowline) {
-      const s = smoothstep(snowline, snowline + 700, h);
-      color = color.map((v, k) => v + (SNOW[k] - v) * s);
+      const k = smoothstep(snowline, snowline + 600, h);
+      color = color.map((v, i) => v + (SNOW[i] - v) * k);
     }
 
     return { height: h, color, nationIndex: ni, foundingIndex: fi, lat, lon, terrain: t.name };
@@ -373,6 +459,7 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
     terrainGapCells: terrainGaps,
     landCells: land.reduce((a, b) => a + b, 0),
     naropaShift,
+    natural,
     gapKm: Math.round(continentGapKm(data)),
   };
 

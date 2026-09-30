@@ -1,10 +1,11 @@
 // Renders Naropa & Nalanda (from the hand-drawn map) as a flat equirectangular PNG.
 //
-//   node scripts/render-map.mjs [terrain|nations|founding] [out.png] [width] [west,east,south,north] [naropaShift]
+//   node scripts/render-map.mjs [terrain|nations|founding] [out.png] [width] [west,east,south,north] [naropaShift] [natural]
 //
 // By default it renders the whole planet (360° × 180°). The optional last
 // argument crops to a lon/lat box, e.g. -90,70,-80,90. naropaShift moves
-// Naropa that many degrees west (0 = as drawn). Continent A is on top
+// Naropa that many degrees west (0 = as drawn); natural sets how much noise
+// is layered on coastlines and terrain (0 = as drawn, default 1). Continent A is on top
 // because north is up.
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -19,7 +20,8 @@ const [west, east, south, north] = (process.argv[5] || '-180,180,-90,90').split(
 const height = Math.round((width * (north - south)) / (east - west));
 
 const naropaShift = Number(process.argv[6] || 0);
-const world = createSketchWorld(JSON.parse(readFileSync(new URL('../src/atlas/sketch-data.json', import.meta.url))), { naropaShift });
+const natural = Number(process.argv[7] ?? 1);
+const world = createSketchWorld(JSON.parse(readFileSync(new URL('../src/atlas/sketch-data.json', import.meta.url))), { naropaShift, natural });
 console.log('grid', world.stats);
 
 function crc32(buf) {
@@ -118,6 +120,7 @@ for (const river of world.rivers) {
       const px = Math.floor(((lon - west) / (east - west)) * width);
       const py = Math.floor(((north - lat) / (north - south)) * height);
       if (px < 0 || py < 0 || px >= width || py >= height) continue;
+      if (world.sample(...latLonToVec(lat, lon)).nationIndex < 0) continue; // over the sea
       rgb.set([63, 143, 224], (py * width + px) * 3);
     }
   }

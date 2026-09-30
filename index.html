@@ -74,7 +74,10 @@
         <label for="gap">Move Naropa west: <span id="gap-value"></span></label>
         <input id="gap" type="range" min="0" max="40" step="1" value="15" />
         <div class="note" id="gap-km"></div>
-        <div class="note">Coastlines, borders, terrain and rivers from the hand-drawn map. Heights are rough placeholders per terrain type. 0° is the map as drawn.</div>
+
+        <label for="natural">Natural shapes: <span id="natural-value"></span></label>
+        <input id="natural" type="range" min="0" max="2" step="0.1" value="1" />
+        <div class="note">Coastlines, borders, terrain and rivers from the hand-drawn map. Heights are rough placeholders per terrain type. 0° and "as drawn" show the map exactly as drawn.</div>
       </div>
 
       <div id="random-controls" hidden>
@@ -99,6 +102,7 @@
         <option value="48">Low</option>
         <option value="96">Medium</option>
         <option value="160" selected>High</option>
+        <option value="256">Very high (slower)</option>
       </select>
 
       <div class="toggles">

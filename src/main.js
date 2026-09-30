@@ -74,6 +74,8 @@ const ui = {
   worldSelect: $('world'),
   view: $('view'),
   gap: $('gap'),
+  natural: $('natural'),
+  naturalValue: $('natural-value'),
   gapValue: $('gap-value'),
   gapKm: $('gap-km'),
   randomControls: $('random-controls'),
@@ -110,7 +112,10 @@ function writeHash() {
   if (ui.worldSelect.value === 'random') params.set('seed', ui.seed.value.trim() || DEFAULT_SETTINGS.seed);
   else params.set('world', ui.worldSelect.value);
   if (ui.view.value !== 'terrain') params.set('view', ui.view.value);
-  if (ui.worldSelect.value !== 'random') params.set('shift', ui.gap.value);
+  if (ui.worldSelect.value !== 'random') {
+    params.set('shift', ui.gap.value);
+    params.set('natural', ui.natural.value);
+  }
   history.replaceState(null, '', `#${params}`);
 }
 
@@ -120,6 +125,8 @@ function naropaShift() {
 
 function updateGapLabel() {
   ui.gapValue.textContent = `${ui.gap.value}° west`;
+  const n = parseFloat(ui.natural.value);
+  ui.naturalValue.textContent = n === 0 ? 'as drawn' : `${n.toFixed(1)}×`;
 }
 
 // Keeps the view centred between the continents as Naropa moves.
@@ -128,7 +135,7 @@ function lookAtContinents() {
 }
 
 function makeWorld() {
-  if (ui.worldSelect.value === 'naropa-nalanda') return createSketchWorld(sketchData, { naropaShift: naropaShift() });
+  if (ui.worldSelect.value === 'naropa-nalanda') return createSketchWorld(sketchData, { naropaShift: naropaShift(), natural: parseFloat(ui.natural.value) });
   return createWorld({
     seed: ui.seed.value.trim() || DEFAULT_SETTINGS.seed,
     seaLevel: parseFloat(ui.seaLevel.value),
@@ -230,6 +237,7 @@ if (hash.get('seed')) {
 }
 if (hash.get('view')) ui.view.value = hash.get('view');
 if (hash.get('shift') !== null) ui.gap.value = hash.get('shift');
+if (hash.get('natural') !== null) ui.natural.value = hash.get('natural');
 updateGapLabel();
 
 ui.worldSelect.addEventListener('change', () => {
@@ -243,6 +251,8 @@ ui.randomSeed.addEventListener('click', () => {
   generate();
 });
 ui.gap.addEventListener('input', updateGapLabel);
+ui.natural.addEventListener('input', updateGapLabel);
+ui.natural.addEventListener('change', generate);
 ui.gap.addEventListener('change', () => {
   generate();
   lookAtContinents();

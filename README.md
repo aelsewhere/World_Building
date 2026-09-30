@@ -16,7 +16,7 @@ Other commands:
 | --- | --- |
 | `npm run build` | Static site in `dist/` |
 | `npm run import-sketch` | Re-imports `reference/Naropa_and_Nalanda_Map.html` into `src/atlas/sketch-data.json`. Run this after updating the hand-drawn map |
-| `npm run map -- nations out.png 1200 -145,95,-78,88 15` | Flat (equirectangular) PNG. View is `terrain`, `nations` or `founding`; then the crop box `west,east,south,north` and how far to move Naropa west (default 0, as drawn) |
+| `npm run map -- nations out.png 1200 -145,95,-78,88 15 1` | Flat (equirectangular) PNG. View is `terrain`, `nations` or `founding`; then the crop box `west,east,south,north`, how far to move Naropa west (default 0) and the natural-shapes strength (default 1; 0 = as drawn) |
 
 ## Controls
 
@@ -29,8 +29,13 @@ Other commands:
   the tracker. The panel shows the closest coast-to-coast distance: about
   1,335 km as drawn (0°), about 2,770 km at 15° and about 4,275 km at 30°. It
   grows by roughly 1,000 km per 10°.
+- **Natural shapes** (0–2, default 1): how much natural detail is layered
+  on your drawing. 0 shows the map exactly as drawn. See "Natural shapes"
+  below.
+- **Mesh detail**: *Very high* (about 660k vertices) shows the finer
+  coastline when zoomed in, but takes a few seconds longer to generate.
 - **Labels / Rivers / Grid / Rotate** toggles. The equator is always drawn on the atlas.
-- The URL keeps the world and view (`#world=naropa-nalanda&view=nations&shift=15`, or `#seed=...` for random worlds).
+- The URL keeps the world and view (`#world=naropa-nalanda&view=nations&shift=15&natural=1`, or `#seed=...` for random worlds).
 
 ## The Naropa & Nalanda atlas
 
@@ -43,8 +48,9 @@ The globe is built from the hand-drawn map, `reference/Naropa_and_Nalanda_Map.ht
   names (`src/atlas/naropa-nalanda.js`), plus Mount Firmamenta as the tallest
   mountain in the world. It is placed on the largest mountain/volcano shape
   inside Firmara.
-- **Placeholders:** heights per terrain type (`src/atlas/terrain-types.js`)
-  and the "satellite" colours. Volcanoes are added as cones.
+- **Placeholders:** heights per terrain type (`src/atlas/terrain-types.js`),
+  the "satellite" colours and all the natural-shape detail below. Volcanoes
+  are added as cones.
 
 How the drawing maps to the globe (read from the map's own script): shapes
 are drawn rotated −40.5°, which is why the equator looks diagonal on the
@@ -60,9 +66,30 @@ Prasinagos, Eschatia) curves into a crescent near the pole.
 
 The import rasterises the map onto a 0.125° grid (about 14 km). Any land not
 covered by a nation or terrain shape takes its nearest neighbour's value: 23
-cells for nations and 188 for terrain, out of 681,375 land cells. Terrain
-edges are softened, land slopes down to the sea and the sea deepens away from
-the coast. Coastlines stay exactly as drawn.
+cells for nations and 188 for terrain, out of 681,375 land cells.
+
+### Natural shapes
+
+Noise is layered on top of the drawing, and your shapes stay recognisable at
+the default strength:
+
+- **Coastlines:** fractal noise on the distance to the drawn coast adds bays,
+  headlands and small offshore islands, about ±100 km at strength 1. Areas
+  drawn as fjords get deeper, finer cuts.
+- **Terrain zones and borders:** each point looks up its terrain and nation a
+  little off its true position (up to about 2°, at three scales), so straight
+  polygon edges become organic. Nation borders follow the same shapes.
+- **Relief:** mountainous terrain (mountains, volcanoes, ice fields, fjords,
+  gorges, and more lightly highlands) gets sharp ridged relief with bare rock
+  on the crests, and snow only on high peaks. Other terrain gets gentle
+  rolling relief.
+- **Colour:** subtle brightness and warm/cool variation within each zone.
+- **Rivers:** rivers sit in shallow valleys with greener banks, and are
+  clipped where the natural coastline has moved.
+
+Naropa's noise is taken at its drawn position, so moving it west doesn't
+change its shapes. The noise is fixed (seeded), so the planet looks the same
+on every load.
 
 ### Open questions
 

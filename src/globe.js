@@ -165,26 +165,35 @@ export function createRivers(world, resolution) {
   const b = new THREE.Vector3();
   const p = new THREE.Vector3();
   for (const river of world.rivers) {
-    const positions = [];
+    // Densify along great circles, then keep only the stretches over land:
+    // with natural coastlines the shore can sit a little off the drawn river.
+    const pts = [];
     for (let i = 0; i < river.points.length - 1; i++) {
       a.fromArray(latLonToVec(...river.points[i]));
       b.fromArray(latLonToVec(...river.points[i + 1]));
-      const steps = Math.max(1, Math.ceil(a.angleTo(b) / THREE.MathUtils.degToRad(0.3)));
-      for (let k = 0; k < steps; k++) {
-        p.copy(a).lerp(b, k / steps).normalize();
-        const r = surfaceRadius(world.sample(p.x, p.y, p.z).height) + 0.0015;
-        positions.push(p.x * r, p.y * r, p.z * r);
-      }
+      const steps = Math.max(1, Math.ceil(a.angleTo(b) / THREE.MathUtils.degToRad(0.2)));
+      for (let k = 0; k < steps; k++) pts.push(p.copy(a).lerp(b, k / steps).normalize().clone());
     }
-    p.fromArray(latLonToVec(...river.points.at(-1)));
-    const r = surfaceRadius(world.sample(p.x, p.y, p.z).height) + 0.0015;
-    positions.push(p.x * r, p.y * r, p.z * r);
+    pts.push(new THREE.Vector3(...latLonToVec(...river.points.at(-1))));
 
-    const geo = new LineGeometry();
-    geo.setPositions(positions);
-    const line = new Line2(geo, materials[river.kind] || materials.major);
-    line.userData.river = river;
-    group.add(line);
+    let run = [];
+    const flush = () => {
+      if (run.length >= 6) {
+        const geo = new LineGeometry();
+        geo.setPositions(run);
+        const line = new Line2(geo, materials[river.kind] || materials.major);
+        line.userData.river = river;
+        group.add(line);
+      }
+      run = [];
+    };
+    for (const q of pts) {
+      const s = world.sample(q.x, q.y, q.z);
+      if (s.nationIndex < 0) { flush(); continue; }
+      const r = surfaceRadius(s.height) + 0.0015;
+      run.push(q.x * r, q.y * r, q.z * r);
+    }
+    flush();
   }
   group.userData.materials = Object.values(materials);
   return group;
