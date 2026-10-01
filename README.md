@@ -1,7 +1,8 @@
 # World_Building
 
-An interactive 3D globe of **Naropa & Nalanda**, plus a seeded random-world
-generator, built with [Three.js](https://threejs.org/) and [Vite](https://vite.dev/).
+An interactive 3D globe for world building. It opens on a **blank planet you
+draw yourself**, and also includes **Naropa & Nalanda** and a seeded
+random-world generator. Built with [Three.js](https://threejs.org/) and [Vite](https://vite.dev/).
 
 ## Run it
 
@@ -32,6 +33,38 @@ zoom. Phones default to Medium mesh detail.
 To update the page after changing the code, run `npm run build:artifact`,
 then republish `dist/artifact.html` together with the script it names under
 `dist/assets/`.
+
+## Drawing a planet
+
+The **Blank planet** world (the default) starts as open ocean. The toolbar at
+the bottom has:
+
+- **✏️ Drawing / ✋ Moving:** while drawing, a one-finger drag (or mouse drag)
+  paints. Switch to Moving to turn and zoom the globe; tap the globe there to
+  inspect a spot.
+- **Brushes:**
+  - **Land:** terrain chosen by latitude, from ice and tundra near the poles
+    down to jungle at the equator.
+  - **Sea:** erases land.
+  - **Terrain:** Mountains, Hills, Forest, Jungle, Grassland, Desert, Tundra,
+    Ice and Lake. Terrain brushes also raise land, so you can paint mountains
+    straight into the sea.
+- **Size:** brush radius 1–20°. 1° is about 111 km on an Earth-sized planet.
+- **Undo** and **Clear.** Clear asks for a second tap.
+
+Coastlines, zone edges and relief get the same natural detail as the
+Naropa & Nalanda atlas, with ridged mountains, snow on high peaks, and soft
+blending between brushes.
+
+**Saving:** the drawing is saved automatically, about a second after each
+stroke, as its list of strokes. On the published claude.ai page it goes to
+your private document in the page's database (`data/users/<you>/planet`), so
+it follows you across devices. Anywhere else it's kept in the browser's
+localStorage. One document holds up to 256 KB, roughly several hundred
+strokes; the toolbar says if a drawing gets too big to save.
+
+Code: `src/paint/paint-world.js` (brushes, painted grids, sampling) and
+`src/paint/storage.js` (saving).
 
 ## Controls
 

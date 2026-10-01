@@ -6,6 +6,17 @@ import { createSketchWorld } from './atlas/sketch-world.js';
 import sketchData from './atlas/sketch-data.json';
 import draftLands from './atlas/draft-lands.json';
 import {
+  BRUSHES,
+  createPaintState,
+  createPaintWorld,
+  applyStroke,
+  strokeDabs,
+  replay,
+  encodeStrokes,
+  decodeStrokes,
+} from './paint/paint-world.js';
+import { openStore } from './paint/storage.js';
+import {
   buildTerrain,
   applyView,
   createTerrainMesh,
@@ -15,6 +26,7 @@ import {
   createRivers,
   createEquator,
   createLabels,
+  updateTerrainRegion,
 } from './globe.js';
 import { mulberry32 } from './noise.js';
 import { latLonToVec, formatLatLon } from './geo.js';
@@ -111,6 +123,13 @@ const ui = {
   legendItems: $('legend-items'),
   panel: $('panel'),
   togglePanel: $('toggle-panel'),
+  drawBar: $('draw-bar'),
+  drawMode: $('draw-mode'),
+  brushSize: $('brush-size'),
+  brushes: $('brushes'),
+  undo: $('undo'),
+  clear: $('clear'),
+  saveStatus: $('save-status'),
 };
 
 let world = null;
@@ -174,7 +193,16 @@ function lookAtContinents() {
   lookAtLatLon(8 - naropaSouth() / 2, -8 - naropaShift() / 2, fitDistance());
 }
 
+// The drawn planet lives in memory across regenerations (e.g. a new mesh
+// detail); its strokes are what gets saved.
+const paintState = createPaintState();
+
+function isPaintWorld() {
+  return ui.worldSelect.value === 'draw';
+}
+
 function makeWorld() {
+  if (isPaintWorld()) return createPaintWorld(paintState, { natural: 1 });
   if (ui.worldSelect.value === 'naropa-nalanda') return createSketchWorld(sketchData, {
       naropaShift: naropaShift(),
       naropaSouth: naropaSouth(),
@@ -200,9 +228,15 @@ function disposeGroup(group) {
 }
 
 function updateModeControls() {
-  const atlas = ui.worldSelect.value !== 'random';
-  ui.randomControls.hidden = atlas;
-  ui.atlasControls.hidden = !atlas;
+  const v = ui.worldSelect.value;
+  ui.randomControls.hidden = v !== 'random';
+  ui.atlasControls.hidden = v !== 'naropa-nalanda';
+  ui.drawBar.hidden = v !== 'draw';
+  $('panel-title').textContent = { draw: 'Blank planet', 'naropa-nalanda': 'Naropa & Nalanda', random: 'Random world' }[v];
+  $('labels-toggle').hidden = v !== 'naropa-nalanda';
+  $('rivers-toggle').hidden = v !== 'naropa-nalanda';
+  document.body.classList.toggle('painting', v === 'draw');
+  applyDrawingUI();
 }
 
 function generate() {
@@ -260,7 +294,7 @@ function applyCurrentView() {
   applyView(terrain, world, view);
   if (rivers) rivers.visible = ui.rivers.checked;
   graticule.visible = ui.grid.checked;
-  equator.visible = ui.grid.checked || world.kind === 'atlas';
+  equator.visible = ui.grid.checked || world.kind === 'atlas' || world.kind === 'paint';
   renderLegend(view);
   writeHash();
 }
@@ -294,6 +328,7 @@ ui.legend.open = !isSmallScreen;
 
 // Initial state from the URL.
 const hash = readHash();
+if (['draw', 'naropa-nalanda'].includes(hash.get('world'))) ui.worldSelect.value = hash.get('world');
 if (hash.get('seed')) {
   ui.worldSelect.value = 'random';
   ui.seed.value = hash.get('seed');
@@ -311,7 +346,8 @@ updateGapLabel();
 
 ui.worldSelect.addEventListener('change', () => {
   generate();
-  if (ui.worldSelect.value !== 'random') lookAtContinents();
+  if (ui.worldSelect.value === 'naropa-nalanda') lookAtContinents();
+  if (isPaintWorld()) lookAtLatLon(15, 0, fitDistance());
 });
 ui.generate.addEventListener('click', generate);
 ui.seed.addEventListener('keydown', (e) => e.key === 'Enter' && generate());
@@ -389,10 +425,10 @@ function showInfoAt(clientX, clientY) {
 // Mouse: hover. Touch: tap (a touch that doesn't move) shows the readout.
 let downAt = null;
 renderer.domElement.addEventListener('pointermove', (e) => {
-  if (e.pointerType === 'mouse') showInfoAt(e.clientX, e.clientY);
+  if (e.pointerType === 'mouse' && !drawingActive()) showInfoAt(e.clientX, e.clientY);
 });
 renderer.domElement.addEventListener('pointerdown', (e) => {
-  downAt = [e.clientX, e.clientY];
+  downAt = drawingActive() ? null : [e.clientX, e.clientY];
 });
 renderer.domElement.addEventListener('pointerup', (e) => {
   if (e.pointerType === 'mouse' || !downAt) return;
@@ -405,6 +441,202 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 renderer.domElement.addEventListener('pointerleave', (e) => {
   if (e.pointerType === 'mouse') ui.info.hidden = true;
 });
+
+// ---------- Drawing ----------
+let drawing = true; // Draw vs Move, within the blank-planet world
+let brushId = 'land';
+let stroke = null; // the stroke in progress
+let pendingCenters = []; // dab centres waiting for a mesh update
+let pendingRadius = 0;
+let lastNormals = 0;
+let store = null;
+let loaded = false; // never save before the saved planet has loaded
+
+function drawingActive() {
+  return isPaintWorld() && drawing && terrain && world?.kind === 'paint';
+}
+
+function setDrawing(on) {
+  drawing = on;
+  applyDrawingUI();
+}
+
+function applyDrawingUI() {
+  const active = isPaintWorld() && drawing;
+  controls.enabled = !active;
+  ui.drawMode.setAttribute('aria-pressed', String(active));
+  ui.drawMode.textContent = active ? '✏️ Drawing' : '✋ Moving';
+  document.body.classList.toggle('moving', isPaintWorld() && !drawing);
+}
+
+function brushRadius() {
+  return parseFloat(ui.brushSize.value);
+}
+
+function renderBrushes() {
+  ui.brushes.innerHTML = '';
+  for (const b of BRUSHES) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('role', 'radio');
+    btn.setAttribute('aria-checked', String(b.id === brushId));
+    btn.innerHTML = `<i style="background:${b.swatch}"></i>${b.name}`;
+    btn.addEventListener('click', () => {
+      brushId = b.id;
+      renderBrushes();
+      setDrawing(true);
+    });
+    ui.brushes.appendChild(btn);
+  }
+}
+
+function updateBrushLabel() {
+  ui.brushSize.title = `Brush radius ${brushRadius()}° (about ${Math.round(brushRadius() * 111).toLocaleString()} km)`;
+}
+
+// Where on the planet (lat/lon, in the planet's own frame) a screen point is.
+function pickLatLon(clientX, clientY) {
+  pointer.set((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1);
+  raycaster.setFromCamera(pointer, camera);
+  if (!raycaster.ray.intersectSphere(sphere, hit)) return null;
+  local.copy(hit);
+  planet.worldToLocal(local).normalize();
+  const lat = THREE.MathUtils.radToDeg(Math.asin(local.y));
+  const lon = THREE.MathUtils.radToDeg(Math.atan2(local.x, local.z));
+  return [lat, lon];
+}
+
+function paintDabs(dabs, radius) {
+  for (const d of dabs) applyStroke(paintState, { brush: stroke.brush, radius, points: [d] });
+  for (const d of dabs) pendingCenters.push(latLonToVec(d[0], d[1]));
+  pendingRadius = Math.max(pendingRadius, radius);
+}
+
+function angleBetween(a, b) {
+  const va = latLonToVec(...a), vb = latLonToVec(...b);
+  return THREE.MathUtils.radToDeg(Math.acos(Math.min(1, va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2])));
+}
+
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (!drawingActive() || !e.isPrimary || e.button > 0) return;
+  const p = pickLatLon(e.clientX, e.clientY);
+  if (!p) return;
+  renderer.domElement.setPointerCapture(e.pointerId);
+  stroke = { brush: brushId, radius: brushRadius(), points: [p] };
+  paintState.strokes.push(stroke);
+  paintDabs([p], stroke.radius);
+});
+
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (!stroke || !e.isPrimary) return;
+  const p = pickLatLon(e.clientX, e.clientY);
+  if (!p) return;
+  const last = stroke.points[stroke.points.length - 1];
+  if (angleBetween(last, p) < Math.max(0.2, stroke.radius * 0.25)) return;
+  stroke.points.push(p);
+  paintDabs(strokeDabs({ points: [last, p], radius: stroke.radius }).slice(1), stroke.radius);
+});
+
+function endStroke() {
+  if (!stroke) return;
+  stroke = null;
+  flushPaint(true);
+  scheduleSave();
+}
+renderer.domElement.addEventListener('pointerup', endStroke);
+renderer.domElement.addEventListener('pointercancel', endStroke);
+
+// Apply queued dabs to the mesh: positions/colours now, normals throttled.
+function flushPaint(force = false) {
+  if (pendingCenters.length && terrain && world?.kind === 'paint') {
+    // Margin covers the soft brush edge plus the noise that warps zone edges.
+    updateTerrainRegion(terrain, world, pendingCenters, pendingRadius * 1.1 + 1.2);
+    pendingCenters = [];
+    pendingRadius = 0;
+  }
+  const now = performance.now();
+  if (terrain && (force || now - lastNormals > 500)) {
+    terrain.geometry.computeVertexNormals();
+    lastNormals = now;
+  }
+}
+
+function regionUpdate(strokes) {
+  for (const s of strokes) {
+    pendingCenters.push(...strokeDabs(s).map((d) => latLonToVec(d[0], d[1])));
+    pendingRadius = Math.max(pendingRadius, s.radius);
+  }
+  flushPaint(true);
+}
+
+ui.undo.addEventListener('click', () => {
+  const last = paintState.strokes.pop();
+  if (!last) return;
+  replay(paintState);
+  regionUpdate([last]);
+  scheduleSave();
+});
+
+let clearTimer = null;
+ui.clear.addEventListener('click', () => {
+  if (!clearTimer) {
+    // No confirm() dialogs in the embedded viewer: ask with a second tap.
+    ui.clear.textContent = 'Tap again to clear';
+    ui.clear.classList.add('confirm');
+    clearTimer = setTimeout(resetClear, 3000);
+    return;
+  }
+  resetClear();
+  const old = paintState.strokes.splice(0);
+  replay(paintState);
+  regionUpdate(old);
+  scheduleSave();
+});
+function resetClear() {
+  clearTimer && clearTimeout(clearTimer);
+  clearTimer = null;
+  ui.clear.textContent = 'Clear';
+  ui.clear.classList.remove('confirm');
+}
+
+ui.drawMode.addEventListener('click', () => setDrawing(!drawing));
+ui.brushSize.addEventListener('input', updateBrushLabel);
+
+// ---------- Saving ----------
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+let saveTimer = null;
+function scheduleSave() {
+  if (!loaded || !store) return;
+  ui.saveStatus.textContent = 'Saving…';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    const result = await store.save(encodeStrokes(paintState.strokes));
+    const where = store.kind === 'cloud' ? 'to your account' : 'in this browser';
+    ui.saveStatus.textContent =
+      result === 'saved' ? `Saved ${where} · ${plural(paintState.strokes.length, 'stroke')}`
+      : result === 'too-big' ? 'Too much drawing to save. Undo or clear some strokes, or use bigger brushes.'
+      : "Couldn't save just now; it will try again after your next stroke.";
+  }, 1200);
+}
+
+async function loadSavedPlanet() {
+  ui.saveStatus.textContent = 'Loading your planet…';
+  store = await openStore();
+  const doc = await store.load();
+  const strokes = decodeStrokes(doc?.strokes);
+  loaded = true;
+  if (strokes.length) {
+    paintState.strokes.push(...strokes);
+    replay(paintState);
+    if (isPaintWorld()) generate();
+  }
+  ui.saveStatus.textContent = strokes.length
+    ? `Loaded ${plural(strokes.length, 'stroke')} (${store.kind === 'cloud' ? 'saved to your account' : 'saved in this browser'})`
+    : 'Pick a brush and draw on the globe. Tap ✏️ to switch between drawing and turning the globe.';
+}
+
+renderBrushes();
+updateBrushLabel();
 
 // ---------- Loop ----------
 window.addEventListener('resize', () => {
@@ -440,7 +672,8 @@ const timer = new THREE.Timer();
 renderer.setAnimationLoop((time) => {
   timer.update(time);
   const dt = timer.getDelta();
-  if (ui.rotate.checked) planet.rotation.y += dt * 0.05;
+  if (ui.rotate.checked && !stroke) planet.rotation.y += dt * 0.05;
+  if (pendingCenters.length) flushPaint();
   controls.update();
   updateLabels();
   renderer.render(scene, camera);
@@ -448,5 +681,7 @@ renderer.setAnimationLoop((time) => {
 });
 
 updateModeControls();
-lookAtContinents();
+if (isPaintWorld()) lookAtLatLon(15, 0, fitDistance());
+else lookAtContinents();
 generate();
+loadSavedPlanet();

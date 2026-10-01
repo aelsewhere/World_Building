@@ -88,7 +88,28 @@
         .label span { display: none; }
         .label.founding { font-size: 12px; }
         #info { left: var(--gutter); min-width: 0; }
+        .draw-row .size span { display: none; }
+        .draw-row .size { min-width: 80px; }
       }
+      #draw-bar {
+        position: fixed; left: var(--gutter); right: var(--gutter); bottom: var(--bottom);
+        max-width: 640px; margin: 0 auto; padding: 10px 12px; box-sizing: border-box;
+        display: flex; flex-direction: column; gap: 8px;
+      }
+      .draw-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .draw-row .size { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 120px; margin: 0; color: var(--muted); }
+      .draw-row .size input { flex: 1; min-width: 0; }
+      button.mode[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); }
+      button.confirm { background: #8a2a2a; border-color: #b33b3b; }
+      .brushes { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+      .brushes button { display: flex; align-items: center; gap: 6px; white-space: nowrap; flex: none; }
+      .brushes button i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; border: 1px solid var(--panel-edge); }
+      .brushes button[aria-checked="true"] { border-color: var(--text); background: #2a3350; }
+      #save-status { margin: 0; }
+      body.painting #info { bottom: calc(var(--bottom) + 150px); }
+      body.painting #app canvas { cursor: crosshair; }
+      body.painting.moving #app canvas { cursor: grab; }
+
       @media (prefers-reduced-motion: reduce) {
         * { scroll-behavior: auto; }
       }
@@ -99,13 +120,14 @@
 
     <div class="panel glass" id="panel" data-collapsed="false">
       <div class="panel-head">
-        <h1>Naropa &amp; Nalanda</h1>
+        <h1 id="panel-title">Naropa &amp; Nalanda</h1>
         <button id="toggle-panel" type="button" aria-controls="panel-body" aria-expanded="true">Hide</button>
       </div>
       <div class="panel-body" id="panel-body">
         <label for="world">World</label>
         <select id="world">
-          <option value="naropa-nalanda" selected>Naropa &amp; Nalanda</option>
+          <option value="draw" selected>Blank planet (draw your own)</option>
+          <option value="naropa-nalanda">Naropa &amp; Nalanda</option>
           <option value="random">Random (seeded)</option>
         </select>
 
@@ -160,8 +182,8 @@
         </select>
 
         <div class="toggles">
-          <label><input id="labels" type="checkbox" checked /> Labels</label>
-          <label><input id="rivers" type="checkbox" checked /> Rivers</label>
+          <label id="labels-toggle"><input id="labels" type="checkbox" checked /> Labels</label>
+          <label id="rivers-toggle"><input id="rivers" type="checkbox" checked /> Rivers</label>
           <label><input id="grid" type="checkbox" /> Grid</label>
           <label><input id="rotate" type="checkbox" /> Rotate</label>
         </div>
@@ -169,6 +191,17 @@
         <button id="generate" type="button" class="primary">Generate</button>
       </div>
       <div id="status"></div>
+    </div>
+
+    <div id="draw-bar" class="glass" hidden>
+      <div class="draw-row">
+        <button id="draw-mode" type="button" class="mode" aria-pressed="true">✏️ Drawing</button>
+        <label class="size" for="brush-size"><span>Size</span> <input id="brush-size" type="range" min="1" max="20" step="0.5" value="5" /></label>
+        <button id="undo" type="button">Undo</button>
+        <button id="clear" type="button">Clear</button>
+      </div>
+      <div id="brushes" class="brushes" role="radiogroup" aria-label="Brush"></div>
+      <div id="save-status" class="note"></div>
     </div>
 
     <details id="legend" class="glass" hidden>

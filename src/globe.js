@@ -29,10 +29,12 @@ export function buildTerrain(world, detail) {
   const terrainColors = new Float32Array(pos.count * 3);
   const nationIndex = new Int16Array(pos.count);
   const foundingIndex = new Int8Array(pos.count);
+  const dirs = new Float32Array(pos.count * 3); // unit direction of each vertex
   const v = new THREE.Vector3();
 
   for (let i = 0; i < pos.count; i++) {
     v.fromBufferAttribute(pos, i).normalize();
+    dirs[i * 3] = v.x; dirs[i * 3 + 1] = v.y; dirs[i * 3 + 2] = v.z;
     const s = world.sample(v.x, v.y, v.z);
 
     // Ocean stays a smooth sphere; land is displaced outward.
@@ -45,7 +47,37 @@ export function buildTerrain(world, detail) {
 
   geo.setAttribute('color', new THREE.BufferAttribute(terrainColors.slice(), 3));
   geo.computeVertexNormals();
-  return { geometry: geo, terrainColors, nationIndex, foundingIndex };
+  return { geometry: geo, terrainColors, nationIndex, foundingIndex, dirs };
+}
+
+// Re-samples only the vertices within `radiusDeg` of any of `centers`
+// (unit vectors), for live painting. Normals are left to the caller
+// (recomputing them for the whole mesh is the slow part).
+export function updateTerrainRegion(terrain, world, centers, radiusDeg) {
+  const { geometry, dirs, terrainColors } = terrain;
+  const pos = geometry.attributes.position;
+  const col = geometry.attributes.color;
+  const cosR = Math.cos(THREE.MathUtils.degToRad(radiusDeg));
+  let changed = 0;
+  for (let i = 0; i < pos.count; i++) {
+    const x = dirs[i * 3], y = dirs[i * 3 + 1], z = dirs[i * 3 + 2];
+    let near = false;
+    for (const c of centers) {
+      if (x * c[0] + y * c[1] + z * c[2] > cosR) { near = true; break; }
+    }
+    if (!near) continue;
+    const s = world.sample(x, y, z);
+    const r = surfaceRadius(s.height);
+    pos.setXYZ(i, x * r, y * r, z * r);
+    terrainColors.set(s.color, i * 3);
+    col.setXYZ(i, s.color[0], s.color[1], s.color[2]);
+    changed++;
+  }
+  if (changed) {
+    pos.needsUpdate = true;
+    col.needsUpdate = true;
+  }
+  return changed;
 }
 
 // view: 'terrain' | 'nations' | 'founding'. Political views keep a little of
