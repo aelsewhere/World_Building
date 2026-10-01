@@ -16,7 +16,7 @@ Other commands:
 | --- | --- |
 | `npm run build` | Static site in `dist/` |
 | `npm run import-sketch` | Re-imports `reference/Naropa_and_Nalanda_Map.html` into `src/atlas/sketch-data.json`. Run this after updating the hand-drawn map |
-| `npm run map -- nations out.png 1200 -180,180,-80,90 15 1 1 0` | Flat (equirectangular) PNG. Arguments: view (`terrain`, `nations` or `founding`), output file, width, crop box `west,east,south,north`, degrees to move Naropa west, natural-shapes strength (0 = as drawn), `1` to include the draft lands, degrees to move Naropa south |
+| `npm run map -- nations out.png 1200 -180,180,-80,90 15 1 1 0 0` | Flat (equirectangular) PNG. Arguments: view (`terrain`, `nations` or `founding`), output file, width, crop box `west,east,south,north`, degrees to move Naropa west, natural-shapes strength (0 = as drawn), `1` to include the draft lands, degrees to move Naropa south, degrees to rotate Nalanda counterclockwise |
 
 ## On your phone
 
@@ -51,6 +51,13 @@ then republish `dist/artifact.html` together with the script it names under
   overlaps Nalanda. Moving it south changes two tracker facts: Eschatia's tip
   at about 83°N, and all of Naropa lying north of the equator. At 28° south,
   for example, Naropa spans 18.2°S to 55.9°N.
+- **Rotate Nalanda** (−90° to 90°, default 0; positive is counterclockwise
+  as seen from above): turns all of Nalanda, Nalu included, as one solid
+  piece about the centre of its mainland coastline (about 23°S, 23°E). About
+  41° counterclockwise puts Nalu's centre on the equator (0.4°N, about 29°W).
+  The panel shows Nalu's latitude. Like moving Naropa south, this changes
+  latitudes the tracker lists, such as BA at about 18–34°N and the equator
+  crossing BD.
 - **Natural shapes** (0–2, default 1): how much natural detail is layered
   on your drawing. 0 shows the map exactly as drawn. See "Natural shapes"
   below.

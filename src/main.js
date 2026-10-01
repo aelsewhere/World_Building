@@ -83,6 +83,8 @@ const ui = {
   view: $('view'),
   gap: $('gap'),
   south: $('south'),
+  turn: $('turn'),
+  turnValue: $('turn-value'),
   southValue: $('south-value'),
   natural: $('natural'),
   draft: $('draft'),
@@ -130,6 +132,7 @@ function writeHash() {
   if (ui.worldSelect.value !== 'random') {
     params.set('shift', ui.gap.value);
     if (ui.south.value !== '0') params.set('south', ui.south.value);
+    if (ui.turn.value !== '0') params.set('turn', ui.turn.value);
     params.set('natural', ui.natural.value);
     if (!ui.draft.checked) params.set('draft', '0');
   }
@@ -160,6 +163,8 @@ function updateGapLimit() {
 function updateGapLabel() {
   ui.gapValue.textContent = `${ui.gap.value}° west`;
   ui.southValue.textContent = ui.south.value === '0' ? 'as drawn' : `${ui.south.value}° south`;
+  const t = parseFloat(ui.turn.value);
+  ui.turnValue.textContent = t === 0 ? 'as drawn' : `${Math.abs(t)}° ${t > 0 ? 'counterclockwise' : 'clockwise'}`;
   const n = parseFloat(ui.natural.value);
   ui.naturalValue.textContent = n === 0 ? 'as drawn' : `${n.toFixed(1)}×`;
 }
@@ -173,6 +178,7 @@ function makeWorld() {
   if (ui.worldSelect.value === 'naropa-nalanda') return createSketchWorld(sketchData, {
       naropaShift: naropaShift(),
       naropaSouth: naropaSouth(),
+      nalandaTurn: parseFloat(ui.turn.value),
       natural: parseFloat(ui.natural.value),
       extraLands: ui.draft.checked ? draftLands.lands : [],
     });
@@ -241,7 +247,7 @@ function generate() {
       const st = world.stats;
       const latText = (v) => `${Math.abs(v)}°${v >= 0 ? 'N' : 'S'}`;
       ui.gapKm.textContent = st?.gapKm
-        ? `Closest coasts ≈ ${st.gapKm.toLocaleString()} km (Earth-sized planet). Naropa spans ${latText(st.naropaSouthLat)} to ${latText(st.naropaTipLat)}.` +
+        ? `Closest coasts ≈ ${st.gapKm.toLocaleString()} km (Earth-sized planet). Naropa spans ${latText(st.naropaSouthLat)} to ${latText(st.naropaTipLat)}. Nalu's centre: ${latText(st.naluLat)}.` +
           (st.overlapCells ? ' Warning: Naropa now overlaps Nalanda.' : '')
         : '';
     }, 0),
@@ -297,6 +303,7 @@ if (hash.get('seed')) {
 if (hash.get('view')) ui.view.value = hash.get('view');
 if (hash.get('shift') !== null) ui.gap.value = hash.get('shift');
 if (hash.get('south') !== null) ui.south.value = hash.get('south');
+if (hash.get('turn') !== null) ui.turn.value = hash.get('turn');
 if (hash.get('natural') !== null) ui.natural.value = hash.get('natural');
 if (hash.get('draft') === '0') ui.draft.checked = false;
 updateGapLimit();
@@ -314,6 +321,8 @@ ui.randomSeed.addEventListener('click', () => {
 });
 ui.gap.addEventListener('input', updateGapLabel);
 ui.south.addEventListener('input', updateGapLabel);
+ui.turn.addEventListener('input', updateGapLabel);
+ui.turn.addEventListener('change', generate);
 ui.south.addEventListener('change', () => {
   generate();
   lookAtContinents();

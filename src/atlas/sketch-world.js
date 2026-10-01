@@ -59,13 +59,18 @@ export function naropaTransform(west = 0, south = 0) {
   const lonC = NAROPA_CENTER_LON * DEG, th = south * DEG, w = west * DEG;
   const fwdVec = (v) => rotY(rotY(rotX(rotY(v, -lonC), th), lonC), -w);
   const invVec = (v) => rotY(rotX(rotY(rotY(v, w), -lonC), -th), lonC);
-  const identity = !west && !south;
+  return makeTransform(fwdVec, invVec, !west && !south, west);
+}
+
+// Wraps a rigid rotation (unit vector in, unit vector out) as lat/lon
+// mappings. `west` is the expected westward longitude change, used to keep
+// longitudes continuous (the grid may run past ±180°).
+function makeTransform(fwdVec, invVec, identity, west = 0) {
   return {
     identity,
     fwd([lat, lon]) {
       if (identity) return [lat, lon];
       const m = vecToLatLon(...fwdVec(latLonToVec(lat, lon)));
-      // Keep longitudes continuous (the grid may run past ±180°).
       let l = m.lon;
       const expected = lon - west;
       while (l - expected > 180) l -= 360;
@@ -76,26 +81,52 @@ export function naropaTransform(west = 0, south = 0) {
   };
 }
 
-// Applies the Naropa transform to every Naropa (continent A) feature.
-export function moveNaropa(data, T) {
+// Turns Nalanda `degrees` counterclockwise (as seen from above) about the
+// centre of its mainland coastline, as one rigid piece.
+export function nalandaTransform(data, degrees = 0) {
+  const ring = data.coasts.find((c) => c.id === 'cB').ring;
+  let ax = 0, ay = 0, az = 0;
+  for (const [lat, lon] of ring) {
+    const [x, y, z] = latLonToVec(lat, lon);
+    ax += x; ay += y; az += z;
+  }
+  const len = Math.hypot(ax, ay, az);
+  const k = [ax / len, ay / len, az / len];
+  // Rodrigues' rotation about axis k; positive angles turn counterclockwise
+  // when looking down at the surface.
+  const rot = (v, a) => {
+    const c = Math.cos(a), s = Math.sin(a);
+    const dot = k[0] * v[0] + k[1] * v[1] + k[2] * v[2];
+    const cr = [k[1] * v[2] - k[2] * v[1], k[2] * v[0] - k[0] * v[2], k[0] * v[1] - k[1] * v[0]];
+    return [0, 1, 2].map((i) => v[i] * c + cr[i] * s + k[i] * dot * (1 - c));
+  };
+  const a = degrees * DEG;
+  const pivot = vecToLatLon(...k);
+  return { ...makeTransform((v) => rot(v, a), (v) => rot(v, -a), !degrees), pivot };
+}
+
+// Applies a transform to every feature of one continent ('A' Naropa or
+// 'B' Nalanda, which includes Nalu).
+export function moveContinent(data, T, continent) {
   if (T.identity) return data;
+  const isFounding = (code) => (continent === 'A' ? code === 'F1' : code !== 'F1');
   const ring = (r) => r.map(T.fwd);
   const pt = (p) => (p ? T.fwd(p) : p);
   const nations = {};
   for (const [code, n] of Object.entries(data.nations)) {
-    nations[code] = code[0] === 'A' ? { ...n, rings: n.rings.map(ring), label: pt(n.label) } : n;
+    nations[code] = code[0] === continent ? { ...n, rings: n.rings.map(ring), label: pt(n.label) } : n;
   }
   const founding = {};
   for (const [code, f] of Object.entries(data.founding)) {
-    founding[code] = code === 'F1' ? { ...f, label: pt(f.label) } : f;
+    founding[code] = isFounding(code) ? { ...f, label: pt(f.label) } : f;
   }
   return {
     ...data,
-    coasts: data.coasts.map((c) => (c.continent === 'A' ? { ...c, ring: ring(c.ring) } : c)),
+    coasts: data.coasts.map((c) => (c.continent === continent ? { ...c, ring: ring(c.ring) } : c)),
     nations,
     founding,
-    terrain: data.terrain.map((t) => (t.continent === 'A' ? { ...t, rings: t.rings.map(ring) } : t)),
-    rivers: data.rivers.map((r) => (r.continent === 'A' ? { ...r, points: ring(r.points) } : r)),
+    terrain: data.terrain.map((t) => (t.continent === continent ? { ...t, rings: t.rings.map(ring) } : t)),
+    rivers: data.rivers.map((r) => (r.continent === continent ? { ...r, points: ring(r.points) } : r)),
   };
 }
 
@@ -131,9 +162,10 @@ function draftTerrainFor(lat) {
 
 // extraLands: draft landmasses ({ code, name, rings, label }) given in
 // Naropa's drawn frame; they move with Naropa.
-export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0, naropaSouth = 0, natural = 1, extraLands = [] } = {}) {
+export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0, naropaSouth = 0, nalandaTurn = 0, natural = 1, extraLands = [] } = {}) {
   const T = naropaTransform(naropaShift, naropaSouth);
-  const data = moveNaropa(sourceData, T);
+  const TB = nalandaTransform(sourceData, nalandaTurn);
+  const data = moveContinent(moveContinent(sourceData, T, 'A'), TB, 'B');
   const drafts = extraLands.map((l) => ({
     ...l,
     rings: l.rings.map((r) => r.map(T.fwd)),
@@ -454,8 +486,7 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
 
     // Noise is evaluated where the land was drawn, so shifting Naropa moves
     // its details with it.
-    const moved = nations[nation[ci]].continent !== 'B';
-    const [nx, ny, nz] = moved ? T.inv([x, y, z]) : [x, y, z];
+    const [nx, ny, nz] = (nations[nation[ci]].continent === 'B' ? TB : T).inv([x, y, z]);
 
     // Coastline: signed distance (in ~14 km cells) plus noise.
     const fj = bilinear(fjord, lat, lon);
@@ -538,6 +569,8 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
     landCells: land.reduce((a, b) => a + b, 0),
     naropaShift,
     naropaSouth,
+    nalandaTurn,
+    naluLat: +(data.coasts.find((c) => c.id === 'cBA').ring.reduce((sum, p) => sum + p[0], 0) / data.coasts.find((c) => c.id === 'cBA').ring.length).toFixed(1),
     overlapCells,
     naropaTipLat: +Math.max(...data.coasts.filter((c) => c.continent === 'A').flatMap((c) => c.ring.map((p) => p[0]))).toFixed(1),
     naropaSouthLat: +Math.min(...data.coasts.filter((c) => c.continent === 'A').flatMap((c) => c.ring.map((p) => p[0]))).toFixed(1),
