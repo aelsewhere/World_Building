@@ -82,6 +82,8 @@ const ui = {
   worldSelect: $('world'),
   view: $('view'),
   gap: $('gap'),
+  south: $('south'),
+  southValue: $('south-value'),
   natural: $('natural'),
   draft: $('draft'),
   naturalValue: $('natural-value'),
@@ -127,6 +129,7 @@ function writeHash() {
   if (ui.view.value !== 'terrain') params.set('view', ui.view.value);
   if (ui.worldSelect.value !== 'random') {
     params.set('shift', ui.gap.value);
+    if (ui.south.value !== '0') params.set('south', ui.south.value);
     params.set('natural', ui.natural.value);
     if (!ui.draft.checked) params.set('draft', '0');
   }
@@ -142,6 +145,10 @@ function naropaShift() {
   return parseFloat(ui.gap.value);
 }
 
+function naropaSouth() {
+  return parseFloat(ui.south.value);
+}
+
 // With the draft lands west of Naropa, moving Naropa more than 30° west would
 // wrap them around into Nalanda's east coast.
 function updateGapLimit() {
@@ -152,18 +159,20 @@ function updateGapLimit() {
 
 function updateGapLabel() {
   ui.gapValue.textContent = `${ui.gap.value}° west`;
+  ui.southValue.textContent = ui.south.value === '0' ? 'as drawn' : `${ui.south.value}° south`;
   const n = parseFloat(ui.natural.value);
   ui.naturalValue.textContent = n === 0 ? 'as drawn' : `${n.toFixed(1)}×`;
 }
 
 // Keeps the view centred between the continents as Naropa moves.
 function lookAtContinents() {
-  lookAtLatLon(8, -8 - naropaShift() / 2, fitDistance());
+  lookAtLatLon(8 - naropaSouth() / 2, -8 - naropaShift() / 2, fitDistance());
 }
 
 function makeWorld() {
   if (ui.worldSelect.value === 'naropa-nalanda') return createSketchWorld(sketchData, {
       naropaShift: naropaShift(),
+      naropaSouth: naropaSouth(),
       natural: parseFloat(ui.natural.value),
       extraLands: ui.draft.checked ? draftLands.lands : [],
     });
@@ -229,8 +238,11 @@ function generate() {
       applyCurrentView();
       const ms = Math.round(performance.now() - t0);
       ui.status.textContent = `${terrain.geometry.attributes.position.count.toLocaleString()} vertices · ${ms} ms`;
-      ui.gapKm.textContent = world.stats?.gapKm
-        ? `Closest coasts ≈ ${world.stats.gapKm.toLocaleString()} km (Earth-sized planet)`
+      const st = world.stats;
+      const latText = (v) => `${Math.abs(v)}°${v >= 0 ? 'N' : 'S'}`;
+      ui.gapKm.textContent = st?.gapKm
+        ? `Closest coasts ≈ ${st.gapKm.toLocaleString()} km (Earth-sized planet). Naropa spans ${latText(st.naropaSouthLat)} to ${latText(st.naropaTipLat)}.` +
+          (st.overlapCells ? ' Warning: Naropa now overlaps Nalanda.' : '')
         : '';
     }, 0),
   );
@@ -284,6 +296,7 @@ if (hash.get('seed')) {
 }
 if (hash.get('view')) ui.view.value = hash.get('view');
 if (hash.get('shift') !== null) ui.gap.value = hash.get('shift');
+if (hash.get('south') !== null) ui.south.value = hash.get('south');
 if (hash.get('natural') !== null) ui.natural.value = hash.get('natural');
 if (hash.get('draft') === '0') ui.draft.checked = false;
 updateGapLimit();
@@ -300,6 +313,11 @@ ui.randomSeed.addEventListener('click', () => {
   generate();
 });
 ui.gap.addEventListener('input', updateGapLabel);
+ui.south.addEventListener('input', updateGapLabel);
+ui.south.addEventListener('change', () => {
+  generate();
+  lookAtContinents();
+});
 ui.natural.addEventListener('input', updateGapLabel);
 ui.natural.addEventListener('change', generate);
 ui.draft.addEventListener('change', () => {

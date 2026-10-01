@@ -16,7 +16,7 @@ Other commands:
 | --- | --- |
 | `npm run build` | Static site in `dist/` |
 | `npm run import-sketch` | Re-imports `reference/Naropa_and_Nalanda_Map.html` into `src/atlas/sketch-data.json`. Run this after updating the hand-drawn map |
-| `npm run map -- nations out.png 1200 -145,95,-78,88 15 1` | Flat (equirectangular) PNG. View is `terrain`, `nations` or `founding`; then the crop box `west,east,south,north`, how far to move Naropa west (default 0) and the natural-shapes strength (default 1; 0 = as drawn) |
+| `npm run map -- nations out.png 1200 -180,180,-80,90 15 1 1 0` | Flat (equirectangular) PNG. Arguments: view (`terrain`, `nations` or `founding`), output file, width, crop box `west,east,south,north`, degrees to move Naropa west, natural-shapes strength (0 = as drawn), `1` to include the draft lands, degrees to move Naropa south |
 
 ## On your phone
 
@@ -44,6 +44,13 @@ then republish `dist/artifact.html` together with the script it names under
   the tracker. The panel shows the closest coast-to-coast distance: about
   1,335 km as drawn (0°), about 2,770 km at 15° and about 4,275 km at 30°. It
   grows by roughly 1,000 km per 10°.
+- **Move Naropa south** (0–40°, default 0): moves Naropa south along its
+  centre meridian. Naropa moves as one solid piece around the globe, west and
+  south together, so its shape and size in km stay the same; the draft lands
+  move with it. The panel shows Naropa's new latitude range and warns if it
+  overlaps Nalanda. Moving it south changes two tracker facts: Eschatia's tip
+  at about 83°N, and all of Naropa lying north of the equator. At 28° south,
+  for example, Naropa spans 18.2°S to 55.9°N.
 - **Natural shapes** (0–2, default 1): how much natural detail is layered
   on your drawing. 0 shows the map exactly as drawn. See "Natural shapes"
   below.

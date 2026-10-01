@@ -40,12 +40,47 @@ function hexToRgb(hex) {
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 }
 
-// Moves every Naropa (continent A) feature `shiftDeg` degrees of longitude
-// west. Latitudes are untouched, so the tracker's 9–83°N still holds.
-export function shiftNaropa(data, shiftDeg) {
-  if (!shiftDeg) return data;
-  const ring = (r) => r.map(([lat, lon]) => [lat, lon - shiftDeg]);
-  const pt = (p) => (p ? [p[0], p[1] - shiftDeg] : p);
+// Naropa's drawn centre meridian (mean longitude of its coastline).
+const NAROPA_CENTER_LON = -74.9;
+
+// Moves Naropa as one rigid piece around the globe: `south` degrees south
+// along its centre meridian, then `west` degrees west. A rigid rotation
+// keeps its shape and size in km. Returns forward (drawn lat/lon -> moved
+// lat/lon) and inverse (moved unit vector -> drawn unit vector) mappings.
+export function naropaTransform(west = 0, south = 0) {
+  const rotY = ([x, y, z], a) => {
+    const c = Math.cos(a), s = Math.sin(a);
+    return [x * c + z * s, y, -x * s + z * c];
+  };
+  const rotX = ([x, y, z], a) => {
+    const c = Math.cos(a), s = Math.sin(a);
+    return [x, y * c - z * s, y * s + z * c];
+  };
+  const lonC = NAROPA_CENTER_LON * DEG, th = south * DEG, w = west * DEG;
+  const fwdVec = (v) => rotY(rotY(rotX(rotY(v, -lonC), th), lonC), -w);
+  const invVec = (v) => rotY(rotX(rotY(rotY(v, w), -lonC), -th), lonC);
+  const identity = !west && !south;
+  return {
+    identity,
+    fwd([lat, lon]) {
+      if (identity) return [lat, lon];
+      const m = vecToLatLon(...fwdVec(latLonToVec(lat, lon)));
+      // Keep longitudes continuous (the grid may run past ±180°).
+      let l = m.lon;
+      const expected = lon - west;
+      while (l - expected > 180) l -= 360;
+      while (expected - l > 180) l += 360;
+      return [+m.lat.toFixed(4), +l.toFixed(4)];
+    },
+    inv: (v) => (identity ? v : invVec(v)),
+  };
+}
+
+// Applies the Naropa transform to every Naropa (continent A) feature.
+export function moveNaropa(data, T) {
+  if (T.identity) return data;
+  const ring = (r) => r.map(T.fwd);
+  const pt = (p) => (p ? T.fwd(p) : p);
   const nations = {};
   for (const [code, n] of Object.entries(data.nations)) {
     nations[code] = code[0] === 'A' ? { ...n, rings: n.rings.map(ring), label: pt(n.label) } : n;
@@ -96,12 +131,13 @@ function draftTerrainFor(lat) {
 
 // extraLands: draft landmasses ({ code, name, rings, label }) given in
 // Naropa's drawn frame; they move with Naropa.
-export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0, natural = 1, extraLands = [] } = {}) {
-  const data = shiftNaropa(sourceData, naropaShift);
+export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0, naropaSouth = 0, natural = 1, extraLands = [] } = {}) {
+  const T = naropaTransform(naropaShift, naropaSouth);
+  const data = moveNaropa(sourceData, T);
   const drafts = extraLands.map((l) => ({
     ...l,
-    rings: l.rings.map((r) => r.map(([lat, lon]) => [lat, lon - naropaShift])),
-    label: l.label ? [l.label[0], l.label[1] - naropaShift] : null,
+    rings: l.rings.map((r) => r.map(T.fwd)),
+    label: l.label ? T.fwd(l.label) : null,
   }));
 
   // ---------- Grid ----------
@@ -176,8 +212,12 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
 
   // ---------- Land, nations, terrain ----------
   const land = new Uint8Array(N);
-  for (const { ring } of data.coasts) fill([ring], (i) => (land[i] = 1));
-  for (const l of drafts) fill(l.rings, (i) => (land[i] = 1));
+  // Track which continent drew each cell, to warn when moved land overlaps.
+  const owner = new Uint8Array(N);
+  for (const { ring, continent } of data.coasts) fill([ring], (i) => { land[i] = 1; owner[i] |= continent === 'A' ? 1 : 2; });
+  for (const l of drafts) fill(l.rings, (i) => { land[i] = 1; owner[i] |= 4; });
+  let overlapCells = 0;
+  for (let i = 0; i < N; i++) if ((owner[i] & 2) && (owner[i] & 5)) overlapCells++;
 
   const codes = NATION_ORDER.filter((c) => data.nations[c]);
   const foundingCodes = Object.keys(data.founding);
@@ -415,7 +455,7 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
     // Noise is evaluated where the land was drawn, so shifting Naropa moves
     // its details with it.
     const moved = nations[nation[ci]].continent !== 'B';
-    const [nx, ny, nz] = moved ? latLonToVec(lat, lon + naropaShift) : [x, y, z];
+    const [nx, ny, nz] = moved ? T.inv([x, y, z]) : [x, y, z];
 
     // Coastline: signed distance (in ~14 km cells) plus noise.
     const fj = bilinear(fjord, lat, lon);
@@ -497,6 +537,10 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
     terrainGapCells: terrainGaps,
     landCells: land.reduce((a, b) => a + b, 0),
     naropaShift,
+    naropaSouth,
+    overlapCells,
+    naropaTipLat: +Math.max(...data.coasts.filter((c) => c.continent === 'A').flatMap((c) => c.ring.map((p) => p[0]))).toFixed(1),
+    naropaSouthLat: +Math.min(...data.coasts.filter((c) => c.continent === 'A').flatMap((c) => c.ring.map((p) => p[0]))).toFixed(1),
     natural,
     draftLands: drafts.length,
     gapKm: Math.round(continentGapKm(data)),
