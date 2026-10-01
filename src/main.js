@@ -4,6 +4,7 @@ import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import { createWorld, DEFAULT_SETTINGS } from './world.js';
 import { createSketchWorld } from './atlas/sketch-world.js';
 import sketchData from './atlas/sketch-data.json';
+import draftLands from './atlas/draft-lands.json';
 import {
   buildTerrain,
   applyView,
@@ -82,6 +83,7 @@ const ui = {
   view: $('view'),
   gap: $('gap'),
   natural: $('natural'),
+  draft: $('draft'),
   naturalValue: $('natural-value'),
   gapValue: $('gap-value'),
   gapKm: $('gap-km'),
@@ -126,6 +128,7 @@ function writeHash() {
   if (ui.worldSelect.value !== 'random') {
     params.set('shift', ui.gap.value);
     params.set('natural', ui.natural.value);
+    if (!ui.draft.checked) params.set('draft', '0');
   }
   // Some embedded viewers refuse URL changes; the page works without them.
   try {
@@ -137,6 +140,14 @@ function writeHash() {
 
 function naropaShift() {
   return parseFloat(ui.gap.value);
+}
+
+// With the draft lands west of Naropa, moving Naropa more than 30° west would
+// wrap them around into Nalanda's east coast.
+function updateGapLimit() {
+  ui.gap.max = ui.draft.checked ? '30' : '40';
+  if (parseFloat(ui.gap.value) > parseFloat(ui.gap.max)) ui.gap.value = ui.gap.max;
+  updateGapLabel();
 }
 
 function updateGapLabel() {
@@ -151,7 +162,11 @@ function lookAtContinents() {
 }
 
 function makeWorld() {
-  if (ui.worldSelect.value === 'naropa-nalanda') return createSketchWorld(sketchData, { naropaShift: naropaShift(), natural: parseFloat(ui.natural.value) });
+  if (ui.worldSelect.value === 'naropa-nalanda') return createSketchWorld(sketchData, {
+      naropaShift: naropaShift(),
+      natural: parseFloat(ui.natural.value),
+      extraLands: ui.draft.checked ? draftLands.lands : [],
+    });
   return createWorld({
     seed: ui.seed.value.trim() || DEFAULT_SETTINGS.seed,
     seaLevel: parseFloat(ui.seaLevel.value),
@@ -270,6 +285,8 @@ if (hash.get('seed')) {
 if (hash.get('view')) ui.view.value = hash.get('view');
 if (hash.get('shift') !== null) ui.gap.value = hash.get('shift');
 if (hash.get('natural') !== null) ui.natural.value = hash.get('natural');
+if (hash.get('draft') === '0') ui.draft.checked = false;
+updateGapLimit();
 updateGapLabel();
 
 ui.worldSelect.addEventListener('change', () => {
@@ -285,6 +302,10 @@ ui.randomSeed.addEventListener('click', () => {
 ui.gap.addEventListener('input', updateGapLabel);
 ui.natural.addEventListener('input', updateGapLabel);
 ui.natural.addEventListener('change', generate);
+ui.draft.addEventListener('change', () => {
+  updateGapLimit();
+  generate();
+});
 ui.gap.addEventListener('change', () => {
   generate();
   lookAtContinents();
@@ -320,8 +341,12 @@ function showInfoAt(clientX, clientY) {
   if (s.nationIndex >= 0) {
     const n = world.nations[s.nationIndex];
     const f = world.founding[s.foundingIndex];
-    lines.push(`<strong>${n.name}</strong> (${n.code})${n.prominent ? ' ★' : ''}`);
-    lines.push(`<span class="muted">${world.continents[n.continent].name} · founding: ${f.name} (${f.code})</span>`);
+    if (n.draft) {
+      lines.push(`<strong>${n.name}</strong> <span class="muted">(draft, unnamed)</span>`);
+    } else {
+      lines.push(`<strong>${n.name}</strong> (${n.code})${n.prominent ? ' ★' : ''}`);
+      lines.push(`<span class="muted">${world.continents[n.continent].name} · founding: ${f.name} (${f.code})</span>`);
+    }
   }
   lines.push(s.nationIndex >= 0 ? s.terrain : `<strong>${s.terrain}</strong>`);
   if (s.coast) lines.push(`Coast: ${s.coast}`);

@@ -81,12 +81,32 @@ function continentGapKm(data) {
   return 2 * R * Math.asin(Math.sqrt(best));
 }
 
-export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0, natural = 1 } = {}) {
+// Placeholder terrain for draft lands, which have no terrain drawn yet.
+function draftTerrainFor(lat) {
+  const a = Math.abs(lat);
+  if (a > 75) return 'ice';
+  if (a > 64) return 'tundra';
+  if (a > 52) return 'taiga';
+  if (a > 40) return 'tforest';
+  if (a > 30) return 'grassland';
+  if (a > 22) return 'scrubland';
+  if (a > 12) return 'savanna';
+  return 'jungle';
+}
+
+// extraLands: draft landmasses ({ code, name, rings, label }) given in
+// Naropa's drawn frame; they move with Naropa.
+export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0, natural = 1, extraLands = [] } = {}) {
   const data = shiftNaropa(sourceData, naropaShift);
+  const drafts = extraLands.map((l) => ({
+    ...l,
+    rings: l.rings.map((r) => r.map(([lat, lon]) => [lat, lon - naropaShift])),
+    label: l.label ? [l.label[0], l.label[1] - naropaShift] : null,
+  }));
 
   // ---------- Grid ----------
   let north = -90, south = 90, west = 180, east = -180;
-  for (const { ring } of data.coasts) {
+  for (const ring of [...data.coasts.map((c) => c.ring), ...drafts.flatMap((l) => l.rings)]) {
     for (const [lat, lon] of ring) {
       north = Math.max(north, lat); south = Math.min(south, lat);
       east = Math.max(east, lon); west = Math.min(west, lon);
@@ -95,6 +115,7 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
   const margin = 6;
   north = Math.min(90, north + margin); south = Math.max(-90, south - margin);
   west -= margin; east += margin;
+  if (east - west > 360) throw new Error('Land spans more than 360° of longitude; move Naropa less far west.');
   const cols = Math.ceil((east - west) / RES);
   const rows = Math.ceil((north - south) / RES);
   const N = cols * rows;
@@ -156,6 +177,7 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
   // ---------- Land, nations, terrain ----------
   const land = new Uint8Array(N);
   for (const { ring } of data.coasts) fill([ring], (i) => (land[i] = 1));
+  for (const l of drafts) fill(l.rings, (i) => (land[i] = 1));
 
   const codes = NATION_ORDER.filter((c) => data.nations[c]);
   const foundingCodes = Object.keys(data.founding);
@@ -171,6 +193,10 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
       label: n.label,
     };
   });
+  const firstDraft = nations.length;
+  for (const l of drafts) {
+    nations.push({ code: l.code, name: l.name, continent: 'D', founding: null, prominent: false, draft: true, color: [0.72, 0.72, 0.66], label: l.label });
+  }
   const founding = foundingCodes.map((code) => ({
     code,
     name: data.founding[code].name,
@@ -180,6 +206,7 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
 
   const nation = new Int8Array(N).fill(-1);
   codes.forEach((code, ni) => fill(data.nations[code].rings, (i) => { if (land[i]) nation[i] = ni; }));
+  drafts.forEach((l, k) => fill(l.rings, (i) => (nation[i] = firstDraft + k)));
   const nationGaps = fillEverywhere(nation, -1);
 
   const typeKeys = Object.keys(TERRAIN);
@@ -187,7 +214,14 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
   for (const t of data.terrain) {
     const ti = typeKeys.indexOf(t.type);
     if (ti < 0) throw new Error(`unknown terrain type "${t.type}"`);
-    fill(t.rings, (i) => { if (land[i]) terrain[i] = ti; });
+    fill(t.rings, (i) => { if (land[i] && nation[i] < firstDraft) terrain[i] = ti; });
+  }
+  for (let r = 0; r < rows; r++) {
+    const ti = typeKeys.indexOf(draftTerrainFor(rowLat(r)));
+    for (let c = 0; c < cols; c++) {
+      const i = r * cols + c;
+      if (land[i] && nation[i] >= firstDraft) terrain[i] = ti;
+    }
   }
   const terrainGaps = fillEverywhere(terrain, 255);
 
@@ -372,13 +406,16 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
   function sample(x, y, z) {
     const len = Math.hypot(x, y, z);
     x /= len; y /= len; z /= len;
-    const { lat, lon } = vecToLatLon(x, y, z);
+    const { lat, lon: rawLon } = vecToLatLon(x, y, z);
+    // The grid may run past ±180° (lands west of Naropa); wrap into it.
+    const lon = rawLon > east ? rawLon - 360 : rawLon < west ? rawLon + 360 : rawLon;
     const ci = cellIndex(lat, lon);
-    if (ci < 0) return ocean(-4860, lat, lon);
+    if (ci < 0) return ocean(-4860, lat, rawLon);
 
     // Noise is evaluated where the land was drawn, so shifting Naropa moves
     // its details with it.
-    const [nx, ny, nz] = nations[nation[ci]].continent === 'A' ? latLonToVec(lat, lon + naropaShift) : [x, y, z];
+    const moved = nations[nation[ci]].continent !== 'B';
+    const [nx, ny, nz] = moved ? latLonToVec(lat, lon + naropaShift) : [x, y, z];
 
     // Coastline: signed distance (in ~14 km cells) plus noise.
     const fj = bilinear(fjord, lat, lon);
@@ -387,7 +424,7 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
       s += natural * (8 + 3 * fj) * fbm(coastNoise, nx, ny, nz, { octaves: 6, frequency: 10 });
       s += natural * (2 + 3.5 * fj) * fbm(fjordNoise, nx, ny, nz, { octaves: 4, frequency: 55 });
     }
-    if (s <= 0) return ocean(-(60 + 4800 * smoothstep(0, 22, -s)), lat, lon);
+    if (s <= 0) return ocean(-(60 + 4800 * smoothstep(0, 22, -s)), lat, rawLon);
 
     // Warped lookup: organic edges between terrain zones and nations.
     let wlat = lat, wlon = lon;
@@ -405,9 +442,10 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
     const ni = nation[wi];
     const fi = foundingCodes.indexOf(nations[ni].founding);
     const t = TERRAIN[typeKeys[terrain[wi]]];
+    const terrainName = nations[ni].draft ? `${t.name} (placeholder)` : t.name;
 
     if (t.water) {
-      return { height: 0, color: t.color, nationIndex: ni, foundingIndex: fi, lat, lon, terrain: t.name };
+      return { height: 0, color: t.color, nationIndex: ni, foundingIndex: fi, lat, lon: rawLon, terrain: terrainName };
     }
 
     // Relief: rolling noise, ridged on mountainous terrain.
@@ -450,7 +488,7 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
       color = color.map((v, i) => v + (SNOW[i] - v) * k);
     }
 
-    return { height: h, color, nationIndex: ni, foundingIndex: fi, lat, lon, terrain: t.name };
+    return { height: h, color, nationIndex: ni, foundingIndex: fi, lat, lon: rawLon, terrain: terrainName };
   }
 
   const stats = {
@@ -460,6 +498,7 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
     landCells: land.reduce((a, b) => a + b, 0),
     naropaShift,
     natural,
+    draftLands: drafts.length,
     gapKm: Math.round(continentGapKm(data)),
   };
 
@@ -468,7 +507,7 @@ export function createSketchWorld(sourceData, { seed = 'naropa', naropaShift = 0
     sample,
     nations,
     founding,
-    continents: CONTINENTS,
+    continents: { ...CONTINENTS, D: { name: 'Draft lands' } },
     rivers: data.rivers.map((r) => ({ ...r, name: r.kind === 'major' ? 'Major river' : 'River' })),
     peaks,
     stats,

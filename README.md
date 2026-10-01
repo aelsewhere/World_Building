@@ -106,6 +106,26 @@ Naropa's noise is taken at its drawn position, so moving it west doesn't
 change its shapes. The noise is fixed (seeded), so the planet looks the same
 on every load.
 
+### Draft lands west of Naropa
+
+Six rough landmasses traced from a globe sketch
+(`reference/draft-lands-sketch.jpg`), shown when **Draft lands west of
+Naropa** is ticked (the default). Run `node scripts/trace-draft-lands.mjs` to
+regenerate `src/atlas/draft-lands.json` after editing the traced outlines.
+
+- **Placement:** the sketch is a disc with Naropa's northwest tip as a red
+  sliver on its upper-right edge. Reading it as a north-up view of the globe
+  and lining that sliver up with Naropa's real coast puts the disc's centre at
+  about 40°N, 168.5°E (in Naropa's drawn position). The fit is rough.
+- **Result:** the lands fill the ocean between Naropa's west coast and
+  Nalanda's east coast. The central landmass reaches about 82°N, ending a few
+  hundred km from Naropa's northern tip.
+- **They move with Naropa.** With draft lands shown, "Move Naropa west" stops
+  at 30° so they don't wrap around into Nalanda.
+- **Placeholder terrain** in latitude bands (ice, tundra, taiga, forest,
+  grassland, scrub, savanna, jungle). There are no nations, names or rivers
+  yet; the hover readout marks them as drafts.
+
 ### Open questions
 
 1. **Closest crossing:** on the drawn map, Naropa's nearest coast is
