@@ -16,6 +16,7 @@ import {
   decodeStrokes,
 } from './paint/paint-world.js';
 import { openStore } from './paint/storage.js';
+import { renderMapImage, canvasToPng, planetFileText, parsePlanetFile, offerFile } from './paint/export.js';
 import {
   buildTerrain,
   applyView,
@@ -130,6 +131,13 @@ const ui = {
   undo: $('undo'),
   clear: $('clear'),
   saveStatus: $('save-status'),
+  exportMap: $('export-map'),
+  exportGlobe: $('export-globe'),
+  exportPlanet: $('export-planet'),
+  importPlanet: $('import-planet'),
+  importFile: $('import-file'),
+  exportStatus: $('export-status'),
+  openExport: $('open-export'),
 };
 
 let world = null;
@@ -234,6 +242,8 @@ function updateModeControls() {
   ui.drawBar.hidden = v !== 'draw';
   $('panel-title').textContent = { draw: 'Blank planet', 'naropa-nalanda': 'Naropa & Nalanda', random: 'Random world' }[v];
   $('labels-toggle').hidden = v !== 'naropa-nalanda';
+  ui.exportPlanet.hidden = v !== 'draw';
+  ui.importPlanet.hidden = v !== 'draw';
   $('rivers-toggle').hidden = v !== 'naropa-nalanda';
   document.body.classList.toggle('painting', v === 'draw');
   applyDrawingUI();
@@ -637,6 +647,84 @@ async function loadSavedPlanet() {
 
 renderBrushes();
 updateBrushLabel();
+
+// ---------- Export ----------
+const today = () => new Date().toISOString().slice(0, 10);
+const worldSlug = () => ({ draw: 'planet', 'naropa-nalanda': 'naropa-nalanda', random: `random-${ui.seed.value.trim() || 'world'}` })[ui.worldSelect.value];
+
+function reportOffer(result, what) {
+  ui.exportStatus.textContent =
+    result === 'saved' ? `${what} ready. Check your downloads (or the share sheet on a phone).`
+    : result === 'declined' ? `${what} not saved.`
+    : `Couldn't save the ${what.toLowerCase()} here.`;
+}
+
+ui.exportMap.addEventListener('click', async () => {
+  if (!world) return;
+  ui.exportMap.disabled = true;
+  try {
+    const blob = await renderMapImage(world, isTouch ? 1440 : 2048, (f) => {
+      ui.exportStatus.textContent = `Drawing the map… ${Math.round(f * 100)}%`;
+    });
+    reportOffer(await offerFile(`${worldSlug()}-map-${today()}.png`, blob), 'Map image');
+  } finally {
+    ui.exportMap.disabled = false;
+  }
+});
+
+ui.exportGlobe.addEventListener('click', async () => {
+  renderer.render(scene, camera);
+  const blob = await canvasToPng(renderer.domElement);
+  reportOffer(await offerFile(`${worldSlug()}-globe-${today()}.png`, blob), 'Globe picture');
+});
+
+ui.exportPlanet.addEventListener('click', async () => {
+  if (!paintState.strokes.length) {
+    ui.exportStatus.textContent = 'Nothing drawn yet.';
+    return;
+  }
+  reportOffer(await offerFile(`planet-${today()}.json`, planetFileText(encodeStrokes(paintState.strokes))), 'Planet file');
+});
+
+// Opening a file replaces the current drawing, so ask with a second tap
+// when there is something to lose (no confirm() dialogs in the viewer).
+let importArmed = null;
+ui.importPlanet.addEventListener('click', () => {
+  if (paintState.strokes.length && !importArmed) {
+    ui.importPlanet.textContent = 'Tap again: replaces your drawing';
+    ui.importPlanet.classList.add('confirm');
+    importArmed = setTimeout(disarmImport, 4000);
+    return;
+  }
+  disarmImport();
+  ui.importFile.click();
+});
+function disarmImport() {
+  importArmed && clearTimeout(importArmed);
+  importArmed = null;
+  ui.importPlanet.textContent = 'Open planet file…';
+  ui.importPlanet.classList.remove('confirm');
+}
+ui.importFile.addEventListener('change', async () => {
+  const file = ui.importFile.files[0];
+  ui.importFile.value = '';
+  if (!file) return;
+  try {
+    const strokes = decodeStrokes(parsePlanetFile(await file.text()));
+    paintState.strokes.splice(0, paintState.strokes.length, ...strokes);
+    replay(paintState);
+    if (isPaintWorld()) generate();
+    scheduleSave();
+    ui.exportStatus.textContent = `Opened ${file.name}: ${strokes.length} strokes.`;
+  } catch (e) {
+    ui.exportStatus.textContent = `Couldn't open ${file.name}. ${e.message}`;
+  }
+});
+
+ui.openExport.addEventListener('click', () => {
+  setPanelCollapsed(false);
+  $('export').scrollIntoView({ block: 'nearest' });
+});
 
 // ---------- Loop ----------
 window.addEventListener('resize', () => {

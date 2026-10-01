@@ -91,6 +91,8 @@
         .draw-row .size span { display: none; }
         .draw-row .size { min-width: 80px; }
       }
+      .export-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+      .export-buttons button { flex: 1 1 45%; }
       #draw-bar {
         position: fixed; left: var(--gutter); right: var(--gutter); bottom: var(--bottom);
         max-width: 640px; margin: 0 auto; padding: 10px 12px; box-sizing: border-box;
@@ -189,6 +191,18 @@
         </div>
 
         <button id="generate" type="button" class="primary">Generate</button>
+
+        <div class="export" id="export">
+          <label>Save &amp; export</label>
+          <div class="export-buttons">
+            <button id="export-map" type="button">Map image (PNG)</button>
+            <button id="export-globe" type="button">Globe picture (PNG)</button>
+            <button id="export-planet" type="button">Planet file</button>
+            <button id="import-planet" type="button">Open planet file…</button>
+            <input id="import-file" type="file" accept=".json,application/json" hidden />
+          </div>
+          <div class="note" id="export-status"></div>
+        </div>
       </div>
       <div id="status"></div>
     </div>
@@ -199,6 +213,7 @@
         <label class="size" for="brush-size"><span>Size</span> <input id="brush-size" type="range" min="1" max="20" step="0.5" value="5" /></label>
         <button id="undo" type="button">Undo</button>
         <button id="clear" type="button">Clear</button>
+        <button id="open-export" type="button">Save…</button>
       </div>
       <div id="brushes" class="brushes" role="radiogroup" aria-label="Brush"></div>
       <div id="save-status" class="note"></div>

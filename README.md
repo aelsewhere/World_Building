@@ -63,8 +63,22 @@ it follows you across devices. Anywhere else it's kept in the browser's
 localStorage. One document holds up to 256 KB, roughly several hundred
 strokes; the toolbar says if a drawing gets too big to save.
 
-Code: `src/paint/paint-world.js` (brushes, painted grids, sampling) and
-`src/paint/storage.js` (saving).
+**Exporting** (Controls → Save & export, or **Save…** in the drawing
+toolbar):
+
+- **Map image (PNG):** the whole planet as a flat world map, 2048×1024
+  (1440×720 on phones). Works for every world, including Naropa & Nalanda.
+- **Globe picture (PNG):** what's on screen.
+- **Planet file (JSON):** the drawing itself. **Open planet file…** loads one
+  back; it replaces the current drawing and asks for a second tap first.
+
+On claude.ai each export shows a save prompt (the share sheet on a phone).
+
+Saved planets kept in this repo live in `worlds/`. Render one to a flat map
+with `node scripts/render-planet.mjs worlds/<file>.json out.png [width]`.
+
+Code: `src/paint/paint-world.js` (brushes, painted grids, sampling),
+`src/paint/storage.js` (saving) and `src/paint/export.js` (exports).
 
 ## Controls
 
