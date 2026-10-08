@@ -9,6 +9,7 @@
 import { createNoise3D, fbm, ridged, hashString, mulberry32 } from '../noise.js';
 import { vecToLatLon, latLonToVec } from '../geo.js';
 import { TERRAIN } from '../atlas/terrain-types.js';
+import { decodeBase, BASE_RES } from './base-map.js';
 
 const DEG = Math.PI / 180;
 const RES = 0.25; // degrees per grid cell (~28 km)
@@ -63,6 +64,7 @@ export function createPaintState() {
   const N = COLS * ROWS;
   return {
     strokes: [],
+    base: null, // an imported base map ({res, cols, rows, keys, rle}), painted under the strokes
     land: new Float32Array(N),
     height: new Float32Array(N),
     rough: new Float32Array(N),
@@ -180,7 +182,65 @@ export function applyStroke(state, stroke, from = 0) {
 
 export function replay(state) {
   resetFields(state);
+  if (state.base) applyBase(state);
   for (const s of state.strokes) applyStroke(state, s);
+}
+
+// Paints an imported base map into the fields, then softens the edges
+// between zones (and the coastline a little) the way brushes would.
+function applyBase(state) {
+  if (BASE_RES !== RES) throw new Error('Base map resolution does not match the drawing grid.');
+  const { cells, keys } = decodeBase(state.base);
+  const types = keys.map((k) => (TERRAIN[k] ? k : 'grassland'));
+  const N = COLS * ROWS;
+  for (let i = 0; i < N; i++) {
+    const k = cells[i];
+    if (k === 255) continue;
+    const key = types[k];
+    const t = TERRAIN[key];
+    state.land[i] = 1;
+    state.type[i] = TYPE_KEYS.indexOf(key);
+    state.height[i] = t.height;
+    state.rough[i] = t.rough;
+    state.ridge[i] = t.ridge || 0;
+    state.r[i] = t.color[0];
+    state.g[i] = t.color[1];
+    state.b[i] = t.color[2];
+  }
+  const isLand = state.land.slice();
+  for (const f of [state.height, state.rough, state.ridge, state.r, state.g, state.b]) blurOnLand(f, isLand, 2);
+  blurOnLand(state.land, null, 1);
+}
+
+// Separable box blur, wrapping east-west. With `mask`, only masked cells
+// are averaged (and changed), so the sea doesn't bleed into the land.
+function blurOnLand(field, mask, radius) {
+  const tmp = new Float32Array(field.length);
+  for (let r = 0; r < ROWS; r++) {
+    const base = r * COLS;
+    for (let c = 0; c < COLS; c++) {
+      let sum = 0, n = 0;
+      for (let d = -radius; d <= radius; d++) {
+        const j = base + ((c + d + COLS) % COLS);
+        if (!mask || mask[j]) { sum += field[j]; n++; }
+      }
+      tmp[base + c] = n ? sum / n : field[base + c];
+    }
+  }
+  for (let c = 0; c < COLS; c++) {
+    for (let r = 0; r < ROWS; r++) {
+      const i = r * COLS + c;
+      if (mask && !mask[i]) { field[i] = tmp[i]; continue; }
+      let sum = 0, n = 0;
+      for (let d = -radius; d <= radius; d++) {
+        const rr = r + d;
+        if (rr < 0 || rr >= ROWS) continue;
+        const j = rr * COLS + c;
+        if (!mask || mask[j]) { sum += tmp[j]; n++; }
+      }
+      field[i] = n ? sum / n : tmp[i];
+    }
+  }
 }
 
 // ---------- Saving: strokes as compact integer arrays ----------

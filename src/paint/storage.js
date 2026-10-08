@@ -43,7 +43,7 @@ export async function openStore() {
   return {
     kind: ref ? 'cloud' : 'browser',
 
-    // The saved document ({strokes, savedAt}) or null.
+    // The saved document ({strokes, base?, savedAt}) or null.
     async load() {
       if (ref) {
         try {
@@ -58,9 +58,10 @@ export async function openStore() {
     },
 
     // Resolves to 'saved', 'too-big' or 'failed'. Writes are queued so only
-    // one is in flight at a time.
-    save(strokes) {
+    // one is in flight at a time. `base` is an imported base map, or null.
+    save(strokes, base = null) {
       const doc = { strokes, savedAt: new Date().toISOString() };
+      if (base) doc.base = base;
       const size = JSON.stringify(doc).length;
       if (size > MAX_BYTES) return Promise.resolve('too-big');
       saveLocal(doc);

@@ -74,6 +74,17 @@ toolbar):
 
 On claude.ai each export shows a save prompt (the share sheet on a phone).
 
+**Importing a climate map:** `node scripts/import-climate-map.mjs <image>
+<out.json>` turns a flat map with a terrain legend (like
+`reference/climate-map.webp`) into a planet file with a base map: a terrain
+type for every 0.25° cell, stored as compact run-length text, with your
+brush strokes painted on top. It assumes the map covers the whole globe
+(360° across, pole to pole). Pixels are matched to the legend colours,
+allowing for the map's shading. Thin blue river lines, the C1–C6 label boxes
+and white peak snow are filled in from the land around them, and water
+enclosed by land becomes lakes. Clear removes the base map along with the
+strokes.
+
 Saved planets kept in this repo live in `worlds/`. Render one to a flat map
 with `node scripts/render-planet.mjs worlds/<file>.json out.png [width]`.
 

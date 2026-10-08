@@ -59,22 +59,24 @@ export function canvasToPng(canvas) {
   return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
 }
 
-export function planetFileText(encodedStrokes) {
+export function planetFileText(encodedStrokes, base = null) {
   return JSON.stringify({
     format: PLANET_FORMAT,
-    version: 1,
+    version: base ? 2 : 1,
+    ...(base ? { base } : {}),
     savedAt: new Date().toISOString(),
     note: 'Brush strokes: [brush, radius×10, lat×10, lon×10, ...]. Open it from the globe\'s "Open planet file" button.',
     strokes: encodedStrokes,
   });
 }
 
-// Accepts a planet file, or the bare saved document ({strokes}).
+// Accepts a planet file, or the bare saved document. Returns
+// { strokes, base } (base is null when the file has none).
 export function parsePlanetFile(text) {
   const doc = JSON.parse(text);
-  if (!doc || !Array.isArray(doc.strokes)) throw new Error('This file has no planet strokes in it.');
-  if (doc.format && doc.format !== PLANET_FORMAT) throw new Error('This is not a planet file from this globe.');
-  return doc.strokes;
+  if (doc?.format && doc.format !== PLANET_FORMAT) throw new Error('This is not a planet file from this globe.');
+  if (!doc || (!Array.isArray(doc.strokes) && !doc.base)) throw new Error('This file has no planet in it.');
+  return { strokes: Array.isArray(doc.strokes) ? doc.strokes : [], base: doc.base || null };
 }
 
 // Hands a file to the viewer: through the claude.ai page's download prompt

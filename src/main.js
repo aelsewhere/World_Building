@@ -598,8 +598,11 @@ ui.clear.addEventListener('click', () => {
   }
   resetClear();
   const old = paintState.strokes.splice(0);
+  const hadBase = !!paintState.base;
+  paintState.base = null;
   replay(paintState);
-  regionUpdate(old);
+  if (hadBase) generate(); // a whole imported map changes everywhere
+  else regionUpdate(old);
   scheduleSave();
 });
 function resetClear() {
@@ -620,10 +623,10 @@ function scheduleSave() {
   ui.saveStatus.textContent = 'Saving…';
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
-    const result = await store.save(encodeStrokes(paintState.strokes));
+    const result = await store.save(encodeStrokes(paintState.strokes), paintState.base);
     const where = store.kind === 'cloud' ? 'to your account' : 'in this browser';
     ui.saveStatus.textContent =
-      result === 'saved' ? `Saved ${where} · ${plural(paintState.strokes.length, 'stroke')}`
+      result === 'saved' ? `Saved ${where} · ${paintState.base ? 'imported map + ' : ''}${plural(paintState.strokes.length, 'stroke')}`
       : result === 'too-big' ? 'Too much drawing to save. Undo or clear some strokes, or use bigger brushes.'
       : "Couldn't save just now; it will try again after your next stroke.";
   }, 1200);
@@ -635,14 +638,23 @@ async function loadSavedPlanet() {
   const doc = await store.load();
   const strokes = decodeStrokes(doc?.strokes);
   loaded = true;
-  if (strokes.length) {
+  if (strokes.length || doc?.base) {
     paintState.strokes.push(...strokes);
-    replay(paintState);
+    paintState.base = doc?.base || null;
+    try {
+      replay(paintState);
+    } catch {
+      paintState.base = null; // an unreadable base map: keep the strokes
+      replay(paintState);
+    }
     if (isPaintWorld()) generate();
   }
-  ui.saveStatus.textContent = strokes.length
-    ? `Loaded ${plural(strokes.length, 'stroke')} (${store.kind === 'cloud' ? 'saved to your account' : 'saved in this browser'})`
-    : 'Pick a brush and draw on the globe. Tap ✏️ to switch between drawing and turning the globe.';
+  const where = store.kind === 'cloud' ? 'saved to your account' : 'saved in this browser';
+  ui.saveStatus.textContent = paintState.base
+    ? `Loaded your imported map${strokes.length ? ` and ${plural(strokes.length, 'stroke')}` : ''} (${where})`
+    : strokes.length
+      ? `Loaded ${plural(strokes.length, 'stroke')} (${where})`
+      : 'Pick a brush and draw on the globe. Tap ✏️ to switch between drawing and turning the globe.';
 }
 
 renderBrushes();
@@ -679,18 +691,18 @@ ui.exportGlobe.addEventListener('click', async () => {
 });
 
 ui.exportPlanet.addEventListener('click', async () => {
-  if (!paintState.strokes.length) {
+  if (!paintState.strokes.length && !paintState.base) {
     ui.exportStatus.textContent = 'Nothing drawn yet.';
     return;
   }
-  reportOffer(await offerFile(`planet-${today()}.json`, planetFileText(encodeStrokes(paintState.strokes))), 'Planet file');
+  reportOffer(await offerFile(`planet-${today()}.json`, planetFileText(encodeStrokes(paintState.strokes), paintState.base)), 'Planet file');
 });
 
 // Opening a file replaces the current drawing, so ask with a second tap
 // when there is something to lose (no confirm() dialogs in the viewer).
 let importArmed = null;
 ui.importPlanet.addEventListener('click', () => {
-  if (paintState.strokes.length && !importArmed) {
+  if ((paintState.strokes.length || paintState.base) && !importArmed) {
     ui.importPlanet.textContent = 'Tap again: replaces your drawing';
     ui.importPlanet.classList.add('confirm');
     importArmed = setTimeout(disarmImport, 4000);
@@ -710,12 +722,23 @@ ui.importFile.addEventListener('change', async () => {
   ui.importFile.value = '';
   if (!file) return;
   try {
-    const strokes = decodeStrokes(parsePlanetFile(await file.text()));
+    const planet = parsePlanetFile(await file.text());
+    const strokes = decodeStrokes(planet.strokes);
+    const previous = { strokes: paintState.strokes.slice(), base: paintState.base };
     paintState.strokes.splice(0, paintState.strokes.length, ...strokes);
-    replay(paintState);
+    paintState.base = planet.base;
+    try {
+      replay(paintState);
+    } catch (e) {
+      // Put the old planet back if the file's base map can't be read.
+      paintState.strokes.splice(0, paintState.strokes.length, ...previous.strokes);
+      paintState.base = previous.base;
+      replay(paintState);
+      throw e;
+    }
     if (isPaintWorld()) generate();
     scheduleSave();
-    ui.exportStatus.textContent = `Opened ${file.name}: ${strokes.length} strokes.`;
+    ui.exportStatus.textContent = `Opened ${file.name}: ${planet.base ? 'an imported map' : ''}${planet.base && strokes.length ? ' and ' : ''}${strokes.length || !planet.base ? plural(strokes.length, 'stroke') : ''}.`;
   } catch (e) {
     ui.exportStatus.textContent = `Couldn't open ${file.name}. ${e.message}`;
   }

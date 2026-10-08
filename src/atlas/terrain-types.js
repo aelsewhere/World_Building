@@ -25,6 +25,7 @@ export const TERRAIN = {
   dryscrub: { name: 'Dry scrub', color: [0.66, 0.58, 0.4], height: 800, rough: 300, ridge: 0.2 },
   desert: { name: 'Hot desert', color: [0.87, 0.74, 0.48], height: 450, rough: 200 },
   dunes: { name: 'Dunes', color: [0.91, 0.8, 0.55], height: 120, rough: 80 },
+  fogdesert: { name: 'Coastal fog desert', color: [0.83, 0.79, 0.67], height: 200, rough: 120 },
   jungle: { name: 'Jungle', color: [0.06, 0.33, 0.11], height: 150, rough: 100 },
   forest: { name: 'Tropical forest (seasonal)', color: [0.22, 0.42, 0.16], height: 250, rough: 150 },
   trainforest: { name: 'Temperate rainforest', color: [0.11, 0.37, 0.22], height: 350, rough: 350 },

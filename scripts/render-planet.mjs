@@ -12,6 +12,7 @@ const [input, out = 'planet-map.png', w = '2048'] = process.argv.slice(2);
 const doc = JSON.parse(readFileSync(input, 'utf8'));
 const state = createPaintState();
 state.strokes.push(...decodeStrokes(doc.strokes));
+state.base = doc.base || null;
 replay(state);
 const world = createPaintWorld(state);
 
