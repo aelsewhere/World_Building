@@ -6,8 +6,8 @@ Inputs (morasil/data/, all 780x1380, 12 px per degree, 50N at row 60):
   snow.png             1 seasonal mountain, 2 permanent, 3 glacier tongue, 4 winter lowland
   water.png            1 river, 2 seasonal river, 16 lake, other = waterfall/gorge marks
 
-Climate-class colours below are a first guess from the shaded-relief map;
-they need checking against the C1_climate_combined legend.
+climate_classes.png is the C1_climate_combined map (climate + step 7 land use);
+class numbers and names match its legend.
 """
 import numpy as np
 from PIL import Image
@@ -17,26 +17,27 @@ HERE = Path(__file__).parent
 DATA = HERE / "data"
 SCALE = 2  # output pixels per data pixel
 
-# Natural ground colour per climate class (guessed meaning in comments).
+# Natural ground colour per class of C1_climate_combined (v2, Oct 23, step 7 land use).
 CLASS_RGB = {
-    1: (40, 84, 42),     # tropical monsoon / rainforest edge
-    2: (24, 64, 32),     # tropical rainforest
-    3: (128, 128, 72),   # savanna
-    4: (72, 102, 52),    # humid subtropical
-    5: (168, 146, 108),  # rocky desert
-    6: (206, 178, 130),  # sandy desert
-    7: (226, 221, 206),  # salt flats
-    8: (122, 116, 72),   # Mediterranean scrub
-    9: (158, 136, 98),   # highland semi-desert
-    10: (62, 82, 46),    # temperate / boreal forest
-    11: (46, 76, 48),    # oceanic forest
-    12: (122, 118, 98),  # tundra / subpolar
-    13: (56, 86, 56),    # montane forest
-    14: (164, 144, 88),  # steppe
-    15: (40, 64, 46),    # mangrove
-    16: (196, 172, 132), # coastal desert
-    18: (76, 92, 66),    # marsh / swamp
+    1: (26, 70, 34),     # jungle (tropical rainforest)
+    2: (52, 84, 40),     # seasonal tropical forest
+    3: (150, 140, 82),   # savanna
+    4: (116, 128, 66),   # grassland
+    5: (170, 156, 104),  # steppe (dry grassland)
+    6: (214, 184, 136),  # hot desert
+    7: (228, 224, 212),  # salt flats
+    8: (126, 118, 76),   # scrubland (Mediterranean)
+    9: (172, 150, 104),  # dry scrub
+    10: (54, 78, 42),    # temperate forest
+    11: (34, 64, 40),    # temperate rainforest
+    12: (112, 102, 80),  # moorland
+    13: (40, 76, 50),    # cloud forest
+    14: (140, 140, 80),  # farmland
+    15: (36, 60, 42),    # mangroves
+    16: (196, 180, 148), # coastal fog desert
+    18: (70, 88, 62),    # marsh / swamp
 }
+FARMLAND = 14
 LAKE = np.array([38, 78, 120], float)
 RIVER = np.array([44, 86, 130], float)
 SEASONAL = np.array([150, 150, 130], float)
@@ -125,6 +126,11 @@ def main():
     rng = np.random.default_rng(7)
     tex = sum(blur(rng.standard_normal(E.shape), r) * r for r in (1, 3, 8))
     tex = 1 + 0.06 * tex / tex.std()
+
+    # Farmland gets a stronger, finer patchwork than wild ground.
+    farm = up((cls == FARMLAND).astype(float), Image.BILINEAR)
+    fields = blur(rng.standard_normal(E.shape), 0.7)
+    tex = tex * (1 + 0.10 * farm * fields / fields.std())
 
     out = RGB * (shade * tex)[..., None]
 
