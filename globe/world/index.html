@@ -135,7 +135,7 @@
     <li>Hoakamotu's land use has colour-reading errors: stray salt flats and peat and tussock in the tropics; the northwest island group reads as salt flats but is recorded as Mediterranean scrub.</li>
     <li>Not yet drawn: Mesomara's islet pair A as temperate forest; the Iskay Islands' Mediterranean scrub; Kamon's springs on Koshio and Sueshio; the Hoaka Sea loop and Gulf of Mor throughflow; Hoakamotu's mudflow valley.</li>
     <li>Pass 3 checks still to do: where continents meet and across the map edge (Moramotu Sea); the three islets east of Elmiyaro's Byrland.</li>
-    <li>Snow is recorded for Morasil and Hoakamotu only.</li>
+    <li>Snow is recorded for Morasil and Hoakamotu only. In the natural-colour map, snow and treeline elsewhere are estimated from the temperatures, and the seabed is invented (there is no depth data).</li>
   </ul></details>
   <details><summary>Data files</summary><div id="files" class="mono" style="margin-top:6px"></div></details>
 </div>
@@ -198,7 +198,7 @@ function material(tex, overlay) {
           float light = mix(0.045, 0.32 + 0.80 * pow(max(d, 0.0), 0.55), day);
           float water = texture2D(waterMap, vG).r;
           vec3 v = normalize(cameraPosition - vWorld), hh = normalize(sunDir + v);
-          float spec = (pow(max(dot(n, hh), 0.0), 140.0) * 0.55 + pow(max(dot(n, hh), 0.0), 14.0) * 0.05) * water * day;
+          float spec = (pow(max(dot(n, hh), 0.0), 260.0) * 0.32 + pow(max(dot(n, hh), 0.0), 24.0) * 0.025) * water * water * day;
           outgoingLight = outgoingLight * light + vec3(1.0, 0.95, 0.86) * spec;
         }
         #include <opaque_fragment>`);
@@ -479,7 +479,7 @@ const flyToNation = (n) => flyTo(dirOf(n.lat, n.lon), Math.min(12000, Math.max(9
 function drawLegend() {
   const sw = (c, t) => '<div><span class="sw" style="background:' + c + '"></span>' + t + '</div>';
   const lu = (i) => Object.entries(LEG.landuse).filter(([k]) => k != 17).map(([, v]) => sw(v[i], v[0])).join('');
-  const h = { natural: () => S.realistic ? '<div class="soft">Satellite-style colours from the recorded land cover, made greener or drier by the recorded rainfall. For the exact land-cover types, switch to <b>Land cover</b>.</div><div class="soft" style="margin-top:6px">Made up for the picture (not in the data): the seabed shading, and the treeline and snow outside Morasil and Hoakamotu, which come from the recorded temperatures.</div>' : lu(1) + sw('#2c5f93', 'Lake') + sw('#3fbfb8', 'Coral reef') + sw('#f4f7fa', 'Permanent snow'),
+  const h = { natural: () => S.realistic ? '<p class="soft" style="margin:0">Satellite-style colours from the recorded land cover, made greener or drier by the recorded rainfall. For the exact land-cover types, switch to <b>Land cover</b>.</p><p class="soft" style="margin:6px 0 0">Estimated for the picture, not recorded: the seabed shading, and the treeline and snow outside Morasil and Hoakamotu (worked out from the recorded temperatures).</p>' : lu(1) + sw('#2c5f93', 'Lake') + sw('#3fbfb8', 'Coral reef') + sw('#f4f7fa', 'Permanent snow'),
     elevation: () => [...LEG.elev].reverse().map(([v, c]) => sw(c, v.toLocaleString() + ' m')).join(''),
     landuse: () => lu(2), nations: () => '<div class="soft">Each nation has its own colour. Point at one for its name and area.</div>',
     continents: () => LEG.continents.map(([n, c]) => sw(c, n)).join(''),

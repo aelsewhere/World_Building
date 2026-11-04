@@ -55,6 +55,8 @@ The land it makes is meaningless and does not join up across the seam.
 
 It is published as a private claude.ai page. When the maps change, re-run the preparation and republish:
 
-    python tools/bake_globe.py PATH/TO/maps globe/world
+    python tools/bake_globe.py PATH/TO/maps globe/world PATH/TO/climates
+
+With the climate files (world_t_jan/jul_data, world_p_jan/jul_data) the natural-colour map is painted realistically by `tools/realistic.py`: satellite-style colours made greener or drier by rainfall, natural edges between land-cover types, texture, treeline and snow from temperature (recorded snow is used for Morasil and Hoakamotu), smoothed coasts, an invented seabed, and a cloud picture. It needs numpy, Pillow and scipy. The page adds sunlight (lit from where you look, or day and night by season and time), sun glint on water, and clouds.
 
 The page needs a web server (it loads its files with fetch), so double-clicking `index.html` will not work; use the published link.
