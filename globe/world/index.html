@@ -1,0 +1,487 @@
+<meta charset="utf-8">
+<title>World Globe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus+SC&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+  /* Layout: the globe fills the screen; three translucent instrument panels float over it (controls left, readout bottom-left, atlas right). */
+  :root {
+    --space: #060a12;        /* behind the globe */
+    --panel: rgba(13, 19, 30, 0.86);
+    --rule: rgba(190, 210, 235, 0.14);
+    --ink: #e4e9f0;
+    --ink-soft: #97a4b6;
+    --brass: #d9b56b;        /* accent: the old-atlas gold of the equator line */
+    --warn: #f0a05a;
+    --font-display: "Marcellus SC", "Trajan Pro", Georgia, serif;
+    --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+    --font-data: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--space); color: var(--ink); font: 14px/1.45 var(--font-body); overflow: hidden; }
+  #view, #labels { position: fixed; inset: 0; }
+  #labels { pointer-events: none; }
+  .panel { box-sizing: border-box; position: fixed; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; backdrop-filter: blur(8px); }
+  #controls { top: calc(12px + env(safe-area-inset-top, 0px)); left: calc(12px + env(safe-area-inset-left, 0px)); width: 248px; max-height: calc(100% - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); overflow: auto; }
+  #readout { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); left: calc(272px + env(safe-area-inset-left, 0px)); width: 330px; }
+  #atlas { top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); width: 292px; max-height: calc(100% - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); overflow: auto; }
+  h1 { font: 22px/1.1 var(--font-display); letter-spacing: .06em; margin: 0 0 2px; color: var(--brass); }
+  .sub { color: var(--ink-soft); font-size: 12px; margin-bottom: 10px; }
+  h2 { font: 600 11px/1 var(--font-body); text-transform: uppercase; letter-spacing: .12em; color: var(--ink-soft); margin: 14px 0 7px; }
+  label { display: flex; align-items: center; gap: 7px; margin: 4px 0; }
+  select, input[type=text], input[type=number], button { font: inherit; color: var(--ink); background: rgba(255,255,255,0.05); border: 1px solid var(--rule); border-radius: 4px; padding: 5px 7px; }
+  select, input[type=text] { width: 100%; box-sizing: border-box; }
+  button { cursor: pointer; }
+  button:hover, select:hover { border-color: var(--brass); }
+  :focus-visible { outline: 2px solid var(--brass); outline-offset: 1px; }
+  button.on { background: rgba(217,181,107,0.18); border-color: var(--brass); }
+  input[type=range] { flex: 1; accent-color: var(--brass); min-width: 0; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .mono { font-family: var(--font-data); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .soft { color: var(--ink-soft); }
+  .warn { color: var(--warn); }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 2px 0; vertical-align: top; }
+  td:first-child { color: var(--ink-soft); width: 96px; padding-right: 8px; }
+  .legend { display: grid; gap: 2px; }
+  .legend div { display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
+  .sw { width: 12px; height: 12px; border-radius: 2px; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.35); }
+  #nationList .c { font: 15px var(--font-display); letter-spacing: .05em; color: var(--brass); margin: 12px 0 3px; display: flex; justify-content: space-between; }
+  #nationList .n { display: flex; justify-content: space-between; gap: 8px; cursor: pointer; padding: 2px 4px; margin: 0 -4px; border-radius: 3px; background: none; border: 0; width: calc(100% + 8px); text-align: left; }
+  #nationList .n:hover, #nationList .n:focus-visible { background: rgba(217,181,107,0.12); }
+  #status { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); font: 16px var(--font-display); letter-spacing: .1em; color: var(--ink-soft); }
+  details summary { cursor: pointer; color: var(--ink-soft); margin-top: 12px; }
+  details ul { margin: 6px 0 0; padding-left: 18px; color: var(--ink-soft); font-size: 12.5px; }
+  .zoom { position: fixed; right: calc(316px + env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 6px; }
+  .zoom button { width: 36px; height: 36px; font-size: 18px; background: var(--panel); }
+  #toggleAtlas, #toggleControls { display: none; }
+  @media (max-width: 900px) {
+    #readout { left: calc(12px + env(safe-area-inset-left, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); width: auto; font-size: 13px; }
+    #atlas { display: none; } #atlas.open { display: block; width: auto; left: calc(12px + env(safe-area-inset-left, 0px)); max-height: 60%; }
+    #controls { display: none; } #controls.open { display: block; }
+    #toggleAtlas, #toggleControls { display: block; position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); z-index: 2; background: var(--panel); }
+    #toggleControls { left: calc(12px + env(safe-area-inset-left, 0px)); } #toggleAtlas { right: calc(12px + env(safe-area-inset-right, 0px)); }
+    #controls.open, #atlas.open { top: calc(56px + env(safe-area-inset-top, 0px)); }
+    .zoom { right: calc(12px + env(safe-area-inset-right, 0px)); bottom: auto; top: calc(60px + env(safe-area-inset-top, 0px)); }
+  }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<div id="view"></div>
+<canvas id="labels"></canvas>
+<div id="status">Loading the world…</div>
+<button id="toggleControls">Map</button>
+<button id="toggleAtlas">Atlas</button>
+
+<div id="controls" class="panel">
+  <h1>World Globe</h1>
+  <div class="sub">Earth-sized: radius 6,371 km</div>
+  <h2>Map</h2>
+  <select id="mode" aria-label="Map style">
+    <option value="natural">Natural colour</option>
+    <option value="elevation">Elevation</option>
+    <option value="landuse">Land cover</option>
+    <option value="nations">Nations</option>
+    <option value="continents">Continents</option>
+    <option value="water">Rivers and lakes</option>
+    <option value="coast">Coasts and reefs</option>
+    <option value="snow">Snow and ice</option>
+  </select>
+  <h2>Show</h2>
+  <label id="bordersRow"><input type="checkbox" id="optBorders" checked> Nation borders</label>
+  <label><input type="checkbox" id="optNames" checked> Names</label>
+  <label><input type="checkbox" id="optCities" checked> Cities</label>
+  <label><input type="checkbox" id="optGrid"> Latitude and longitude</label>
+  <label><input type="checkbox" id="optAtmo" checked> Atmosphere</label>
+  <h2>Relief</h2>
+  <label title="How much heights are raised. 1x is true scale.">Raise <input type="range" id="exag" min="0" max="50" step="1" value="12"><span id="exagV" class="mono">12x</span></label>
+  <h2>Find</h2>
+  <input type="text" id="find" list="findList" placeholder="Nation name, e.g. Crocevia">
+  <datalist id="findList"></datalist>
+  <h2>Tools</h2>
+  <div class="row"><button id="measureBtn">Measure distance</button><button id="resetView">Whole globe</button></div>
+  <div id="measureOut" class="soft" style="margin-top:5px"></div>
+  <h2>Legend</h2>
+  <div id="legend" class="legend"></div>
+  <h2>Settings</h2>
+  <label title="The longitude number of the map's left edge (column 0). Not yet confirmed; probably 180°.">Seam longitude <input type="number" id="seam" value="-180" step="1" style="width:72px"></label>
+</div>
+
+<div id="readout" class="panel"><span class="soft">Point at the globe to read the map.</span></div>
+<div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button></div>
+
+<div id="atlas" class="panel">
+  <h1>Atlas</h1>
+  <div id="summary"></div>
+  <div id="nationList"></div>
+  <details><summary>Known limits of this data (Nov 4)</summary><ul>
+    <li>Climate data is from the Pass 1 heights; Morasil's big southern island is now higher.</li>
+    <li>Hoakamotu's land use has colour-reading errors: stray salt flats and peat and tussock in the tropics; the northwest island group reads as salt flats but is recorded as Mediterranean scrub.</li>
+    <li>Not yet drawn: Mesomara's islet pair A as temperate forest; the Iskay Islands' Mediterranean scrub; Kamon's springs on Koshio and Sueshio; the Hoaka Sea loop and Gulf of Mor throughflow; Hoakamotu's mudflow valley.</li>
+    <li>Pass 3 checks still to do: where continents meet and across the map edge (Moramotu Sea); the three islets east of Elmiyaro's Byrland.</li>
+    <li>Snow is recorded for Morasil and Hoakamotu only.</li>
+  </ul></details>
+  <details><summary>Data files</summary><div id="files" class="mono" style="margin-top:6px"></div></details>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const R = 6371, KM_PER_MI = 1.609344;
+const $ = (id) => document.getElementById(id);
+const CONTINENTS = ['', 'Morasil', 'Solua', 'Mesomara', 'Kamon', 'Elmiyaro', 'Hoakamotu'];
+
+const world = await (await fetch('world.json')).json();
+const S = world.summary, LEG = world.legend;
+const [TX, TY] = S.tiles, [MW, MH] = S.mesh, STEP = S.mesh_step;
+const nations = world.nations, cities = world.cities;
+const byIndex = []; nations.forEach((n) => { byIndex[n.i] = n; });
+async function readPixels(url) {   // exact pixel values of a PNG (no colour correction)
+  const bmp = await createImageBitmap(await (await fetch(url)).blob(), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
+  const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+  const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(bmp, 0, 0);
+  return { w: c.width, h: c.height, d: x.getImageData(0, 0, c.width, c.height).data };
+}
+const heights = (() => { const t = new Int16Array(MW * MH); return t; })();
+{ const px = await readPixels('heights.png'); for (let i = 0; i < MW * MH; i++) heights[i] = px.d[i * 4] * 256 + px.d[i * 4 + 1]; }
+
+// ---------------------------------------------------------------- scene
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(1.5, devicePixelRatio));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+$('view').appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#060a12');
+const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 1, R * 30);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableZoom = false; controls.enablePan = false; controls.enableDamping = true; controls.dampingFactor = 0.08;
+let dirty = true; const redraw = () => { dirty = true; };
+controls.addEventListener('change', redraw);
+const ANIS = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+
+function dirOf(lat, lonE) { const a = lat * Math.PI / 180, o = lonE * Math.PI / 180; return new THREE.Vector3(Math.cos(a) * Math.cos(o), Math.sin(a), -Math.cos(a) * Math.sin(o)); }
+function latLonOf(v) { const n = v.clone().normalize(); return { lat: Math.asin(Math.max(-1, Math.min(1, n.y))) * 180 / Math.PI, lonE: ((Math.atan2(-n.z, n.x) * 180 / Math.PI) + 360) % 360 }; }
+
+let exag = 12; const exagU = { value: exag };
+function material(tex, overlay) {
+  const m = new THREE.MeshBasicMaterial({ map: tex });
+  if (overlay) { m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -2; }
+  m.onBeforeCompile = (sh) => { sh.uniforms.exag = exagU;
+    sh.vertexShader = 'attribute float height;\nuniform float exag;\n' + sh.vertexShader.replace('#include <begin_vertex>', 'vec3 transformed = position * (' + R.toFixed(1) + ' + height * 0.001 * exag);'); };
+  return m;
+}
+// a grid of the relief mesh between vertex columns i0..i1 and rows j0..j1 (rows from the north pole)
+function gridGeometry(i0, i1, j0, j1) {
+  const nx = i1 - i0 + 1, ny = j1 - j0 + 1, pos = new Float32Array(nx * ny * 3), hts = new Float32Array(nx * ny), uv = new Float32Array(nx * ny * 2);
+  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+    const k = (j - j0) * nx + (i - i0), d = dirOf(90 - j * STEP, i * STEP);
+    pos[k * 3] = d.x; pos[k * 3 + 1] = d.y; pos[k * 3 + 2] = d.z; hts[k] = heights[j * MW + i];
+    uv[k * 2] = (i - i0) / (i1 - i0); uv[k * 2 + 1] = 1 - (j - j0) / (j1 - j0);
+  }
+  const idx = new Uint32Array((nx - 1) * (ny - 1) * 6); let q = 0;
+  for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) { const a = j * nx + i, b = a + 1, c = a + nx, d = c + 1; idx[q++] = a; idx[q++] = c; idx[q++] = b; idx[q++] = b; idx[q++] = c; idx[q++] = d; }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('height', new THREE.BufferAttribute(hts, 1));
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setIndex(new THREE.BufferAttribute(idx, 1));
+  g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), R + 400);
+  return g;
+}
+const loader = new THREE.TextureLoader();
+function loadTex(url) {
+  return new Promise((res, rej) => loader.load(url, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = ANIS; t.minFilter = THREE.LinearMipmapLinearFilter; res(t); }, undefined, rej));
+}
+
+const base = new THREE.Mesh(gridGeometry(0, MW - 1, 0, MH - 1), material(null));
+base.frustumCulled = false; scene.add(base);
+
+// close-up tiles: 45 x 45 degrees each, loaded only near the camera
+const PER_X = (MW - 1) / TX, PER_Y = (MH - 1) / TY, MAX_TILES = 12, NEAR_ALT = 7000;
+const tiles = [];
+for (let ty = 0; ty < TY; ty++) for (let tx = 0; tx < TX; tx++) {
+  const mesh = new THREE.Mesh(gridGeometry(tx * PER_X, (tx + 1) * PER_X, ty * PER_Y, (ty + 1) * PER_Y), material(null, true));
+  mesh.visible = false; mesh.frustumCulled = false; mesh.renderOrder = 1; scene.add(mesh);
+  const cLat = 90 - (ty + 0.5) * 180 / TY, cLon = (tx + 0.5) * 360 / TX;
+  const samples = [];   // 7 x 7 points across the tile, to test whether any part of it is on screen
+  for (let a = 0; a <= 6; a++) for (let b = 0; b <= 6; b++) samples.push(dirOf(90 - (ty + a / 6) * 180 / TY, (tx + b / 6) * 360 / TX));
+  tiles.push({ tx, ty, mesh, center: dirOf(cLat, cLon), samples, tex: null, style: null, loading: false, used: 0 });
+}
+let style = 'natural';
+const styleDir = () => 'maps/' + (style === 'natural' && !$('optBorders').checked ? 'natural-plain' : style) + '/';
+async function setStyle() {
+  const dir = styleDir(); $('status').textContent = 'Loading map…'; $('status').hidden = false;
+  const tex = await loadTex(dir + 'world.webp');
+  if (dir !== styleDir()) { tex.dispose(); return; }
+  const old = base.material.map; base.material.map = tex; base.material.needsUpdate = true; if (old) old.dispose();
+  for (const t of tiles) { if (t.tex) { t.tex.dispose(); t.tex = null; } t.mesh.visible = false; t.style = null; }
+  $('status').hidden = true; drawLegend(); updateTiles(); redraw();
+}
+const frustum = new THREE.Frustum(), pm = new THREE.Matrix4(), tmpP = new THREE.Vector3();
+function updateTiles() {
+  const d = camera.position.length(), alt = d - R, dir = styleDir();
+  if (alt > NEAR_ALT) { for (const t of tiles) t.mesh.visible = false; return; }
+  pm.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); frustum.setFromProjectionMatrix(pm);
+  const camDir = camera.position.clone().normalize(), cosH = R / d - 0.02, now = performance.now(), sub = latLonOf(camDir);
+  const want = [];
+  for (const t of tiles) {
+    const under = Math.floor(sub.lonE / (360 / TX)) === t.tx && Math.min(TY - 1, Math.floor((90 - sub.lat) / (180 / TY))) === t.ty;
+    let seen = under;
+    for (let k = 0; !seen && k < t.samples.length; k++) { const s = t.samples[k];
+      if (s.dot(camDir) > cosH && frustum.containsPoint(tmpP.copy(s).multiplyScalar(R))) seen = true; }
+    if (seen) want.push([1 - t.center.dot(camDir), t]);
+  }
+  want.sort((a, b) => a[0] - b[0]);
+  const wanted = new Set(want.slice(0, MAX_TILES).map((w) => w[1]));
+  for (const t of tiles) {
+    if (wanted.has(t)) { t.used = now;
+      if (t.tex && t.style === dir) t.mesh.visible = true;
+      else if (!t.loading) { t.loading = true;
+        loadTex(dir + 't' + t.tx + '_' + t.ty + '.webp').then((tex) => { t.loading = false;
+          if (dir !== styleDir()) { tex.dispose(); return; }
+          if (t.tex) t.tex.dispose(); t.tex = tex; t.style = dir; t.mesh.material.map = tex; t.mesh.material.needsUpdate = true; updateTiles(); redraw();
+        }).catch(() => { t.loading = false; }); }
+    } else t.mesh.visible = false;
+  }
+  // keep graphics memory bounded: free the least recently used tiles
+  const held = tiles.filter((t) => t.tex).sort((a, b) => a.used - b.used);
+  while (held.length > MAX_TILES + 4) { const t = held.shift(); if (wanted.has(t)) continue; t.tex.dispose(); t.tex = null; t.mesh.visible = false; }
+}
+
+// atmosphere
+const atmo = new THREE.Mesh(new THREE.SphereGeometry(R * 1.025, 96, 48), new THREE.ShaderMaterial({
+  side: THREE.BackSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  vertexShader: 'varying vec3 vN; varying vec3 vP; void main(){ vN = normalize(normalMatrix*normal); vec4 mv = modelViewMatrix*vec4(position,1.); vP = mv.xyz; gl_Position = projectionMatrix*mv; }',
+  fragmentShader: 'varying vec3 vN; varying vec3 vP; void main(){ float f = pow(max(0., 0.75 + dot(normalize(vP), vN)), 3.0); gl_FragColor = vec4(0.35,0.6,1.0,1.)*f*1.3; }',
+}));
+scene.add(atmo);
+
+// latitude and longitude lines; tropics and polar circles at Earth's tilt
+const grid = new THREE.Group(); grid.visible = false; scene.add(grid);
+function buildGrid() {
+  grid.clear(); const seam = +$('seam').value || 0, rr = R * 1.0015;
+  const m1 = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 }), m2 = new THREE.LineBasicMaterial({ color: 0xd9b56b, transparent: true, opacity: 0.6 });
+  const line = (pts, m) => grid.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), m));
+  const ring = (lat) => { const p = []; for (let l = 0; l <= 360; l += 2) p.push(dirOf(lat, l).multiplyScalar(rr)); return p; };
+  for (let lat = -75; lat <= 75; lat += 15) line(ring(lat), lat === 0 ? m2 : m1);
+  for (const lat of [23.44, -23.44, 66.56, -66.56]) line(ring(lat), m2);
+  for (let lon = -180; lon < 180; lon += 15) { const lonE = ((lon - seam) % 360 + 360) % 360, p = []; for (let a = -90; a <= 90; a += 2) p.push(dirOf(a, lonE).multiplyScalar(rr)); line(p, m1); }
+}
+buildGrid();
+
+// heights at any point, from the relief mesh grid (for placing things on the raised surface)
+function meshHeight(lat, lonE) { const j = Math.round((90 - lat) / STEP), i = Math.round(lonE / STEP); return heights[Math.min(MH - 1, Math.max(0, j)) * MW + Math.min(MW - 1, i)]; }
+
+// cities
+const cityGeo = new THREE.BufferGeometry();
+const cityPts = new THREE.Points(cityGeo, new THREE.PointsMaterial({ color: 0xffe7a3, size: 4.5, sizeAttenuation: false }));
+scene.add(cityPts);
+function placeCities() {
+  const pos = new Float32Array(cities.length * 3);
+  cities.forEach((c, k) => { const v = dirOf(c.lat, c.lon).multiplyScalar(R + Math.max(0, meshHeight(c.lat, c.lon)) / 1000 * exag + 2); c.pos = v; pos.set([v.x, v.y, v.z], k * 3); });
+  cityGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); cityGeo.computeBoundingSphere();
+}
+placeCities();
+
+// ---------------------------------------------------------------- names on the globe
+const lc = $('labels'), lctx = lc.getContext('2d'), tmpV = new THREE.Vector3();
+function sizeLabels() { const d = Math.min(2, devicePixelRatio); lc.width = innerWidth * d; lc.height = innerHeight * d; lctx.setTransform(d, 0, 0, d, 0, 0); }
+sizeLabels();
+nations.forEach((n) => { n.pos = dirOf(n.lat, n.lon).multiplyScalar(R + 2); });
+const byArea = [...nations].sort((a, b) => b.area - a.area);
+const contLabels = CONTINENTS.slice(1).map((name, k) => {
+  const v = new THREE.Vector3(); nations.filter((n) => n.c === k + 1).forEach((n) => v.addScaledVector(dirOf(n.lat, n.lon), n.area));
+  return { name, pos: v.normalize().multiplyScalar(R + 2) };
+});
+function drawLabels() {
+  lctx.clearRect(0, 0, innerWidth, innerHeight);
+  if (!$('optNames').checked) return;
+  const d = camera.position.length(), alt = d - R, camDir = camera.position.clone().normalize(), limit = R / d + 0.03;
+  const taken = [], put = (text, v, font, colour, spacing) => {
+    if (v.dot(camDir) / v.length() < limit) return;
+    const s = tmpV.copy(v).project(camera); if (s.z > 1) return;
+    const x = (s.x + 1) / 2 * innerWidth, y = (1 - s.y) / 2 * innerHeight;
+    lctx.font = font; lctx.letterSpacing = spacing; const w = lctx.measureText(text).width, hgt = parseInt(font.match(/(\d+)px/)[1]);
+    const box = [x - w / 2 - 3, y - hgt, x + w / 2 + 3, y + 4];
+    if (box[2] < 0 || box[0] > innerWidth || box[3] < 0 || box[1] > innerHeight) return;
+    if (taken.some((b) => b[0] < box[2] && box[0] < b[2] && b[1] < box[3] && box[1] < b[3])) return;
+    taken.push(box);
+    lctx.lineWidth = 3; lctx.strokeStyle = 'rgba(6,10,18,0.75)'; lctx.strokeText(text, x - w / 2, y); lctx.fillStyle = colour; lctx.fillText(text, x - w / 2, y);
+  };
+  if (alt > 9000) { for (const c of contLabels) put(c.name.toUpperCase(), c.pos, '17px "Marcellus SC", Georgia, serif', '#f2d9a0', '3px'); return; }
+  const lim = alt > 5500 ? 30 : alt > 3000 ? 70 : nations.length;
+  for (let k = 0; k < lim; k++) { const n = byArea[k]; put(n.name, n.pos, (n.area > 700000 ? 14 : 12) + 'px "Marcellus SC", Georgia, serif', '#ffffff', '1px'); }
+}
+
+// ---------------------------------------------------------------- hover data (loaded after the globe is showing)
+let info = null;
+async function loadInfo() {
+  const read = async (url) => {
+    const { w, h, d } = await readPixels(url), n = w * h, a = new Uint8Array(n), b = new Uint8Array(n), e = new Uint8Array(n);
+    for (let i = 0, p = 0; i < n; i++, p += 4) { a[i] = d[p]; b[i] = d[p + 1]; e[i] = d[p + 2]; }
+    return [a, b, e, w, h];
+  };
+  const [nat, lu, water, w, h] = await read('info_a.png');
+  const [cs, eh, el] = await read('info_b.png');
+  info = { nat, lu, water, cs, eh, el, w, h };
+}
+
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+function pick(ev) {
+  mouse.set(ev.clientX / innerWidth * 2 - 1, -(ev.clientY / innerHeight) * 2 + 1); ray.setFromCamera(mouse, camera);
+  const o = ray.ray.origin, d = ray.ray.direction, b = o.dot(d), c = o.lengthSq() - R * R, disc = b * b - c;
+  return disc < 0 ? null : o.clone().addScaledVector(d, -b - Math.sqrt(disc));
+}
+const fmtLat = (v) => Math.abs(v).toFixed(2) + '°' + (v >= 0 ? 'N' : 'S');
+const fmtLon = (lonE) => { let l = (+$('seam').value || 0) + lonE; l = ((l + 180) % 360 + 360) % 360 - 180; return Math.abs(l).toFixed(2) + '°' + (l >= 0 ? 'E' : 'W'); };
+const km2 = (a) => Math.round(a).toLocaleString() + ' km²';
+const mi2 = (a) => Math.round(a / 2.589988).toLocaleString() + ' sq mi';
+function gc(la1, lo1, la2, lo2) { const r = Math.PI / 180, a = Math.sin((la2 - la1) * r / 2) ** 2 + Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin((lo2 - lo1) * r / 2) ** 2; return 2 * R * Math.asin(Math.min(1, Math.sqrt(a))); }
+function readout(p) {
+  if (!p) { $('readout').innerHTML = '<span class="soft">Point at the globe to read the map.</span>'; return; }
+  const { lat, lonE } = latLonOf(p);
+  const rows = [['Position', '<span class="mono">' + fmtLat(lat) + ' ' + fmtLon(lonE) + '</span>']];
+  if (info) {
+    const i = Math.min(info.h - 1, Math.floor((90 - lat) / 180 * info.h)) * info.w + Math.min(info.w - 1, Math.floor(lonE / 360 * info.w));
+    const e = info.eh[i] * 256 + info.el[i];
+    rows.push(['Height', e ? '<span class="mono">' + (e - 1000).toLocaleString() + ' m</span>' : 'sea']);
+    const n = byIndex[info.nat[i]];
+    if (n) { rows.push(['Nation', '<b>' + n.name + '</b> <span class="soft">· ' + CONTINENTS[n.c] + '</span>']); rows.push(['Area', '<span class="mono">' + km2(n.area) + '</span> <span class="soft">(' + mi2(n.area) + ')</span>']); }
+    if (info.lu[i]) rows.push(['Land cover', (LEG.landuse[info.lu[i]] || ['code ' + info.lu[i]])[0]]);
+    if (info.water[i]) rows.push(['Water', LEG.water.filter((w) => info.water[i] & w[0]).map((w) => w[1]).join(', ')]);
+    const coast = info.cs[i] >> 3, snow = info.cs[i] & 7;
+    if (coast) rows.push(['Coast', (LEG.coast[coast] || ['code ' + coast])[0]]);
+    if (snow) rows.push(['Snow', (LEG.snow[snow] || ['code ' + snow])[0]]);
+  } else rows.push(['', '<span class="soft">Loading map details…</span>']);
+  let best = null, bd = 80;
+  for (const c of cities) { const d = gc(lat, lonE, c.lat, c.lon); if (d < bd) { bd = d; best = c; } }
+  if (best) rows.push(['Near', best.continent + ' city ' + best.n + ' <span class="soft">(' + Math.round(bd) + ' km' + (best.source && best.source !== 'user' ? '; ' + best.source.replace(/^added: /, '') : '') + ')</span>']);
+  $('readout').innerHTML = '<table>' + rows.map((r) => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('') + '</table>';
+}
+
+// ---------------------------------------------------------------- interaction
+const measure = { on: false, a: null, b: null, line: null };
+function drawMeasure() {
+  if (measure.line) { scene.remove(measure.line); measure.line.geometry.dispose(); measure.line = null; }
+  if (measure.a) {
+    const A = dirOf(measure.a.lat, measure.a.lonE), B = measure.b ? dirOf(measure.b.lat, measure.b.lonE) : A, ang = A.angleTo(B), pts = [], lift = R + 10 + S.highest.h / 1000 * exag;
+    for (let k = 0; k <= 128; k++) { const t = k / 128; pts.push((ang < 1e-6 ? A.clone() : A.clone().multiplyScalar(Math.sin((1 - t) * ang) / Math.sin(ang)).add(B.clone().multiplyScalar(Math.sin(t * ang) / Math.sin(ang)))).multiplyScalar(lift)); }
+    measure.line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xff6a5a, depthTest: false }));
+    measure.line.renderOrder = 5; scene.add(measure.line);
+    if (measure.b) { const d = gc(measure.a.lat, measure.a.lonE, measure.b.lat, measure.b.lonE);
+      $('measureOut').innerHTML = 'Great-circle distance <b class="mono">' + Math.round(d).toLocaleString() + ' km</b> <span class="mono">(' + Math.round(d / KM_PER_MI).toLocaleString() + ' mi)</span>'; }
+    else $('measureOut').textContent = 'Click the second point.';
+  }
+  redraw();
+}
+let down = null, hoverEv = null;
+const cv = renderer.domElement;
+cv.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; flying = null; });
+cv.addEventListener('pointerup', (e) => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4) return;
+  const p = pick(e); if (!p) return; readout(p);
+  if (!measure.on) return;
+  const ll = latLonOf(p); if (!measure.a || measure.b) { measure.a = ll; measure.b = null; } else measure.b = ll; drawMeasure();
+});
+cv.addEventListener('pointermove', (e) => { if (e.pointerType !== 'mouse') return; if (!hoverEv) requestAnimationFrame(() => { readout(pick(hoverEv)); hoverEv = null; }); hoverEv = e; });
+function zoomBy(f) { const d = camera.position.length(), alt = Math.min(R * 10, Math.max(12, (d - R) * f)); camera.position.setLength(R + alt); redraw(); }
+cv.addEventListener('wheel', (e) => { e.preventDefault(); flying = null; zoomBy(Math.exp(e.deltaY * 0.0012)); }, { passive: false });
+// two-finger pinch zoom
+const touches = new Map(); let pinch0 = 0;
+cv.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') touches.set(e.pointerId, [e.clientX, e.clientY]); });
+cv.addEventListener('pointermove', (e) => {
+  if (!touches.has(e.pointerId)) return; touches.set(e.pointerId, [e.clientX, e.clientY]);
+  if (touches.size === 2) { const [a, b] = [...touches.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch0) zoomBy(pinch0 / d); pinch0 = d; controls.enableRotate = false; }
+});
+const endTouch = (e) => { touches.delete(e.pointerId); if (touches.size < 2) { pinch0 = 0; controls.enableRotate = true; } };
+cv.addEventListener('pointerup', endTouch); cv.addEventListener('pointercancel', endTouch);
+$('zin').onclick = () => zoomBy(0.6); $('zout').onclick = () => zoomBy(1 / 0.6);
+
+let flying = null;
+function flyTo(dir, alt) { flying = { from: camera.position.clone().normalize(), to: dir.clone().normalize(), a0: camera.position.length() - R, a1: alt, t0: performance.now() }; redraw(); }
+function stepFly() {
+  const t = Math.min(1, (performance.now() - flying.t0) / 1400), s = t * t * (3 - 2 * t), ang = flying.from.angleTo(flying.to);
+  const v = ang < 1e-6 ? flying.to.clone() : flying.from.clone().multiplyScalar(Math.sin((1 - s) * ang) / Math.sin(ang)).add(flying.to.clone().multiplyScalar(Math.sin(s * ang) / Math.sin(ang)));
+  camera.position.copy(v.multiplyScalar(R + Math.exp(Math.log(flying.a0) + (Math.log(flying.a1) - Math.log(flying.a0)) * s)));
+  if (t >= 1) flying = null;
+}
+const flyToNation = (n) => flyTo(dirOf(n.lat, n.lon), Math.min(12000, Math.max(900, Math.sqrt(n.area) * 3.4)));
+
+// ---------------------------------------------------------------- panels
+function drawLegend() {
+  const sw = (c, t) => '<div><span class="sw" style="background:' + c + '"></span>' + t + '</div>';
+  const lu = (i) => Object.entries(LEG.landuse).filter(([k]) => k != 17).map(([, v]) => sw(v[i], v[0])).join('');
+  const h = { natural: () => lu(1) + sw('#2c5f93', 'Lake') + sw('#3fbfb8', 'Coral reef') + sw('#f4f7fa', 'Permanent snow'),
+    elevation: () => [...LEG.elev].reverse().map(([v, c]) => sw(c, v.toLocaleString() + ' m')).join(''),
+    landuse: () => lu(2), nations: () => '<div class="soft">Each nation has its own colour. Point at one for its name and area.</div>',
+    continents: () => LEG.continents.map(([n, c]) => sw(c, n)).join(''),
+    water: () => LEG.water.map((w) => sw(w[2], w[1])).join('') + '<div class="soft">Waterfalls and springs are drawn larger than their cells.</div>',
+    coast: () => Object.values(LEG.coast).map((v) => sw(v[1], v[0])).join(''),
+    snow: () => Object.values(LEG.snow).map((v) => sw(v[1], v[0])).join('') + '<div class="soft">Recorded for Morasil and Hoakamotu only.</div>' }[style]();
+  $('legend').innerHTML = h; $('bordersRow').hidden = style !== 'natural';
+}
+function drawAtlas() {
+  const hi = S.highest, contTotal = Object.values(S.continents).reduce((a, b) => a + b, 0);
+  let h = '<table>' +
+    '<tr><td>Continents</td><td><span class="mono">' + km2(contTotal) + '</span><br><span class="soft">' + (contTotal / (4 * Math.PI * R * R) * 100).toFixed(1) + '% of the surface; polar ice not counted</span></td></tr>' +
+    '<tr><td>Highest point</td><td><span class="mono">' + hi.h.toLocaleString() + ' m</span> <span class="soft">at ' + fmtLat(hi.lat) + ' ' + fmtLon(hi.lon) + '</span></td></tr>' +
+    '<tr><td>Nations</td><td>' + nations.length + '</td></tr><tr><td>Cities</td><td>' + cities.length + '</td></tr>' +
+    '<tr><td>Map cell</td><td><span class="mono">' + (360 / S.grid[0] * 60).toFixed(1) + '′</span> <span class="soft">(about ' + (2 * Math.PI * R / S.grid[0]).toFixed(1) + ' km at the equator)</span></td></tr></table>';
+  $('summary').innerHTML = h;
+  let nl = '';
+  for (let c = 1; c <= 6; c++) {
+    const list = nations.filter((n) => n.c === c).sort((a, b) => b.area - a.area);
+    nl += '<div class="c"><span>' + CONTINENTS[c] + '</span><span class="mono soft" style="font-size:11px;align-self:end">' + km2(S.continents[CONTINENTS[c]]) + '</span></div>';
+    nl += list.map((n) => '<button class="n" data-i="' + n.i + '"><span>' + n.name + '</span><span class="mono soft">' + km2(n.area) + '</span></button>').join('');
+  }
+  $('nationList').innerHTML = nl;
+  $('nationList').onclick = (e) => { const b = e.target.closest('[data-i]'); if (b) flyToNation(byIndex[+b.dataset.i]); };
+  $('findList').innerHTML = nations.map((n) => '<option value="' + n.name.replace(/"/g, '&quot;') + '">').join('');
+  $('files').innerHTML = Object.entries(S.files).map(([k, v]) => k + ': ' + (v || '<span class="warn">missing</span>')).join('<br>');
+}
+$('find').addEventListener('change', () => { const q = $('find').value.trim().toLowerCase(), n = nations.find((n) => n.name.toLowerCase() === q); if (n) flyToNation(n); });
+$('mode').onchange = () => { style = $('mode').value; setStyle(); };
+$('optBorders').onchange = setStyle;
+$('optNames').onchange = redraw;
+$('optCities').onchange = () => { cityPts.visible = $('optCities').checked; redraw(); };
+$('optGrid').onchange = () => { grid.visible = $('optGrid').checked; redraw(); };
+$('optAtmo').onchange = () => { atmo.visible = $('optAtmo').checked; redraw(); };
+$('exag').oninput = () => { exag = +$('exag').value; exagU.value = exag; $('exagV').textContent = exag + 'x'; placeCities(); if (measure.a) drawMeasure(); redraw(); };
+$('seam').onchange = () => { buildGrid(); drawAtlas(); redraw(); };
+$('measureBtn').onclick = () => { measure.on = !measure.on; $('measureBtn').classList.toggle('on', measure.on);
+  if (!measure.on) { measure.a = measure.b = null; $('measureOut').textContent = ''; drawMeasure(); } else $('measureOut').textContent = 'Click the first point.'; };
+$('resetView').onclick = () => flyTo(dirOf(10, 180), R * 2.4);
+$('toggleControls').onclick = () => { $('controls').classList.toggle('open'); $('atlas').classList.remove('open'); };
+$('toggleAtlas').onclick = () => { $('atlas').classList.toggle('open'); $('controls').classList.remove('open'); };
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); sizeLabels(); redraw(); });
+
+// ---------------------------------------------------------------- start
+camera.position.copy(dirOf(12, 175).multiplyScalar(R * 3.4));
+drawAtlas();
+await setStyle();
+document.fonts.ready.then(redraw);
+let lastTileCheck = 0;
+function loop(now) {
+  requestAnimationFrame(loop);
+  if (flying) { stepFly(); dirty = true; }
+  const alt = camera.position.length() - R;
+  controls.rotateSpeed = Math.min(1, Math.max(0.008, alt / R * 0.9));
+  controls.update();
+  if (!dirty) return;
+  dirty = false;
+  camera.near = Math.max(0.5, (alt - S.highest.h / 1000 * exag) * 0.3); camera.far = camera.position.length() + R * 1.2; camera.updateProjectionMatrix();
+  camera.updateMatrixWorld();
+  if (now - lastTileCheck > 150) { lastTileCheck = now; updateTiles(); }
+  renderer.render(scene, camera);
+  drawLabels();
+}
+requestAnimationFrame(loop);
+setInterval(() => { if (camera.position.length() - R < NEAR_ALT) updateTiles(); }, 500);
+loadInfo().catch((e) => console.error('hover data', e));
+window.__ready = true;
+</script>
