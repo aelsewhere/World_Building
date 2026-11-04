@@ -1,0 +1,884 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World Globe</title>
+<style>
+  :root {
+    --bg: #05070c; --panel: rgba(16, 20, 30, 0.88); --line: rgba(255,255,255,0.12);
+    --text: #e6e9ef; --muted: #9aa3b2; --accent: #7fb2ff; --warn: #ffb36b;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+  #view { position: fixed; inset: 0; }
+  #labels { position: fixed; inset: 0; pointer-events: none; }
+  .panel { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 12px; backdrop-filter: blur(6px); }
+  #controls { top: 12px; left: 12px; width: 250px; max-height: calc(100% - 24px); overflow: auto; }
+  #readout { bottom: 12px; left: 12px; width: 320px; min-height: 40px; }
+  #side { top: 12px; right: 12px; width: 290px; max-height: calc(100% - 24px); overflow: auto; }
+  h1 { font-size: 14px; margin: 0 0 8px; }
+  h2 { font-size: 12px; margin: 12px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  label { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+  select, input[type=text], input[type=number], button { font: inherit; color: var(--text); background: #1c2230;
+    border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px; }
+  select, input[type=text] { width: 100%; }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.on { background: #27406b; border-color: var(--accent); }
+  input[type=range] { flex: 1; }
+  .row { display: flex; gap: 6px; align-items: center; }
+  .muted { color: var(--muted); }
+  .warn { color: var(--warn); }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 1px 0; vertical-align: top; }
+  td:first-child { color: var(--muted); width: 92px; }
+  .legend div { display: flex; align-items: center; gap: 6px; margin: 1px 0; }
+  .sw { width: 12px; height: 12px; border-radius: 2px; flex: none; border: 1px solid rgba(0,0,0,.4); }
+  #nationList div.n { display: flex; justify-content: space-between; cursor: pointer; padding: 1px 2px; border-radius: 3px; }
+  #nationList div.n:hover { background: #1f2a40; }
+  #nationList div.c { margin-top: 6px; font-weight: 600; }
+  #loader { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(5,7,12,.92); z-index: 10; }
+  #loader .box { width: min(560px, calc(100% - 32px)); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+  #drop { border: 2px dashed var(--line); border-radius: 8px; padding: 18px; text-align: center; margin: 12px 0; }
+  #drop.over { border-color: var(--accent); }
+  #status { white-space: pre-wrap; margin-top: 10px; min-height: 1.4em; }
+  details summary { cursor: pointer; color: var(--muted); }
+  @media (max-width: 720px) { #side { display: none; } #controls { width: 200px; } #readout { width: calc(100% - 24px); } }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="view"></div>
+<canvas id="labels"></canvas>
+
+<div id="loader"><div class="box">
+  <h1>World Globe: load the map data</h1>
+  <div class="muted">Choose the <b>maps</b> folder (the one holding <code>world_elevation_data_v2.png</code> and the other files in the Nov 4 globe data pack). The files stay on this computer; nothing is uploaded.</div>
+  <div id="drop">
+    <div class="row" style="justify-content:center; flex-wrap:wrap">
+      <button id="pickFolder">Choose maps folder…</button>
+      <button id="pickFiles">Choose files…</button>
+      <button id="fetchMaps" title="Works when this page is served by a local web server next to a maps folder">Load from ./maps</button>
+    </div>
+    <div class="muted" style="margin-top:8px">or drop the files here</div>
+  </div>
+  <input id="folderInput" type="file" webkitdirectory multiple hidden>
+  <input id="filesInput" type="file" multiple accept=".png,.csv" hidden>
+  <div id="status" class="muted"></div>
+</div></div>
+
+<div id="controls" class="panel" hidden>
+  <h1>World Globe</h1>
+  <h2>Map</h2>
+  <select id="mode">
+    <option value="natural">Natural colour</option>
+    <option value="elevation">Elevation</option>
+    <option value="landuse">Land cover</option>
+    <option value="nations">Nations</option>
+    <option value="continents">Continents</option>
+    <option value="water">Rivers and lakes</option>
+    <option value="coast">Coasts and reefs</option>
+    <option value="snow">Snow and ice</option>
+  </select>
+  <h2>Show</h2>
+  <label><input type="checkbox" id="optBorders" checked> Nation borders</label>
+  <label><input type="checkbox" id="optCities" checked> Cities</label>
+  <label><input type="checkbox" id="optGrid"> Latitude and longitude lines</label>
+  <label><input type="checkbox" id="optAtmo" checked> Atmosphere</label>
+  <h2>Relief</h2>
+  <label title="How much the heights are raised on the globe. 1x is true scale.">Raise <input type="range" id="exag" min="0" max="50" step="1" value="10"><span id="exagV">10x</span></label>
+  <label title="Strength of the hill shading painted on the map">Shading <input type="range" id="shadeK" min="0" max="20" step="1" value="8"><span id="shadeV">8</span></label>
+  <label title="Half uses a quarter of the graphics memory and repaints four times faster. Thin rivers can break up at half.">Map detail
+    <select id="detail" style="width:auto"><option value="1">Full</option><option value="2">Half (faster)</option></select></label>
+  <h2>Find</h2>
+  <input type="text" id="find" list="findList" placeholder="Nation or city name">
+  <datalist id="findList"></datalist>
+  <h2>Tools</h2>
+  <div class="row"><button id="measureBtn">Measure distance</button><button id="resetView">Reset view</button></div>
+  <div id="measureOut" class="muted" style="margin-top:4px"></div>
+  <h2>Settings</h2>
+  <label title="The longitude number given to the left edge of the map (column 0). Not yet confirmed; the reference says probably 180°.">Seam longitude <input type="number" id="seam" value="-180" step="1" style="width:70px"></label>
+  <h2>Legend</h2>
+  <div id="legend" class="legend"></div>
+</div>
+
+<div id="readout" class="panel" hidden><span class="muted">Point at the globe to read the map.</span></div>
+
+<div id="side" class="panel" hidden>
+  <h1>World</h1>
+  <div id="summary"></div>
+  <details id="checksBox"><summary>Data checks</summary><div id="checks" style="margin-top:6px"></div></details>
+  <h2>Nations</h2>
+  <div id="nationList"></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ---------------------------------------------------------------- constants
+const R = 6371;                          // Earth's mean radius, km
+const KM_PER_MI = 1.609344;
+const TILE_X = 4, TILE_Y = 2;            // texture tiles (each 2160 x 2160 on the 8640 x 4320 grid)
+const SEG = 240;                         // mesh segments per tile side
+
+const CONTINENTS = ['', 'Morasil', 'Solua', 'Mesomara', 'Kamon', 'Elmiyaro', 'Hoakamotu'];
+const CONT_COLOURS = ['#000', '#d98c5f', '#6fbf73', '#e6c75a', '#c46fbf', '#5fa8d9', '#d9d9d9'];
+
+const LANDUSE = {
+  1: ['Jungle', '#2c6a2a', '#1b7a2e'],
+  2: ['Seasonal tropical forest', '#557f34', '#5aa83a'],
+  3: ['Savanna', '#b3a95a', '#d6c95a'],
+  4: ['Grassland', '#9cb45e', '#a6d66b'],
+  5: ['Steppe', '#bfb27a', '#e3d79b'],
+  6: ['Hot desert', '#dcc08c', '#f5d991'],
+  7: ['Salt flats', '#e9e3d4', '#ffffff'],
+  8: ['Mediterranean scrub', '#a2985c', '#b8a24a'],
+  9: ['Dry scrub', '#b7a170', '#d2b47c'],
+  10: ['Temperate forest', '#4a7a3b', '#3e9a4a'],
+  11: ['Temperate rainforest (and laurel forest)', '#2d5c3a', '#1f6e55'],
+  12: ['Moorland', '#8a875f', '#9a7fa6'],
+  13: ['Cloud forest (and montane forest)', '#3b6c4c', '#3aa58a'],
+  14: ['Farmland', '#aeb46a', '#e8b84a'],
+  15: ['Mangroves', '#3d684d', '#2f8f7f'],
+  16: ['Coastal fog desert', '#cbbd9b', '#c7b8d6'],
+  17: ['(old painted mountains)', '#8a7f72', '#8a7f72'],
+  18: ['Marsh / swamp', '#6a875a', '#5f8fa0'],
+  19: ['Conifer forest', '#33543a', '#245a3a'],
+  20: ['Peat and tussock grass', '#a1986a', '#b0a070'],
+  21: ['Tundra', '#999a82', '#a9b3a0'],
+  22: ['Ice cap / glacier', '#f1f4f7', '#f4f8ff'],
+  23: ['Outwash gravel and moss', '#9b9988', '#8f9a7e'],
+};
+const COAST = {
+  1: ['Cliffs', '#b5523b'], 2: ['Rocky coves', '#d08a4a'], 3: ['Dry beaches and dunes', '#f0d27a'],
+  4: ['Tropical beaches and lagoons', '#fff2a8'], 5: ['Temperate beaches, dunes, salt marsh', '#c8d98a'],
+  6: ['Rias', '#9a6fd0'], 7: ['Delta (mangroves or marsh)', '#3f9a5a'], 8: ['Estuary', '#4aa0d0'],
+  9: ['Fjord coast', '#3f5fd0'], 10: ['Fjord (inland)', '#2a3fa0'], 11: ['Glacier front', '#e8f4ff'],
+  12: ['Black sand and gravel', '#3a3a3a'], 20: ['Fringing coral reef', '#36d6c8'],
+};
+const WATER = [
+  [1, 'River or stream', '#2f6fd0'], [2, 'Seasonal (dry-bed)', '#8fb8e0'], [4, 'Waterfall or cataract', '#ff4040'],
+  [8, 'Gorge', '#a040c0'], [16, 'Lake', '#2a5fa8'], [32, 'Springs', '#30d070'],
+  [64, 'Canal (Crocevia)', '#ff9a20'], [128, 'Outwash plain', '#c8b890'],
+];
+const SNOW = {
+  1: ['Seasonal mountain snow', '#b8d4f0'], 2: ['Permanent snow / ice cap', '#ffffff'],
+  3: ['Glacier tongue', '#6fb0ff'], 4: ['Winter snow on lowlands', '#d8c8f0'],
+};
+const ELEV_STOPS = [[-200, '#4f9a7a'], [0, '#5f9e4f'], [200, '#9fc06a'], [500, '#e2db96'], [1000, '#d6ae6c'],
+  [2000, '#ad7748'], [3000, '#8a593c'], [4000, '#7d6c66'], [5000, '#b9b1ad'], [6000, '#ffffff']];
+
+const OCEAN = '#173a66', LAKE = '#2c5f93', REEF = '#3fbfb8';
+
+// file name patterns (highest version wins; files inside an "archive" folder are skipped)
+const LAYERS = {
+  elevation: /^world_elevation_data_v(\d+)\.png$/i,
+  water: /^world_water_data_v(\d+)\.png$/i,
+  coast: /^world_coast_data_v(\d+)\.png$/i,
+  landuse: /^world_landuse_data_v(\d+)\.png$/i,
+  snow: /^world_snow_data_v(\d+)\.png$/i,
+  continent: /^world_continent_data_v(\d+)\.png$/i,
+  nations: /^world_nations_data_v(\d+)\.png$/i,
+  index: /^world_nations_index_v(\d+)\.csv$/i,
+  cities: /^cities_v(\d+)\.csv$/i,
+};
+const FETCH_NAMES = {
+  elevation: 'world_elevation_data_v2.png', water: 'world_water_data_v1.png', coast: 'world_coast_data_v1.png',
+  landuse: 'world_landuse_data_v1.png', snow: 'world_snow_data_v1.png', continent: 'world_continent_data_v1.png',
+  nations: 'world_nations_data_v1.png', index: 'world_nations_index_v1.csv', cities: 'cities_v1.csv',
+};
+
+const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const $ = (id) => document.getElementById(id);
+const status = (t) => { $('status').textContent = t; };
+const tick = () => new Promise((r) => setTimeout(r, 0));
+
+// ---------------------------------------------------------------- PNG decoder (8 and 16 bit; keeps full 16-bit values)
+async function decodePNG(buffer) {
+  const b = new Uint8Array(buffer), dv = new DataView(buffer);
+  const sig = [137, 80, 78, 71, 13, 10, 26, 10];
+  for (let i = 0; i < 8; i++) if (b[i] !== sig[i]) throw new Error('not a PNG file');
+  let pos = 8, W = 0, H = 0, depth = 0, ctype = 0, interlace = 0; const idat = [];
+  while (pos < b.length) {
+    const len = dv.getUint32(pos), type = String.fromCharCode(b[pos + 4], b[pos + 5], b[pos + 6], b[pos + 7]);
+    const data = b.subarray(pos + 8, pos + 8 + len);
+    if (type === 'IHDR') { W = dv.getUint32(pos + 8); H = dv.getUint32(pos + 12); depth = b[pos + 16]; ctype = b[pos + 17]; interlace = b[pos + 20]; }
+    else if (type === 'IDAT') idat.push(data);
+    else if (type === 'IEND') break;
+    pos += 12 + len;
+  }
+  if (interlace) throw new Error('interlaced PNGs are not supported; save without interlacing');
+  const ch = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[ctype];
+  const bitsPx = ch * depth, bpp = Math.max(1, bitsPx >> 3), stride = Math.ceil(W * bitsPx / 8);
+  const out = depth === 16 ? new Uint16Array(W * H) : new Uint8Array(W * H);
+  let prev = new Uint8Array(stride), cur = new Uint8Array(stride), filt = -1, fill = 0, row = 0;
+  const finishRow = () => {
+    const p = prev, c = cur;
+    switch (filt) {
+      case 0: break;
+      case 1: for (let i = bpp; i < stride; i++) c[i] = (c[i] + c[i - bpp]) & 255; break;
+      case 2: for (let i = 0; i < stride; i++) c[i] = (c[i] + p[i]) & 255; break;
+      case 3: for (let i = 0; i < stride; i++) c[i] = (c[i] + (((i >= bpp ? c[i - bpp] : 0) + p[i]) >> 1)) & 255; break;
+      case 4: for (let i = 0; i < stride; i++) {
+        const a = i >= bpp ? c[i - bpp] : 0, bb = p[i], cc = i >= bpp ? p[i - bpp] : 0;
+        const pa = Math.abs(bb - cc), pb = Math.abs(a - cc), pc = Math.abs(a + bb - 2 * cc);
+        c[i] = (c[i] + (pa <= pb && pa <= pc ? a : pb <= pc ? bb : cc)) & 255;
+      } break;
+      default: throw new Error('bad PNG filter ' + filt);
+    }
+    const o = row * W;
+    if (depth === 16) for (let x = 0, i = 0; x < W; x++, i += bpp) out[o + x] = (c[i] << 8) | c[i + 1];
+    else if (depth === 8) for (let x = 0, i = 0; x < W; x++, i += bpp) out[o + x] = c[i];
+    else { const per = 8 / depth, mask = (1 << depth) - 1;
+      for (let x = 0; x < W; x++) out[o + x] = (c[(x / per) | 0] >> (8 - depth * (x % per + 1))) & mask; }
+    prev = c; cur = p; row++; filt = -1; fill = 0;
+  };
+  const reader = new Blob(idat).stream().pipeThrough(new DecompressionStream('deflate')).getReader();
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    let i = 0;
+    while (i < value.length && row < H) {
+      if (filt < 0) { filt = value[i++]; continue; }
+      const n = Math.min(stride - fill, value.length - i);
+      cur.set(value.subarray(i, i + n), fill); fill += n; i += n;
+      if (fill === stride) finishRow();
+    }
+  }
+  if (row < H) throw new Error('PNG data ended early');
+  return { W, H, depth, data: out };
+}
+
+// ---------------------------------------------------------------- CSV
+function parseCSV(text) {
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(f); f = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += c;
+  }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  return rows.filter((r) => r.some((x) => x.trim() !== ''));
+}
+const findCol = (head, ...res) => { for (const re of res) { const i = head.findIndex((h) => re.test(h)); if (i >= 0) return i; } return -1; };
+
+// ---------------------------------------------------------------- world state
+const world = { W: 0, H: 0, elev: null, water: null, coast: null, landuse: null, snow: null, continent: null, nations: null,
+  names: new Map(), cities: [], stats: new Map(), files: {} };
+
+function resample(src, sw, sh, W, H) {
+  if (sw === W && sh === H) return src;
+  const out = new src.constructor(W * H);
+  for (let y = 0; y < H; y++) { const sy = Math.min(sh - 1, Math.floor((y + 0.5) * sh / H)) * sw;
+    for (let x = 0; x < W; x++) out[y * W + x] = src[sy + Math.min(sw - 1, Math.floor((x + 0.5) * sw / W))]; }
+  return out;
+}
+
+async function loadSources(sources) {   // sources: { key: {name, buffer(): Promise<ArrayBuffer>} }
+  if (!sources.elevation) throw new Error('No world_elevation_data_v#.png found. It is the one file the globe needs.');
+  for (const k of Object.keys(LAYERS)) world.files[k] = sources[k] ? sources[k].name : null;
+  status('Reading heights (' + sources.elevation.name + ')…'); await tick();
+  const e = await decodePNG(await sources.elevation.buffer());
+  if (e.depth !== 16) throw new Error(sources.elevation.name + ' is ' + e.depth + '-bit; expected 16-bit (metres + 1000).');
+  world.W = e.W; world.H = e.H; world.elev = e.data;
+  for (const k of ['water', 'coast', 'landuse', 'snow', 'continent', 'nations']) {
+    if (!sources[k]) continue;
+    status('Reading ' + sources[k].name + '…'); await tick();
+    const p = await decodePNG(await sources[k].buffer());
+    world.files[k] = sources[k].name + (p.W !== e.W || p.H !== e.H ? ' (' + p.W + '×' + p.H + ', rescaled)' : '');
+    world[k] = resample(p.data, p.W, p.H, e.W, e.H);
+  }
+  if (sources.index) {
+    const rows = parseCSV(await sources.index.text()); const h = rows[0].map((s) => s.toLowerCase());
+    const cG = findCol(h, /global/), cC = findCol(h, /code/), cN = findCol(h, /nation\s*#|number|^#|nation no/), cName = findCol(h, /name/);
+    for (const r of rows.slice(1)) {
+      const gid = cG >= 0 && r[cG] ? +r[cG] : (+r[cC]) * 100 + (+r[cN]);
+      if (gid) world.names.set(gid, (r[cName] || '').trim());
+    }
+  }
+  if (sources.cities) {
+    const rows = parseCSV(await sources.cities.text()); const h = rows[0].map((s) => s.toLowerCase());
+    const cLat = findCol(h, /^lat/, /lat/), cLon = findCol(h, /^lon/, /lon/), cName = findCol(h, /city|name/);
+    const cNat = findCol(h, /nation|country/), cCap = findCol(h, /capital|rank|type|size/);
+    for (const r of rows.slice(1)) {
+      const lat = parseFloat(r[cLat]), lon = parseFloat(r[cLon]);
+      if (!isFinite(lat) || !isFinite(lon)) continue;
+      world.cities.push({ name: (r[cName] || '').trim(), lat, lonE: ((lon % 360) + 360) % 360,
+        nation: cNat >= 0 ? r[cNat] : '', extra: cCap >= 0 ? r[cCap] : '', capital: cCap >= 0 && /capital|yes|true|^1$/i.test(r[cCap] || '') });
+    }
+  }
+}
+
+const isLand = (i) => world.elev[i] > 0;
+const gidAt = (i) => world.gid ? world.gid[i] : 0;
+const nationName = (g) => world.names.get(g) || (CONTINENTS[(g / 100) | 0] || '?') + ' nation ' + (g % 100);
+
+// ---------------------------------------------------------------- statistics and checks
+function computeStats() {
+  const { W, H, continent: C, nations: N, elev } = world;
+  const stats = new Map(), contArea = new Float64Array(8);
+  let landArea = 0, seaArea = 0, contNoNation = 0, landNoCont = 0;
+  const dLon = 2 * Math.PI / W;
+  for (let y = 0; y < H; y++) {
+    const la1 = Math.PI / 2 - y * Math.PI / H, la2 = Math.PI / 2 - (y + 1) * Math.PI / H, lc = (la1 + la2) / 2;
+    const a = R * R * dLon * (Math.sin(la1) - Math.sin(la2));
+    const cy = Math.sin(lc), cr = Math.cos(lc);
+    for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      if (elev[i] === 0) { seaArea += a; continue; }
+      landArea += a;
+      if (!C) continue;
+      const c = C[i]; if (!c) { landNoCont++; continue; }
+      contArea[c] += a;
+      const n = N ? N[i] : 0; if (!n) { contNoNation++; continue; }
+      const g = c * 100 + n; let s = stats.get(g);
+      if (!s) { s = { gid: g, area: 0, cells: 0, sx: 0, sy: 0, sz: 0, hmax: -1e9 }; stats.set(g, s); }
+      const lon = (x + 0.5) * dLon;
+      s.area += a; s.cells++; s.sx += a * cr * Math.cos(lon); s.sy += a * cy; s.sz += -a * cr * Math.sin(lon);
+      const h = elev[i] - 1000; if (h > s.hmax) s.hmax = h;
+    }
+  }
+  for (const s of stats.values()) { const l = Math.hypot(s.sx, s.sy, s.sz); s.dir = new THREE.Vector3(s.sx / l, s.sy / l, s.sz / l); }
+  world.stats = stats;
+  let hmax = -1e9, hmin = 1e9, imax = 0;
+  for (let i = 0; i < elev.length; i++) { const v = elev[i]; if (v) { if (v > hmax) { hmax = v; imax = i; } if (v < hmin) hmin = v; } }
+  world.hmax = hmax - 1000; world.hmin = hmin - 1000; world.imax = imax;
+  world.landArea = landArea; world.seaArea = seaArea; world.contArea = contArea;
+  world.contNoNation = contNoNation; world.landNoCont = landNoCont;
+  // nation ID per cell (continent x 100 + nation; 0 where none) and the cells on a border between two nations
+  if (C && N) {
+    const gid = new Uint16Array(W * H), border = new Uint8Array(W * H);
+    for (let i = 0; i < gid.length; i++) if (elev[i] && C[i] && N[i]) gid[i] = C[i] * 100 + N[i];
+    for (let y = 0; y < H; y++) { const o = y * W;
+      for (let x = 0; x < W; x++) { const i = o + x, g = gid[i]; if (!g) continue;
+        const e2 = gid[x + 1 === W ? o : i + 1], s2 = y < H - 1 ? gid[i + W] : 0;
+        if (e2 && e2 !== g) { border[i] = 1; border[x + 1 === W ? o : i + 1] = 1; }
+        if (s2 && s2 !== g) { border[i] = 1; border[i + W] = 1; } } }
+    world.gid = gid; world.border = border;
+  }
+}
+
+// ---------------------------------------------------------------- hill shading (baked into the map)
+let shade = null;
+function computeShade(k) {
+  const { W, H, elev } = world; shade = shade || new Uint8Array(W * H);
+  const dy = Math.PI * R / H * 1000;  // metres per row
+  const az = 315 * Math.PI / 180, alt = 45 * Math.PI / 180;
+  const Lx = Math.cos(alt) * Math.sin(az), Ly = Math.cos(alt) * Math.cos(az), Lz = Math.sin(alt);
+  for (let y = 0; y < H; y++) {
+    const lat = (90 - (y + 0.5) * 180 / H) * Math.PI / 180;
+    const dx = Math.max(0.05, Math.cos(lat)) * 2 * Math.PI * R / W * 1000;
+    const yn = Math.max(0, y - 1) * W, ys = Math.min(H - 1, y + 1) * W, o = y * W;
+    for (let x = 0; x < W; x++) {
+      const xe = x + 1 === W ? 0 : x + 1, xw = x === 0 ? W - 1 : x - 1;
+      const ve = elev[o + xe], vw = elev[o + xw], vn = elev[yn + x], vs = elev[ys + x];
+      const gx = ((ve ? ve - 1000 : 0) - (vw ? vw - 1000 : 0)) / (2 * dx) * k, gy = ((vn ? vn - 1000 : 0) - (vs ? vs - 1000 : 0)) / (2 * dy) * k;
+      const s = (-gx * Lx - gy * Ly + Lz) / Math.sqrt(gx * gx + gy * gy + 1) / Lz;
+      shade[o + x] = Math.max(0, Math.min(255, s * 128));
+    }
+  }
+}
+
+// ---------------------------------------------------------------- painting the map
+function rampColour(stops, v) {
+  if (v <= stops[0][0]) return hex(stops[0][1]);
+  for (let i = 1; i < stops.length; i++) if (v <= stops[i][0]) {
+    const [v0, c0] = stops[i - 1], [v1, c1] = stops[i], t = (v - v0) / (v1 - v0), a = hex(c0), b = hex(c1);
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  }
+  return hex(stops[stops.length - 1][1]);
+}
+const ELEV_LUT = (() => { const l = new Uint8Array(9001 * 3); for (let m = -1000; m <= 8000; m++) { const c = rampColour(ELEV_STOPS, m); l.set(c.map(Math.round), (m + 1000) * 3); } return l; })();
+const lutFrom = (obj, idx) => { const l = new Uint8Array(256 * 3); for (const [k, v] of Object.entries(obj)) l.set(hex(v[idx]), k * 3); return l; };
+const LU_NAT = lutFrom(LANDUSE, 1), LU_MAP = lutFrom(LANDUSE, 2), COAST_LUT = lutFrom(COAST, 1), SNOW_LUT = lutFrom(SNOW, 1);
+function nationColour(g) {
+  const c = (g / 100) | 0, n = g % 100;
+  const hue = (c * 61 + n * 137.508) % 360, s = 0.45 + 0.2 * ((n * 7) % 3) / 2, l = 0.55 + 0.12 * ((n * 5) % 3) / 2;
+  const col = new THREE.Color().setHSL(hue / 360, s, l); return [col.r * 255, col.g * 255, col.b * 255];
+}
+const NAT_LUT = (() => { const l = new Uint8Array(700 * 3); for (let g = 100; g < 700; g++) l.set(nationColour(g).map(Math.round), g * 3); return l; })();
+
+let savedStep = 1; try { savedStep = +localStorage.getItem('globe.detailStep') || 1; } catch (e) { /* storage blocked */ }
+const settings = { mode: 'natural', borders: true, shadeK: 8, step: savedStep };
+
+const CONT_LUT = (() => { const l = new Uint8Array(256 * 3); CONT_COLOURS.forEach((c, k) => { if (k) l.set(hex(c), k * 3); }); return l; })();
+// rivers-and-lakes map: colour and shading for every combination of water flags (later flags win, as listed)
+const WATER_LUT = new Uint8Array(256 * 3), WATER_SHADE = new Float32Array(256);
+for (let v = 0; v < 256; v++) { let c = [206, 204, 198], sh = 0.7;
+  for (const [bit, , col] of WATER) if (v & bit && bit !== 4 && bit !== 32) { c = hex(col); if (bit !== 128) sh = 0; }
+  WATER_LUT.set(c, v * 3); WATER_SHADE[v] = sh; }
+
+function paintTile(tx, ty, out) {
+  const { W, H, elev, water, coast, landuse, snow, continent } = world;
+  const st = settings.step, TW = W / TILE_X, TH = H / TILE_Y, x0 = tx * TW, y0 = ty * TH, tw = TW / st, th = TH / st, mode = settings.mode;
+  const M = { natural: 0, elevation: 1, landuse: 2, nations: 3, continents: 4, water: 5, coast: 6, snow: 7 }[mode];
+  const darkSea = M <= 1, reefOn = M === 0 || M === 6;
+  const seaR = darkSea ? 23 : 196, seaG = darkSea ? 58 : 214, seaB = darkSea ? 102 : 230;
+  const LKR = 44, LKG = 95, LKB = 147;
+  const border = settings.borders ? world.border : null, gid = world.gid;
+  const shadeK = M === 0 || M === 1 ? 1 : M === 2 ? 0.35 : M === 3 || M === 4 ? 0.5 : M === 7 ? 0.7 : 0.7;
+  for (let yy = 0; yy < th; yy++) {
+    const o = (y0 + yy * st) * W + x0; let p = yy * tw * 4;
+    for (let xx = 0; xx < tw; xx++, p += 4) {
+      const i = o + xx * st, e = elev[i];
+      const wv = water ? water[i] : 0;
+      let r, g, b, sh = shadeK;
+      if (e === 0) {
+        if (wv & 16) { r = LKR; g = LKG; b = LKB; }
+        else if (reefOn && coast && coast[i] === 20) { r = 63; g = 191; b = 184; }
+        else { r = seaR; g = seaG; b = seaB; }
+        out[p] = r; out[p + 1] = g; out[p + 2] = b; out[p + 3] = 255; continue;
+      }
+      const h = e - 1000, lu = landuse ? landuse[i] : 0;
+      if (M === 0) {
+        let j;
+        if (lu) { j = lu * 3; r = LU_NAT[j]; g = LU_NAT[j + 1]; b = LU_NAT[j + 2]; }
+        else { j = ((h < -1000 ? -1000 : h > 8000 ? 8000 : h) + 1000) * 3; r = ELEV_LUT[j]; g = ELEV_LUT[j + 1]; b = ELEV_LUT[j + 2]; }
+        if (h > 2600 && lu !== 22) { const t = (h > 4400 ? 1 : (h - 2600) / 1800) * 0.75; r += (138 - r) * t; g += (127 - g) * t; b += (114 - b) * t; }
+        const sn = snow ? snow[i] : 0;
+        if (sn === 2 || sn === 3) { r = 244; g = 247; b = 250; }
+        else if (sn === 1) { r += (244 - r) * 0.55; g += (247 - g) * 0.55; b += (250 - b) * 0.55; }
+        if (wv & 16) { r = LKR; g = LKG; b = LKB; sh = 0; }
+        else if (wv & 64) { r = 60; g = 110; b = 170; }
+        else if (wv & 1) { r += (52 - r) * 0.85; g += (98 - g) * 0.85; b += (160 - b) * 0.85; }
+        else if (wv & 2) { r += (120 - r) * 0.4; g += (150 - g) * 0.4; b += (180 - b) * 0.4; }
+      } else if (M === 1) {
+        const j = ((h < -1000 ? -1000 : h > 8000 ? 8000 : h) + 1000) * 3; r = ELEV_LUT[j]; g = ELEV_LUT[j + 1]; b = ELEV_LUT[j + 2];
+        if (wv & 16) { r = LKR; g = LKG; b = LKB; sh = 0; }
+      } else if (M === 5) {
+        const j = wv * 3; r = WATER_LUT[j]; g = WATER_LUT[j + 1]; b = WATER_LUT[j + 2]; sh = WATER_SHADE[wv];
+      } else {
+        r = 206; g = 204; b = 198;
+        if (M === 2) { if (lu) { const j = lu * 3; r = LU_MAP[j]; g = LU_MAP[j + 1]; b = LU_MAP[j + 2]; } }
+        else if (M === 3) { const gg = gid ? gid[i] : 0;
+          if (gg) { const j = gg * 3; r = NAT_LUT[j]; g = NAT_LUT[j + 1]; b = NAT_LUT[j + 2]; } else if (lu === 22) { r = 236; g = 240; b = 244; } }
+        else if (M === 4) { const c = continent ? continent[i] : 0;
+          if (c) { const j = c * 3; r = CONT_LUT[j]; g = CONT_LUT[j + 1]; b = CONT_LUT[j + 2]; } else if (lu === 22) { r = 236; g = 240; b = 244; } }
+        else if (M === 6) { const cv = coast ? coast[i] : 0; if (cv) { const j = cv * 3; r = COAST_LUT[j]; g = COAST_LUT[j + 1]; b = COAST_LUT[j + 2]; sh = 0; } }
+        else if (M === 7) { const sn = snow ? snow[i] : 0; if (sn) { const j = sn * 3; r = SNOW_LUT[j]; g = SNOW_LUT[j + 1]; b = SNOW_LUT[j + 2]; sh = 0.4; } }
+        if (wv & 16) { r = LKR; g = LKG; b = LKB; sh = 0; }
+      }
+      if (sh > 0) { const f = 1 + (shade[i] * 0.0078125 - 1) * sh; r *= f; g *= f; b *= f; }
+      if (border !== null && border[i]) {
+        if (M <= 1) { r += (250 - r) * 0.65; g += (240 - g) * 0.65; b += (200 - b) * 0.65; } else { r *= 0.2; g *= 0.2; b *= 0.2; }
+      }
+      out[p] = r > 255 ? 255 : r; out[p + 1] = g > 255 ? 255 : g; out[p + 2] = b > 255 ? 255 : b; out[p + 3] = 255;
+    }
+  }
+  // make small point features visible: waterfalls and springs as 5 x 5 markers
+  if (M === 5 && water) {
+    for (let y = 0; y < TH; y++) { const o = (y0 + y) * W + x0;
+      for (let x = 0; x < TW; x++) {
+        const v = water[o + x]; if (!(v & 36)) continue;
+        const yy = (y / st) | 0, xx = (x / st) | 0;
+        const c = v & 4 ? [255, 64, 64] : [48, 208, 112];
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+          const a = yy + dy, bb = xx + dx; if (a < 0 || bb < 0 || a >= th || bb >= tw) continue;
+          const q = (a * tw + bb) * 4; out[q] = c[0]; out[q + 1] = c[1]; out[q + 2] = c[2];
+        }
+      } }
+  }
+}
+
+// ---------------------------------------------------------------- three.js scene
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+$('view').appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#05070c');
+const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 1, R * 40);
+camera.position.set(0, R * 0.4, R * 3.6);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableZoom = false; controls.enablePan = false; controls.enableDamping = true; controls.dampingFactor = 0.08;
+let dirty = true;                         // draw a new frame only when something has changed
+const redraw = () => { dirty = true; };
+controls.addEventListener('change', redraw);
+
+// direction for a latitude and a longitude counted east of the seam
+function dirOf(latDeg, lonE) {
+  const la = latDeg * Math.PI / 180, lo = lonE * Math.PI / 180;
+  return new THREE.Vector3(Math.cos(la) * Math.cos(lo), Math.sin(la), -Math.cos(la) * Math.sin(lo));
+}
+function latLonOf(v) {
+  const n = v.clone().normalize();
+  return { lat: Math.asin(Math.max(-1, Math.min(1, n.y))) * 180 / Math.PI, lonE: ((Math.atan2(-n.z, n.x) * 180 / Math.PI) + 360) % 360 };
+}
+function cellOf(lat, lonE) {
+  const { W, H } = world;
+  return Math.min(H - 1, Math.max(0, Math.floor((90 - lat) / 180 * H))) * W + Math.min(W - 1, Math.floor(lonE / 360 * W));
+}
+const heightAt = (lat, lonE) => { const v = world.elev[cellOf(lat, lonE)]; return v ? v - 1000 : 0; };
+
+const tiles = [];
+let exag = 10;
+const exagU = { value: exag };
+function makeMaterial(tex) {
+  const m = new THREE.MeshBasicMaterial({ map: tex });
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.exag = exagU;
+    sh.vertexShader = 'attribute float height;\nuniform float exag;\n' + sh.vertexShader.replace('#include <begin_vertex>',
+      'vec3 transformed = position * (' + R.toFixed(1) + ' + height * 0.001 * exag);');
+  };
+  return m;
+}
+function buildTiles() {
+  for (let ty = 0; ty < TILE_Y; ty++) for (let tx = 0; tx < TILE_X; tx++) {
+    const n = SEG + 1, dirs = new Float32Array(n * n * 3), uv = new Float32Array(n * n * 2), hts = new Float32Array(n * n);
+    const idx = new Uint32Array(SEG * SEG * 6);
+    const lonA = tx * 360 / TILE_X, latA = 90 - ty * 180 / TILE_Y;
+    for (let j = 0; j <= SEG; j++) for (let i = 0; i <= SEG; i++) {
+      const k = j * n + i, lat = latA - j / SEG * 180 / TILE_Y, lon = lonA + i / SEG * 360 / TILE_X;
+      const d = dirOf(lat, lon); dirs[k * 3] = d.x; dirs[k * 3 + 1] = d.y; dirs[k * 3 + 2] = d.z;
+      // height at the vertex: highest cell in its neighbourhood keeps peaks from being lost
+      let hmax = 0; const cy = Math.round((90 - lat) / 180 * world.H), cx = Math.round(lon / 360 * world.W);
+      for (let a = -1; a <= 0; a++) for (let b = -1; b <= 0; b++) {
+        const yy = Math.min(world.H - 1, Math.max(0, cy + a)), xx = ((cx + b) % world.W + world.W) % world.W;
+        const v = world.elev[yy * world.W + xx]; if (v && v - 1000 > hmax) hmax = v - 1000;
+      }
+      hts[k] = hmax;
+      uv[k * 2] = i / SEG; uv[k * 2 + 1] = j / SEG;
+    }
+    let q = 0;
+    for (let j = 0; j < SEG; j++) for (let i = 0; i < SEG; i++) {
+      const a = j * n + i, b = a + 1, c = a + n, d = c + 1; idx[q++] = a; idx[q++] = c; idx[q++] = b; idx[q++] = b; idx[q++] = c; idx[q++] = d;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(dirs, 3));
+    geo.setAttribute('height', new THREE.BufferAttribute(hts, 1));
+    geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    geo.setIndex(new THREE.BufferAttribute(idx, 1));
+    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), R + 400);   // covers any raise up to 50x
+    const mesh = new THREE.Mesh(geo, null);
+    mesh.frustumCulled = false;
+    scene.add(mesh);
+    const t = { tx, ty, mesh, geo }; makeTexture(t); tiles.push(t);
+  }
+  applyExag();
+}
+function makeTexture(t) {
+  const anis = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+  const tw = world.W / TILE_X / settings.step, th = world.H / TILE_Y / settings.step;
+  if (t.tex) { t.tex.dispose(); t.mesh.material.dispose(); }
+  const data = new Uint8Array(tw * th * 4);
+  const tex = new THREE.DataTexture(data, tw, th, THREE.RGBAFormat);
+  tex.colorSpace = THREE.SRGBColorSpace; tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.magFilter = THREE.LinearFilter; tex.anisotropy = anis; tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+  t.mesh.material = makeMaterial(tex); t.tex = tex; t.data = data;
+}
+function applyExag() {
+  exagU.value = exag;
+  placeCities(); if (measure.a) drawMeasure();
+  redraw();
+}
+let paintJob = 0;
+async function repaint() {
+  const job = ++paintJob; window.__painting = true;
+  for (const t of tiles) { if (job !== paintJob) return; paintTile(t.tx, t.ty, t.data); t.tex.needsUpdate = true; redraw(); await tick(); }
+  window.__painting = false;
+  drawLegend();
+}
+
+// atmosphere
+const atmo = new THREE.Mesh(new THREE.SphereGeometry(R * 1.025, 96, 48), new THREE.ShaderMaterial({
+  side: THREE.BackSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  vertexShader: `varying vec3 vN; varying vec3 vP; void main(){ vN = normalize(normalMatrix*normal); vec4 mv = modelViewMatrix*vec4(position,1.); vP = mv.xyz; gl_Position = projectionMatrix*mv; }`,
+  fragmentShader: `varying vec3 vN; varying vec3 vP; void main(){ float f = pow(max(0., 0.75 + dot(normalize(vP), vN)), 3.0); gl_FragColor = vec4(0.35,0.6,1.0,1.)*f*1.4; }`,
+}));
+scene.add(atmo);
+
+// latitude and longitude lines (tropics and polar circles at Earth's tilt, 23.44°)
+const grid = new THREE.Group(); grid.visible = false; scene.add(grid);
+function buildGrid() {
+  grid.clear();
+  const seam = +$('seam').value || 0, rr = R * 1.0015;
+  const mat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.22 });
+  const special = new THREE.LineBasicMaterial({ color: 0xffd27f, transparent: true, opacity: 0.5 });
+  const line = (pts, m) => grid.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), m));
+  for (let lat = -75; lat <= 75; lat += 15) { const pts = []; for (let l = 0; l <= 360; l += 2) pts.push(dirOf(lat, l).multiplyScalar(rr)); line(pts, lat === 0 ? special : mat); }
+  for (const lat of [23.44, -23.44, 66.56, -66.56]) { const pts = []; for (let l = 0; l <= 360; l += 2) pts.push(dirOf(lat, l).multiplyScalar(rr)); line(pts, special); }
+  for (let lon = -180; lon < 180; lon += 15) { const lonE = ((lon - seam) % 360 + 360) % 360, pts = [];
+    for (let la = -90; la <= 90; la += 2) pts.push(dirOf(la, lonE).multiplyScalar(rr)); line(pts, lon === 0 ? special : mat); }
+}
+
+// cities
+let cityPts = null;
+function placeCities() {
+  if (!world.cities.length) return;
+  const pos = new Float32Array(world.cities.length * 3);
+  world.cities.forEach((c, k) => { const v = dirOf(c.lat, c.lonE).multiplyScalar(R + heightAt(c.lat, c.lonE) / 1000 * exag + 1.5); c.pos = v; pos.set([v.x, v.y, v.z], k * 3); });
+  if (!cityPts) {
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    cityPts = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffe9a8, size: 4, sizeAttenuation: false }));
+    scene.add(cityPts);
+  } else { cityPts.geometry.attributes.position.array.set(pos); cityPts.geometry.attributes.position.needsUpdate = true; }
+}
+
+// labels overlay
+const lc = $('labels'), lctx = lc.getContext('2d'), tmpV = new THREE.Vector3();
+function sizeLabels() { const d = Math.min(2, devicePixelRatio); lc.width = innerWidth * d; lc.height = innerHeight * d; lctx.setTransform(d, 0, 0, d, 0, 0); }
+sizeLabels();
+function drawLabels() {
+  lctx.clearRect(0, 0, innerWidth, innerHeight);
+  const alt = camera.position.length() - R, camDir = camera.position.clone().normalize();
+  const taken = new Set(), cell = 18;
+  const put = (text, v, font, colour) => {
+    if (v.dot(camDir) / v.length() < Math.min(0.97, R / camera.position.length()) + 0.02) return;
+    const s = tmpV.copy(v).project(camera); if (s.z > 1) return;
+    const x = (s.x + 1) / 2 * innerWidth, y = (1 - s.y) / 2 * innerHeight;
+    if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) return;
+    lctx.font = font; const w = lctx.measureText(text).width;
+    const keys = []; for (let a = Math.floor((x - w / 2) / cell); a <= Math.floor((x + w / 2) / cell); a++) keys.push(a + ',' + Math.floor(y / cell));
+    if (keys.some((k) => taken.has(k))) return; keys.forEach((k) => taken.add(k));
+    lctx.fillStyle = 'rgba(0,0,0,.6)'; lctx.fillText(text, x - w / 2 + 1, y + 1); lctx.fillStyle = colour; lctx.fillText(text, x - w / 2, y);
+  };
+  if ($('optBorders').checked || settings.mode === 'nations') {
+    const big = world.byArea || (world.byArea = [...world.stats.values()].sort((a, b) => b.area - a.area));
+    const lim = alt > 12000 ? 0 : alt > 6000 ? 25 : alt > 3000 ? 60 : 200;
+    for (let k = 0; k < lim && k < big.length; k++) { const s = big[k]; s.lpos = s.lpos || s.dir.clone().multiplyScalar(R + 3);
+      put(nationName(s.gid), s.lpos, '600 12px system-ui', '#ffffff'); }
+  }
+  if ($('optCities').checked && alt < 2500) for (const c of world.cities) if (c.pos) put(c.name, c.pos, '11px system-ui', '#ffe9a8');
+}
+
+// ---------------------------------------------------------------- interaction
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+function pick(ev) {
+  mouse.set(ev.clientX / innerWidth * 2 - 1, -(ev.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const o = ray.ray.origin, d = ray.ray.direction, b = o.dot(d), c = o.lengthSq() - R * R, disc = b * b - c;
+  if (disc < 0) return null;
+  return o.clone().addScaledVector(d, -b - Math.sqrt(disc));
+}
+const fmtLat = (v) => Math.abs(v).toFixed(2) + '°' + (v >= 0 ? 'N' : 'S');
+const fmtLon = (lonE) => { let l = (+$('seam').value || 0) + lonE; l = ((l + 180) % 360 + 360) % 360 - 180; return Math.abs(l).toFixed(2) + '°' + (l >= 0 ? 'E' : 'W'); };
+const fmtArea = (a) => Math.round(a).toLocaleString() + ' km² (' + Math.round(a / 2.589988).toLocaleString() + ' sq mi)';
+function readout(p) {
+  if (!p) { $('readout').innerHTML = '<span class="muted">Point at the globe to read the map.</span>'; return; }
+  const { lat, lonE } = latLonOf(p), i = cellOf(lat, lonE), e = world.elev[i];
+  const rows = [['Position', fmtLat(lat) + ' ' + fmtLon(lonE) + ' <span class="muted">(' + lonE.toFixed(2) + '° E of seam)</span>']];
+  rows.push(['Height', e ? (e - 1000).toLocaleString() + ' m' : 'sea']);
+  const g = gidAt(i);
+  if (world.continent && world.continent[i]) rows.push(['Continent', CONTINENTS[world.continent[i]] || '#' + world.continent[i]]);
+  if (g) { const s = world.stats.get(g); rows.push(['Nation', nationName(g) + ' <span class="muted">(#' + (g % 100) + ', ID ' + g + ')</span>']);
+    if (s) rows.push(['Nation area', fmtArea(s.area)]); }
+  if (world.landuse && world.landuse[i]) rows.push(['Land cover', (LANDUSE[world.landuse[i]] || ['code ' + world.landuse[i]])[0]]);
+  if (world.water && world.water[i]) rows.push(['Water', WATER.filter((w) => world.water[i] & w[0]).map((w) => w[1]).join(', ')]);
+  if (world.coast && world.coast[i]) rows.push(['Coast', (COAST[world.coast[i]] || ['code ' + world.coast[i]])[0]]);
+  if (world.snow && world.snow[i]) rows.push(['Snow', (SNOW[world.snow[i]] || ['code ' + world.snow[i]])[0]]);
+  // nearest city within 60 km
+  let best = null, bd = 60;
+  for (const c of world.cities) { const d = gcDist(lat, lonE, c.lat, c.lonE); if (d < bd) { bd = d; best = c; } }
+  if (best) rows.push(['Near', best.name + ' <span class="muted">(' + Math.round(bd) + ' km)</span>']);
+  $('readout').innerHTML = '<table>' + rows.map((r) => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('') + '</table>';
+}
+function gcDist(la1, lo1, la2, lo2) {
+  const r = Math.PI / 180, a = Math.sin((la2 - la1) * r / 2) ** 2 + Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin((lo2 - lo1) * r / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+// measuring
+const measure = { on: false, a: null, b: null, line: null };
+function drawMeasure() {
+  if (measure.line) { scene.remove(measure.line); measure.line.geometry.dispose(); measure.line = null; }
+  if (!measure.a) { redraw(); return; }
+  const A = dirOf(measure.a.lat, measure.a.lonE), B = measure.b ? dirOf(measure.b.lat, measure.b.lonE) : A;
+  const ang = A.angleTo(B), pts = [], lift = R + 8 + world.hmax / 1000 * exag;
+  for (let k = 0; k <= 128; k++) { const t = k / 128;
+    const v = ang < 1e-6 ? A.clone() : A.clone().multiplyScalar(Math.sin((1 - t) * ang) / Math.sin(ang)).add(B.clone().multiplyScalar(Math.sin(t * ang) / Math.sin(ang)));
+    pts.push(v.multiplyScalar(lift)); }
+  measure.line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xff5a5a, depthTest: false }));
+  measure.line.renderOrder = 5; scene.add(measure.line); redraw();
+  if (measure.b) { const d = gcDist(measure.a.lat, measure.a.lonE, measure.b.lat, measure.b.lonE);
+    $('measureOut').innerHTML = 'Great-circle distance: <b>' + Math.round(d).toLocaleString() + ' km</b> (' + Math.round(d / KM_PER_MI).toLocaleString() + ' mi)'; }
+  else $('measureOut').textContent = 'Click the second point.';
+}
+
+let down = null;
+renderer.domElement.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; flying = null; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4) return;
+  const p = pick(e); if (!p || !measure.on) return;
+  const ll = latLonOf(p);
+  if (!measure.a || measure.b) { measure.a = ll; measure.b = null; } else measure.b = ll;
+  drawMeasure();
+});
+let hoverEv = null;
+renderer.domElement.addEventListener('pointermove', (e) => { if (!world.elev) return;
+  if (!hoverEv) requestAnimationFrame(() => { readout(pick(hoverEv)); hoverEv = null; }); hoverEv = e; });
+renderer.domElement.addEventListener('wheel', (e) => {
+  e.preventDefault(); flying = null;
+  const d = camera.position.length(), alt = Math.max(5, d - R) * Math.exp(e.deltaY * 0.0012);
+  camera.position.setLength(R + Math.min(R * 12, Math.max(15, alt))); redraw();
+}, { passive: false });
+
+// fly to a direction
+let flying = null;
+function flyTo(dir, alt) {
+  flying = { from: camera.position.clone().normalize(), to: dir.clone().normalize(), a0: camera.position.length() - R, a1: alt, t0: performance.now() };
+}
+function stepFly() {
+  if (!flying) return;
+  const t = Math.min(1, (performance.now() - flying.t0) / 1400), s = t * t * (3 - 2 * t);
+  const ang = flying.from.angleTo(flying.to);
+  const v = ang < 1e-6 ? flying.to.clone() : flying.from.clone().multiplyScalar(Math.sin((1 - s) * ang) / Math.sin(ang)).add(flying.to.clone().multiplyScalar(Math.sin(s * ang) / Math.sin(ang)));
+  const alt = Math.exp(Math.log(flying.a0) + (Math.log(flying.a1) - Math.log(flying.a0)) * s);
+  camera.position.copy(v.multiplyScalar(R + alt));
+  if (t >= 1) flying = null;
+}
+function flyToNation(g) { const s = world.stats.get(g); if (s) flyTo(s.dir, Math.min(14000, Math.max(800, Math.sqrt(s.area) * 3.2))); }
+
+// ---------------------------------------------------------------- side panels
+function drawLegend() {
+  const m = settings.mode, sw = (c, t) => '<div><span class="sw" style="background:' + c + '"></span>' + t + '</div>';
+  let h = '';
+  if (m === 'natural') h = Object.entries(LANDUSE).filter(([k]) => k != 17).map(([, v]) => sw(v[1], v[0])).join('') + sw(LAKE, 'Lake') + sw(REEF, 'Coral reef') + sw('#f4f7fa', 'Permanent snow');
+  else if (m === 'elevation') h = [...ELEV_STOPS].reverse().map(([v, c]) => sw(c, v.toLocaleString() + ' m')).join('');
+  else if (m === 'landuse') h = Object.entries(LANDUSE).filter(([k]) => k != 17).map(([, v]) => sw(v[2], v[0])).join('');
+  else if (m === 'nations') h = '<div class="muted">Each nation has its own colour. Hover to see its name.</div>';
+  else if (m === 'continents') h = CONTINENTS.slice(1).map((n, k) => sw(CONT_COLOURS[k + 1], n)).join('');
+  else if (m === 'water') h = WATER.map((w) => sw(w[2], w[1])).join('') + '<div class="muted">Waterfalls and springs are drawn larger than their cells.</div>';
+  else if (m === 'coast') h = Object.values(COAST).map((v) => sw(v[1], v[0])).join('');
+  else if (m === 'snow') h = Object.values(SNOW).map((v) => sw(v[1], v[0])).join('') + (world.snow ? '<div class="muted">Recorded for Morasil and Hoakamotu only.</div>' : '');
+  $('legend').innerHTML = h;
+}
+function drawSide() {
+  const f = world.files, files = Object.keys(LAYERS).map((k) => '<tr><td>' + k + '</td><td>' + (f[k] ? f[k] : '<span class="warn">not loaded</span>') + '</td></tr>').join('');
+  const pk = world.imax, py = Math.floor(pk / world.W), px = pk % world.W;
+  const plat = 90 - (py + 0.5) * 180 / world.H, plon = (px + 0.5) * 360 / world.W;
+  let h = '<table>' +
+    '<tr><td>Grid</td><td>' + world.W + ' × ' + world.H + ' (' + (360 / world.W * 60).toFixed(2) + '′ per cell, about ' + (2 * Math.PI * R / world.W).toFixed(1) + ' km at the equator)</td></tr>' +
+    '<tr><td>Radius</td><td>' + R.toLocaleString() + ' km (Earth)</td></tr>' +
+    '<tr><td>Land</td><td>' + fmtArea(world.landArea) + ', ' + (world.landArea / (world.landArea + world.seaArea) * 100).toFixed(1) + '%</td></tr>' +
+    '<tr><td>Highest</td><td>' + world.hmax.toLocaleString() + ' m at ' + fmtLat(plat) + ' ' + fmtLon(plon) + '</td></tr>' +
+    '<tr><td>Lowest land</td><td>' + world.hmin.toLocaleString() + ' m</td></tr>';
+  if (world.continent) for (let c = 1; c <= 6; c++) h += '<tr><td>' + CONTINENTS[c] + '</td><td>' + fmtArea(world.contArea[c]) + '</td></tr>';
+  h += '<tr><td>Cities</td><td>' + world.cities.length + '</td></tr></table>';
+  $('summary').innerHTML = h;
+  // checks
+  const inData = new Set(world.stats.keys()), inIndex = new Set(world.names.keys());
+  const missing = [...inIndex].filter((g) => !inData.has(g)), unnamed = [...inData].filter((g) => !inIndex.has(g));
+  let c = '<table>' + files + '</table>';
+  c += '<div>Nations found in the map: <b>' + inData.size + '</b>' + (world.names.size ? ' (index lists ' + inIndex.size + ')' : '') + '</div>';
+  if (missing.length) c += '<div class="warn">In the index but not on the map: ' + missing.map((g) => nationName(g) + ' (' + g + ')').join(', ') + '</div>';
+  if (world.names.size && unnamed.length) c += '<div class="warn">On the map but not in the index: ' + unnamed.join(', ') + '</div>';
+  if (world.landNoCont) c += '<div class="muted">Land cells with no continent (polar ice and other land): ' + world.landNoCont.toLocaleString() + '</div>';
+  if (world.contNoNation) c += '<div class="warn">Continent land cells with no nation: ' + world.contNoNation.toLocaleString() + '</div>';
+  $('checks').innerHTML = c;
+  // nation list
+  let nl = '';
+  for (let k = 1; k <= 6; k++) {
+    const list = [...world.stats.values()].filter((s) => ((s.gid / 100) | 0) === k).sort((a, b) => b.area - a.area);
+    if (!list.length) continue;
+    nl += '<div class="c">' + CONTINENTS[k] + ' <span class="muted">(' + list.length + ')</span></div>';
+    for (const s of list) nl += '<div class="n" data-g="' + s.gid + '"><span>' + nationName(s.gid) + '</span><span class="muted">' + Math.round(s.area).toLocaleString() + ' km²</span></div>';
+  }
+  $('nationList').innerHTML = nl || '<div class="muted">No nation data loaded.</div>';
+  $('nationList').onclick = (e) => { const d = e.target.closest('[data-g]'); if (d) flyToNation(+d.dataset.g); };
+  $('findList').innerHTML = [...world.stats.keys()].map((g) => '<option value="' + nationName(g).replace(/"/g, '&quot;') + '">').join('') +
+    world.cities.map((c) => '<option value="' + c.name.replace(/"/g, '&quot;') + '">city</option>').join('');
+}
+$('find').addEventListener('change', () => {
+  const q = $('find').value.trim().toLowerCase(); if (!q) return;
+  for (const g of world.stats.keys()) if (nationName(g).toLowerCase() === q) return flyToNation(g);
+  const c = world.cities.find((c) => c.name.toLowerCase() === q); if (c) flyTo(dirOf(c.lat, c.lonE), 600);
+});
+
+// ---------------------------------------------------------------- controls wiring
+$('mode').onchange = () => { settings.mode = $('mode').value; repaint(); };
+$('optBorders').onchange = () => { settings.borders = $('optBorders').checked; repaint(); };
+$('optCities').onchange = () => { if (cityPts) cityPts.visible = $('optCities').checked; redraw(); };
+$('optGrid').onchange = () => { grid.visible = $('optGrid').checked; redraw(); };
+$('optAtmo').onchange = () => { atmo.visible = $('optAtmo').checked; redraw(); };
+$('exag').oninput = () => { exag = +$('exag').value; $('exagV').textContent = exag + 'x'; applyExag(); };
+let shadeTimer = 0;
+$('shadeK').oninput = () => { $('shadeV').textContent = $('shadeK').value; clearTimeout(shadeTimer);
+  shadeTimer = setTimeout(() => { computeShade(+$('shadeK').value); repaint(); }, 250); };
+$('detail').value = String(settings.step);
+$('detail').onchange = () => { settings.step = +$('detail').value; try { localStorage.setItem('globe.detailStep', settings.step); } catch (e) { /* storage blocked */ }
+  if (tiles.length) { tiles.forEach(makeTexture); repaint(); } };
+$('seam').onchange = () => { buildGrid(); drawSide(); redraw(); };
+$('measureBtn').onclick = () => { measure.on = !measure.on; $('measureBtn').classList.toggle('on', measure.on);
+  if (!measure.on) { measure.a = measure.b = null; drawMeasure(); $('measureOut').textContent = ''; } else $('measureOut').textContent = 'Click the first point.'; };
+$('resetView').onclick = () => flyTo(new THREE.Vector3(0, 0.1, 1), R * 2.6);
+
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); sizeLabels(); redraw(); });
+
+function loop() {
+  requestAnimationFrame(loop);
+  if (flying) { stepFly(); dirty = true; }
+  const alt = camera.position.length() - R;
+  controls.rotateSpeed = Math.min(1, Math.max(0.01, alt / R * 0.9));
+  controls.update();                       // fires 'change' (and so a redraw) while the globe is still moving
+  if (!dirty) return;
+  dirty = false;
+  camera.near = Math.max(0.5, (alt - (world.hmax > 0 ? world.hmax : 0) / 1000 * exag) * 0.3); camera.far = camera.position.length() + R * 1.2; camera.updateProjectionMatrix();
+  renderer.render(scene, camera);
+  if (world.elev) drawLabels();
+}
+loop();
+
+// ---------------------------------------------------------------- loading
+function pickSources(files) {
+  const best = {};
+  for (const f of files) {
+    const path = (f.webkitRelativePath || f.name).replace(/\\/g, '/');
+    if (/(^|\/)archive\//i.test(path)) continue;
+    const name = path.split('/').pop();
+    for (const [k, re] of Object.entries(LAYERS)) {
+      const m = name.match(re); if (!m) continue;
+      if (!best[k] || +m[1] > best[k].v) best[k] = { v: +m[1], name, buffer: () => f.arrayBuffer(), text: () => f.text() };
+    }
+  }
+  return best;
+}
+async function start(sources) {
+  try {
+    $('pickFolder').disabled = $('pickFiles').disabled = $('fetchMaps').disabled = true;
+    await loadSources(sources);
+    status('Measuring nations…'); await tick(); computeStats();
+    status('Shading relief…'); await tick(); computeShade(settings.shadeK);
+    status('Building the globe…'); await tick(); buildTiles(); buildGrid();
+    await repaint(); drawSide();
+    $('loader').hidden = true; ['controls', 'readout', 'side'].forEach((id) => { $(id).hidden = false; });
+    window.__globeReady = true;
+  } catch (err) {
+    console.error(err); status('Could not load: ' + err.message);
+    $('pickFolder').disabled = $('pickFiles').disabled = $('fetchMaps').disabled = false;
+  }
+}
+$('pickFolder').onclick = () => $('folderInput').click();
+$('pickFiles').onclick = () => $('filesInput').click();
+$('folderInput').onchange = (e) => start(pickSources(e.target.files));
+$('filesInput').onchange = (e) => start(pickSources(e.target.files));
+const drop = $('drop');
+drop.ondragover = (e) => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove('over'); start(pickSources(e.dataTransfer.files)); };
+$('fetchMaps').onclick = async () => {
+  const base = new URLSearchParams(location.search).get('maps') || 'maps/', src = {};
+  status('Looking for files in ' + base + '…');
+  for (const [k, name] of Object.entries(FETCH_NAMES)) {
+    try { const r = await fetch(base + name); if (r.ok) { const buf = await r.arrayBuffer();
+      src[k] = { name, buffer: async () => buf, text: async () => new TextDecoder().decode(buf) }; } } catch (e) { /* missing file */ }
+  }
+  start(src);
+};
+if (location.protocol.startsWith('http') && new URLSearchParams(location.search).has('autoload')) $('fetchMaps').click();
+</script>
+</body>
+</html>
