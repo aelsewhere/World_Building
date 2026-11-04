@@ -98,6 +98,17 @@
   <label><input type="checkbox" id="optCities" checked> Cities</label>
   <label><input type="checkbox" id="optGrid"> Latitude and longitude</label>
   <label><input type="checkbox" id="optAtmo" checked> Atmosphere</label>
+  <label><input type="checkbox" id="optClouds"> Clouds</label>
+  <h2>Sunlight</h2>
+  <select id="sunMode" aria-label="Sunlight">
+    <option value="view">Lit from where you look</option>
+    <option value="real">Day and night</option>
+    <option value="off">Even light (no sun)</option>
+  </select>
+  <div id="sunReal" hidden>
+    <label>Season <select id="season" style="width:auto"><option value="-23.44">December solstice</option><option value="0">March equinox</option><option value="23.44" selected>June solstice</option><option value="0.01">September equinox</option></select></label>
+    <label title="Where on the globe it is noon">Noon at <input type="range" id="noon" min="-180" max="180" step="1" value="0"><span id="noonV" class="mono">0°</span></label>
+  </div>
   <h2>Relief</h2>
   <label title="How much heights are raised. 1x is true scale.">Raise <input type="range" id="exag" min="0" max="50" step="1" value="12"><span id="exagV" class="mono">12x</span></label>
   <h2>Find</h2>
@@ -170,26 +181,44 @@ function dirOf(lat, lonE) { const a = lat * Math.PI / 180, o = lonE * Math.PI / 
 function latLonOf(v) { const n = v.clone().normalize(); return { lat: Math.asin(Math.max(-1, Math.min(1, n.y))) * 180 / Math.PI, lonE: ((Math.atan2(-n.z, n.x) * 180 / Math.PI) + 360) % 360 }; }
 
 let exag = 12; const exagU = { value: exag };
+const sunU = { value: new THREE.Vector3(1, 0, 0) }, litU = { value: 1 }, waterU = { value: null };
 function material(tex, overlay) {
   const m = new THREE.MeshBasicMaterial({ map: tex });
   if (overlay) { m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -2; }
-  m.onBeforeCompile = (sh) => { sh.uniforms.exag = exagU;
-    sh.vertexShader = 'attribute float height;\nuniform float exag;\n' + sh.vertexShader.replace('#include <begin_vertex>', 'vec3 transformed = position * (' + R.toFixed(1) + ' + height * 0.001 * exag);'); };
+  m.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, { exag: exagU, sunDir: sunU, lit: litU, waterMap: waterU });
+    sh.vertexShader = 'attribute float height;\nattribute vec2 guv;\nuniform float exag;\nvarying vec3 vDir;\nvarying vec3 vWorld;\nvarying vec2 vG;\n' +
+      sh.vertexShader.replace('#include <begin_vertex>', 'vec3 transformed = position * (' + R.toFixed(1) + ' + height * 0.001 * exag); vDir = position; vWorld = transformed; vG = guv;');
+    sh.fragmentShader = 'uniform vec3 sunDir;\nuniform float lit;\nuniform sampler2D waterMap;\nvarying vec3 vDir;\nvarying vec3 vWorld;\nvarying vec2 vG;\n' +
+      sh.fragmentShader.replace('#include <opaque_fragment>', `
+        if (lit > 0.5) {
+          vec3 n = normalize(vDir);
+          float d = dot(n, sunDir);
+          float day = smoothstep(-0.12, 0.18, d);
+          float light = mix(0.045, 0.32 + 0.80 * pow(max(d, 0.0), 0.55), day);
+          float water = texture2D(waterMap, vG).r;
+          vec3 v = normalize(cameraPosition - vWorld), hh = normalize(sunDir + v);
+          float spec = (pow(max(dot(n, hh), 0.0), 140.0) * 0.55 + pow(max(dot(n, hh), 0.0), 14.0) * 0.05) * water * day;
+          outgoingLight = outgoingLight * light + vec3(1.0, 0.95, 0.86) * spec;
+        }
+        #include <opaque_fragment>`);
+  };
   return m;
 }
 // a grid of the relief mesh between vertex columns i0..i1 and rows j0..j1 (rows from the north pole)
 function gridGeometry(i0, i1, j0, j1) {
-  const nx = i1 - i0 + 1, ny = j1 - j0 + 1, pos = new Float32Array(nx * ny * 3), hts = new Float32Array(nx * ny), uv = new Float32Array(nx * ny * 2);
+  const nx = i1 - i0 + 1, ny = j1 - j0 + 1, pos = new Float32Array(nx * ny * 3), hts = new Float32Array(nx * ny), uv = new Float32Array(nx * ny * 2), guv = new Float32Array(nx * ny * 2);
   for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
     const k = (j - j0) * nx + (i - i0), d = dirOf(90 - j * STEP, i * STEP);
     pos[k * 3] = d.x; pos[k * 3 + 1] = d.y; pos[k * 3 + 2] = d.z; hts[k] = heights[j * MW + i];
     uv[k * 2] = (i - i0) / (i1 - i0); uv[k * 2 + 1] = 1 - (j - j0) / (j1 - j0);
+    guv[k * 2] = i / (MW - 1); guv[k * 2 + 1] = 1 - j / (MH - 1);
   }
   const idx = new Uint32Array((nx - 1) * (ny - 1) * 6); let q = 0;
   for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) { const a = j * nx + i, b = a + 1, c = a + nx, d = c + 1; idx[q++] = a; idx[q++] = c; idx[q++] = b; idx[q++] = b; idx[q++] = c; idx[q++] = d; }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('height', new THREE.BufferAttribute(hts, 1));
-  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setIndex(new THREE.BufferAttribute(idx, 1));
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setAttribute('guv', new THREE.BufferAttribute(guv, 2)); g.setIndex(new THREE.BufferAttribute(idx, 1));
   g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), R + 400);
   return g;
 }
@@ -256,10 +285,44 @@ function updateTiles() {
 // atmosphere
 const atmo = new THREE.Mesh(new THREE.SphereGeometry(R * 1.025, 96, 48), new THREE.ShaderMaterial({
   side: THREE.BackSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-  vertexShader: 'varying vec3 vN; varying vec3 vP; void main(){ vN = normalize(normalMatrix*normal); vec4 mv = modelViewMatrix*vec4(position,1.); vP = mv.xyz; gl_Position = projectionMatrix*mv; }',
-  fragmentShader: 'varying vec3 vN; varying vec3 vP; void main(){ float f = pow(max(0., 0.75 + dot(normalize(vP), vN)), 3.0); gl_FragColor = vec4(0.35,0.6,1.0,1.)*f*1.3; }',
+  uniforms: { sunDir: sunU, lit: litU },
+  vertexShader: 'varying vec3 vN; varying vec3 vP; varying vec3 vW; void main(){ vN = normalize(normalMatrix*normal); vW = position; vec4 mv = modelViewMatrix*vec4(position,1.); vP = mv.xyz; gl_Position = projectionMatrix*mv; }',
+  fragmentShader: 'uniform vec3 sunDir; uniform float lit; varying vec3 vN; varying vec3 vP; varying vec3 vW; void main(){ float f = pow(max(0., 0.75 + dot(normalize(vP), vN)), 3.0); float s = lit > 0.5 ? mix(0.12, 1.0, smoothstep(-0.35, 0.3, dot(normalize(vW), sunDir))) : 1.0; gl_FragColor = vec4(0.35,0.6,1.0,1.)*f*1.3*s; }',
 }));
 scene.add(atmo);
+
+// clouds: placed from rainfall and wind belts; shown above the highest raised mountain
+const cloudR = { value: R + 20 }, cloudO = { value: 0.9 };
+const cloudMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false });
+cloudMat.onBeforeCompile = (sh) => {
+  Object.assign(sh.uniforms, { cloudR, cloudO, sunDir: sunU, lit: litU });
+  sh.vertexShader = 'uniform float cloudR;\nvarying vec3 vDir;\n' + sh.vertexShader.replace('#include <begin_vertex>', 'vec3 transformed = position * cloudR; vDir = position;');
+  sh.fragmentShader = 'uniform float cloudO;\nuniform vec3 sunDir;\nuniform float lit;\nvarying vec3 vDir;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `
+    float d = dot(normalize(vDir), sunDir);
+    float light = lit > 0.5 ? mix(0.03, 0.35 + 0.7 * max(d, 0.0), smoothstep(-0.12, 0.18, d)) : 0.95;
+    outgoingLight *= light; diffuseColor.a *= cloudO;
+    #include <opaque_fragment>`);
+};
+const clouds = new THREE.Mesh(base.geometry, cloudMat); clouds.visible = false; clouds.renderOrder = 3; clouds.frustumCulled = false; scene.add(clouds);
+let cloudsLoaded = false;
+async function showClouds(on) {
+  clouds.visible = on;
+  if (on && !cloudsLoaded) { cloudsLoaded = true; const t = await loadTex('clouds.webp'); t.colorSpace = THREE.NoColorSpace; cloudMat.alphaMap = t; cloudMat.needsUpdate = true; }
+  redraw();
+}
+loadTex('water.webp').then((t) => { t.colorSpace = THREE.NoColorSpace; waterU.value = t; redraw(); }).catch(() => {});
+
+// where the sun is
+const camRight = new THREE.Vector3(), camUp = new THREE.Vector3();
+function updateSun() {
+  const mode = $('sunMode').value;
+  litU.value = (style === 'natural' && mode !== 'off') ? 1 : 0;
+  if (mode === 'real') sunU.value.copy(dirOf(+$('season').value, (( +$('noon').value - (+$('seam').value || 0)) % 360 + 360) % 360));
+  else { const c = camera.position.clone().normalize(); camRight.setFromMatrixColumn(camera.matrixWorld, 0); camUp.setFromMatrixColumn(camera.matrixWorld, 1);
+    sunU.value.copy(c).addScaledVector(camUp, 0.55).addScaledVector(camRight, -0.45).normalize(); }
+  const alt = camera.position.length() - R;
+  cloudR.value = R + 12 + (S.highest.h / 1000) * exag; cloudO.value = 0.92 * Math.min(1, Math.max(0, (alt - 500) / 2500));
+}
 
 // latitude and longitude lines; tropics and polar circles at Earth's tilt
 const grid = new THREE.Group(); grid.visible = false; scene.add(grid);
@@ -416,7 +479,7 @@ const flyToNation = (n) => flyTo(dirOf(n.lat, n.lon), Math.min(12000, Math.max(9
 function drawLegend() {
   const sw = (c, t) => '<div><span class="sw" style="background:' + c + '"></span>' + t + '</div>';
   const lu = (i) => Object.entries(LEG.landuse).filter(([k]) => k != 17).map(([, v]) => sw(v[i], v[0])).join('');
-  const h = { natural: () => lu(1) + sw('#2c5f93', 'Lake') + sw('#3fbfb8', 'Coral reef') + sw('#f4f7fa', 'Permanent snow'),
+  const h = { natural: () => S.realistic ? '<div class="soft">Satellite-style colours from the recorded land cover, made greener or drier by the recorded rainfall. For the exact land-cover types, switch to <b>Land cover</b>.</div><div class="soft" style="margin-top:6px">Made up for the picture (not in the data): the seabed shading, and the treeline and snow outside Morasil and Hoakamotu, which come from the recorded temperatures.</div>' : lu(1) + sw('#2c5f93', 'Lake') + sw('#3fbfb8', 'Coral reef') + sw('#f4f7fa', 'Permanent snow'),
     elevation: () => [...LEG.elev].reverse().map(([v, c]) => sw(c, v.toLocaleString() + ' m')).join(''),
     landuse: () => lu(2), nations: () => '<div class="soft">Each nation has its own colour. Point at one for its name and area.</div>',
     continents: () => LEG.continents.map(([n, c]) => sw(c, n)).join(''),
@@ -451,6 +514,10 @@ $('optNames').onchange = redraw;
 $('optCities').onchange = () => { cityPts.visible = $('optCities').checked; redraw(); };
 $('optGrid').onchange = () => { grid.visible = $('optGrid').checked; redraw(); };
 $('optAtmo').onchange = () => { atmo.visible = $('optAtmo').checked; redraw(); };
+$('optClouds').onchange = () => showClouds($('optClouds').checked);
+$('sunMode').onchange = () => { $('sunReal').hidden = $('sunMode').value !== 'real'; redraw(); };
+$('season').onchange = redraw;
+$('noon').oninput = () => { const v = +$('noon').value; $('noonV').textContent = Math.abs(v) + '°' + (v > 0 ? 'E' : v < 0 ? 'W' : ''); redraw(); };
 $('exag').oninput = () => { exag = +$('exag').value; exagU.value = exag; $('exagV').textContent = exag + 'x'; placeCities(); if (measure.a) drawMeasure(); redraw(); };
 $('seam').onchange = () => { buildGrid(); drawAtlas(); redraw(); };
 $('measureBtn').onclick = () => { measure.on = !measure.on; $('measureBtn').classList.toggle('on', measure.on);
@@ -477,6 +544,7 @@ function loop(now) {
   camera.near = Math.max(0.5, (alt - S.highest.h / 1000 * exag) * 0.3); camera.far = camera.position.length() + R * 1.2; camera.updateProjectionMatrix();
   camera.updateMatrixWorld();
   if (now - lastTileCheck > 150) { lastTileCheck = now; updateTiles(); }
+  updateSun();
   renderer.render(scene, camera);
   drawLabels();
 }
