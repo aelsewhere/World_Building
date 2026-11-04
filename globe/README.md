@@ -10,6 +10,8 @@ An Earth-sized 3D globe (radius 6,371 km) of the world, built from the Nov 4, 20
 
 Nothing is uploaded: the files are read in the browser.
 
+If the globe is still slow on your computer, set **Map detail** to **Half (faster)**. It uses a quarter of the graphics memory and repaints faster; thin rivers can break up when you zoom in close. The page remembers the choice.
+
 ## Files it reads
 
 | File | Needed? | Used for |
