@@ -48,3 +48,13 @@ The data pack counts longitude east of the map seam (column 0). The longitude nu
     python tools/make_test_data.py testmaps
 
 The land it makes is meaningless and does not join up across the seam.
+
+## The prepared globe (globe/world)
+
+`globe/world/index.html` is the fast version, made for this one world. Everything slow is done once in advance by `tools/bake_globe.py`, which reads the world data files and writes finished map pictures (a 4096 x 2048 whole-world picture per map style, plus 32 sharp 45° tiles at full detail that load only when you zoom in), the relief heights, the hover data and the nation, city and world summaries (`world.json`).
+
+It is published as a private claude.ai page. When the maps change, re-run the preparation and republish:
+
+    python tools/bake_globe.py PATH/TO/maps globe/world
+
+The page needs a web server (it loads its files with fetch), so double-clicking `index.html` will not work; use the published link.
