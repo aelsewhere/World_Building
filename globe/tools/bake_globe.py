@@ -5,7 +5,10 @@ already finished: map pictures for each map style (a whole-world picture plus
 sharp close-up tiles), heights for the raised relief, hover data, and the
 nation, city and world summaries. The page then only has to display them.
 
-    python bake_globe.py MAPS_FOLDER OUTPUT_FOLDER
+    python bake_globe.py MAPS_FOLDER OUTPUT_FOLDER [CLIMATE_FOLDER]
+
+CLIMATE_FOLDER holds world_t_jan/jul_data and world_p_jan/jul_data (default: MAPS_FOLDER).
+With them the natural-colour map is painted realistically (tools/realistic.py).
 
 Needs Python 3 with numpy and Pillow (WebP support).
 """
@@ -21,6 +24,7 @@ MESH_STEP = 0.5                 # relief mesh spacing, degrees
 SHADE_K = 8.0                   # strength of the hill shading
 
 maps, out = sys.argv[1], sys.argv[2]
+climate_dir = sys.argv[3] if len(sys.argv) > 3 else maps
 os.makedirs(out, exist_ok=True)
 t0 = time.time()
 def log(*a): print(f"[{time.time() - t0:6.1f}s]", *a, flush=True)
@@ -253,19 +257,51 @@ def paint(style, borders=True):
             img[mm] = col
     return np.clip(img, 0, 255).astype(np.uint8)
 
-STYLES = [("natural", True), ("natural-plain", False), ("elevation", False), ("landuse", False), ("nations", True),
-          ("continents", True), ("water", False), ("coast", False), ("snow", False)]
-tw, th = W // TX, H // TY
-for name, b in STYLES:
-    img = paint(name.replace("-plain", ""), b)
+# ------------------------------------------------------------------ climate (for the realistic natural-colour map)
+climate = {}
+for k, pat in [("tjan", r"world_t_jan_data_v(\d+)\.png$"), ("tjul", r"world_t_jul_data_v(\d+)\.png$"),
+               ("pjan", r"world_p_jan_data_v(\d+)\.png$"), ("pjul", r"world_p_jul_data_v(\d+)\.png$")]:
+    best = None
+    for f in os.listdir(climate_dir):
+        m = re.match(pat, f, re.I)
+        if m and (best is None or int(m.group(1)) > best[0]): best = (int(m.group(1)), f)
+    if best:
+        a = np.asarray(Image.open(os.path.join(climate_dir, best[1]))).astype(np.float32)
+        climate[k] = a / 100 - 100 if k[0] == "t" else a / 10          # degrees C; mm in the month
+        files["climate_" + k] = best[1]
+REALISTIC = len(climate) == 4
+if REALISTIC:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import realistic
+    rdata = dict(h=h, land=land, lu=lu, water=water, coast=coast, snow=snow, cont=cont, border=border, shade=shade, **climate)
+log("climate files:", "found, realistic natural colour" if REALISTIC else "not found, plain natural colour")
+
+def save_style(name, img):
     d = os.path.join(out, "maps", name); os.makedirs(d, exist_ok=True)
     pim = Image.fromarray(img)
     pim.resize((LOW_W, LOW_H), Image.LANCZOS).save(os.path.join(d, "world.webp"), quality=84, method=5)
     for ty in range(TY):
         for tx in range(TX):
             pim.crop((tx * tw, ty * th, (tx + 1) * tw, (ty + 1) * th)).save(os.path.join(d, f"t{tx}_{ty}.webp"), quality=86, method=5)
-    del img, pim
+
+STYLES = [("natural", True), ("natural-plain", False), ("elevation", False), ("landuse", False), ("nations", True),
+          ("continents", True), ("water", False), ("coast", False), ("snow", False)]
+tw, th = W // TX, H // TY
+for name, b in STYLES:
+    if REALISTIC and name.startswith("natural"):
+        if name == "natural": real = realistic.paint_realistic(rdata, log=log)
+        img = real[1] if b else real[0]; save_style(name, img)
+        if name == "natural":     # where the water is, for sun glint on the globe (its own picture: no transparency)
+            Image.fromarray(real[2]).resize((LOW_W, LOW_H), Image.BOX).save(os.path.join(out, "water.webp"), quality=80, method=5)
+        if name == "natural-plain": del real
+    else:
+        img = paint(name.replace("-plain", ""), b); save_style(name, img)
+    del img
     log("painted", name)
+summary["realistic"] = REALISTIC
+if REALISTIC:
+    Image.fromarray(realistic.clouds(climate)).save(os.path.join(out, "clouds.webp"), quality=80, method=5)
+    log("clouds")
 
 # ------------------------------------------------------------------ relief mesh heights (vertex grid, 0.5 degrees)
 cpd = W // 360; s = int(MESH_STEP * cpd); half = s // 2
