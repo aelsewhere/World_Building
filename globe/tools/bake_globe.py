@@ -136,6 +136,14 @@ log("statistics done:", len(nations), "nations")
 dy = math.pi * R / H * 1000
 dx = np.maximum(0.05, np.cos(np.radians(lat_c)))[:, None] * 2 * math.pi * R / W * 1000
 hf = h.astype(np.float32)
+# sea next to land takes the land's height for shading, so coasts do not cast stair-step shadow lines
+from scipy import ndimage as _ndi
+_fill = _ndi.grey_dilation(np.maximum(hf, 0), size=(5, 5), mode=["nearest", "wrap"])
+hf = np.where(land, np.maximum(hf, 0), _fill); del _fill
+# within 3 cells of the sea, shade from softened heights, so steep coasts do not show the grid's stair-steps
+_sea_d = _ndi.distance_transform_edt(np.hstack([land[:, -8:], land, land[:, :8]]))[:, 8:-8]
+_band = np.clip((4 - _sea_d) / 2, 0, 1).astype(np.float32)
+hf = hf * (1 - _band) + _ndi.gaussian_filter(hf, 1.6, mode=["nearest", "wrap"]) * _band; del _sea_d, _band
 gx = (np.roll(hf, -1, 1) - np.roll(hf, 1, 1)) / (2 * dx) * SHADE_K
 north = np.vstack([hf[:1], hf[:-1]]); south = np.vstack([hf[1:], hf[-1:]])
 gy = (north - south) / (2 * dy) * SHADE_K
@@ -287,7 +295,9 @@ def save_style(name, img):
 STYLES = [("natural", True), ("natural-plain", False), ("elevation", False), ("landuse", False), ("nations", True),
           ("continents", True), ("water", False), ("coast", False), ("snow", False)]
 tw, th = W // TX, H // TY
+ONLY = [x for x in os.environ.get("BAKE_ONLY", "").split(",") if x]   # for quick test runs: only these map styles
 for name, b in STYLES:
+    if ONLY and name not in ONLY: continue
     if REALISTIC and name.startswith("natural"):
         if name == "natural": real = realistic.paint_realistic(rdata, log=log)
         img = real[1] if b else real[0]; save_style(name, img)
