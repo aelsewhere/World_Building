@@ -394,7 +394,10 @@ placeCities();
 const lc = $('labels'), lctx = lc.getContext('2d'), tmpV = new THREE.Vector3();
 function sizeLabels() { const d = Math.min(2, devicePixelRatio); lc.width = innerWidth * d; lc.height = innerHeight * d; lctx.setTransform(d, 0, 0, d, 0, 0); }
 sizeLabels();
-nations.forEach((n) => { n.pos = dirOf(n.lat, n.lon).multiplyScalar(R + 2); });
+function placeNames() {   // names sit on the (raised) land, not at sea level
+  nations.forEach((n) => { n.pos = dirOf(n.lat, n.lon).multiplyScalar(R + 2 + Math.max(0, meshHeightMax(n.lat, n.lon)) / 1000 * exag); });
+}
+placeNames();
 const byArea = [...nations].sort((a, b) => b.area - a.area);
 const contLabels = CONTINENTS.slice(1).map((name, k) => {
   const v = new THREE.Vector3(); nations.filter((n) => n.c === k + 1).forEach((n) => v.addScaledVector(dirOf(n.lat, n.lon), n.area));
@@ -409,16 +412,16 @@ function drawLabels() {
     const s = tmpV.copy(v).project(camera); if (s.z > 1) return;
     const x = (s.x + 1) / 2 * innerWidth, y = (1 - s.y) / 2 * innerHeight + dy;
     lctx.font = font; lctx.letterSpacing = spacing; const w = lctx.measureText(text).width, hgt = parseInt(font.match(/(\d+)px/)[1]);
-    const box = [x - w / 2 - 3, y - hgt, x + w / 2 + 3, y + 4];
+    const ty = y + hgt * 0.35, box = [x - w / 2 - 3, ty - hgt, x + w / 2 + 3, ty + 4];
     if (box[2] < 0 || box[0] > innerWidth || box[3] < 0 || box[1] > innerHeight) return;
     if (taken.some((b) => b[0] < box[2] && box[0] < b[2] && b[1] < box[3] && box[1] < b[3])) return;
     taken.push(box);
-    lctx.lineWidth = 3; lctx.strokeStyle = 'rgba(6,10,18,0.75)'; lctx.strokeText(text, x - w / 2, y); lctx.fillStyle = colour; lctx.fillText(text, x - w / 2, y);
+    lctx.lineWidth = 3; lctx.strokeStyle = 'rgba(6,10,18,0.75)'; lctx.strokeText(text, x - w / 2, ty); lctx.fillStyle = colour; lctx.fillText(text, x - w / 2, ty);
   };
   if (alt > 26000) { for (const c of contLabels) put(c.name.toUpperCase(), c.pos, '17px "Marcellus SC", Georgia, serif', '#f2d9a0', '3px'); return; }
   const lim = alt > 9200 ? 30 : alt > 5000 ? 70 : nations.length;   // nation names from the opening view in
   for (let k = 0; k < lim; k++) { const n = byArea[k]; put(n.name, n.pos, (n.area > 700000 ? 14 : 12) + 'px "Marcellus SC", Georgia, serif', '#ffffff', '1px'); }
-  if (alt < 6000 && $('optCities').checked) for (const c of cities) if (c.capital_of && c.pos) { const n = byGid[c.capital_of]; if (n.capital && n.capital !== 'unnamed') put(n.capital, c.pos, '12px "Source Sans 3", system-ui, sans-serif', '#ffe7a3', '0px', 20); }
+  if (alt < 6000 && $('optCities').checked) for (const c of cities) if (c.capital_of && c.pos) { const n = byGid[c.capital_of]; if (n.capital && n.capital !== 'unnamed') put(n.capital, c.pos, '12px "Source Sans 3", system-ui, sans-serif', '#ffe7a3', '0px', 13); }
 }
 
 // ---------------------------------------------------------------- hover data (loaded after the globe is showing)
@@ -579,7 +582,7 @@ $('optClouds').onchange = () => showClouds($('optClouds').checked);
 $('sunMode').onchange = () => { $('sunReal').hidden = $('sunMode').value !== 'real'; redraw(); };
 $('season').onchange = redraw;
 $('noon').oninput = () => { const v = +$('noon').value; $('noonV').textContent = Math.abs(v) + '°' + (v > 0 ? 'E' : v < 0 ? 'W' : ''); redraw(); };
-$('exag').oninput = () => { exag = +$('exag').value; exagU.value = exag; $('exagV').textContent = exag + 'x'; placeCities(); if (measure.a) drawMeasure(); redraw(); };
+$('exag').oninput = () => { exag = +$('exag').value; exagU.value = exag; $('exagV').textContent = exag + 'x'; placeCities(); placeNames(); if (measure.a) drawMeasure(); redraw(); };
 $('seam').onchange = () => { buildGrid(); drawAtlas(); redraw(); };
 $('measureBtn').onclick = () => { measure.on = !measure.on; $('measureBtn').classList.toggle('on', measure.on);
   if (!measure.on) { measure.a = measure.b = null; $('measureOut').textContent = ''; drawMeasure(); } else $('measureOut').textContent = 'Click the first point.'; };
