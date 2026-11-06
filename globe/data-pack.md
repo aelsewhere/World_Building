@@ -22,7 +22,7 @@ Nov 6: the cities row below now points to `cities_v7.csv` (530 cities, replacing
 | world_continent_data_v1.png | Which continent each land cell belongs to | 8-bit: 0 none (sea, polar ice), 1 Morasil, 2 Solua, 3 Mesomara, 4 Kamon, 5 Elmiyaro, 6 Hoakamotu |
 | world_nations_data_v1.png | Which nation each land cell belongs to (after the border redraw, including the Nov 4 Morasil changes) | 8-bit: the nation's number within its continent (1–24); read with world_continent_data for the continent. All 112 nations present |
 | world_nations_index_v1.csv | Nation number to name | Continent code, continent, nation #, name, global ID (continent × 100 + #) |
-| cities_v7.csv (Nov 5; replaces cities_v1.csv) | The 530 cities (Nov 6: checked against the file) | Columns: Continent, City #, Latitude, Longitude (deg east of map seam), Source. City numbers count **per continent**, from 1 with no gaps and no duplicates: Morasil 1–107, Solua 1–75, Mesomara 1–72, Kamon 1–81, Elmiyaro 1–76, Hoakamotu 1–119. See claude/trade_routes.md |
+| cities_v7.csv (Nov 5; replaces cities_v1.csv) | The 530 cities (Nov 6: checked against the file) | Columns: Continent, City #, Latitude, Longitude (deg east of map seam), Source. City numbers count **per continent**, from 1 with no gaps and no duplicates: Morasil 1–107, Solua 1–75, Mesomara 1–72, Kamon 1–81, Elmiyaro 1–76, Hoakamotu 1–119. The file has no name or capital column; capital names live in this note and in `claude/nation_tracker_short.md`. See claude/trade_routes.md |
 
 ## Climate files (maps\climates)
 
@@ -49,30 +49,36 @@ Rules (user, Nov 6):
 - Any city added later continues its continent's numbering. The next free numbers are **Morasil 108, Solua 76, Mesomara 73, Kamon 82, Elmiyaro 77, Hoakamotu 120**.
 - Checked Nov 6: every capital's city number is inside its continent's range in cities_v7.csv. Not checked: that each city lies inside its nation. The user will double-check this at the next globe build.
 - The "City" capital names (Kitashio City, Nyota City, Teina City and so on) are final everywhere.
-- "unnamed" means the capital has no name yet; it waits for one (user, for Morasil, Mesomara and Kamon; assumed for the others).
-- "not on the globe yet" means the capital has a chosen location on the current nation maps but no city in cities_v7.csv (user, Nov 6). It will get the next free number when it is added.
 
-**Not on the globe yet (five):** Nyoka City (Solua #2), Ventania (Solua #8, Terra Livre), Serafina City (Solua #9), Barandicha (Elmiyaro #9, Afsunia), Idapaiva (Hoakamotu #1, Iltala). Their next numbers would be Solua 76, 77, 78, Elmiyaro 77, Hoakamotu 120 (if added in that order).
+Update (Nov 6, later): the user named all 34 capitals that had no name and gave city numbers for the seven capitals that had none. **Every nation now has a named capital with a city number.** The seven numbers are cities that already exist in cities_v7.csv (added cities, not new rows), so the file did not change and the next free numbers above are unchanged. The earlier "not on the globe yet" and "unconfirmed location" lists are retired.
 
-**Also without a city, not confirmed:** Kishodara (Morasil #4; unnamed, and no city on the first build, a thing the user has to come back to) and Aurore (Kamon #21, Aubeterre Island; no city on the globe build). The user has not said whether their locations are chosen.
+| Capital | Nation | City # | Row in cities_v7.csv (Source column) |
+| --- | --- | --- | --- |
+| Destmiasto | Morasil #4 Kishodara | Morasil 101 | added for nation trait: Mining, no city near the mining area |
+| Nyoka City | Solua #2 Nyimbo Nyoka | Solua 67 | added for nation trait: Farming, no city in that land |
+| Ventania | Solua #8 Terra Livre | Solua 69 | added for nation trait: Herding, no city in that land |
+| Serafina City | Solua #9 Serafina | Solua 72 | added: strait port (Serafina) |
+| Barandicha | Elmiyaro #9 Afsunia | Elmiyaro 70 | added for nation trait: Mining, no city near the mining area |
+| Aurore | Kamon #21 Aubeterre Island | Kamon 77 | added for nation trait: Forest Goods, no city in that land |
+| Idapaiva | Hoakamotu #1 Iltala | Hoakamotu 110 | added for nation trait: Tourism, no city near the attraction |
 
 ### Morasil
 
 | # | Nation | Capital | City # |
 | --- | --- | --- | --- |
-| 1 | Naskinisa | unnamed | 86 |
+| 1 | Naskinisa | Turas | 86 |
 | 2 | Rostrana | Uyutna | 6 |
 | 3 | Marzemora | Snomora | 9 |
-| 4 | Kishodara | unnamed | none |
-| 5 | Bilamilha | unnamed | 20 |
-| 6 | Sahradayma | unnamed | 19 |
-| 7 | Bilaghuru | unnamed | 27 |
-| 8 | Mamlabisa | unnamed | 23 |
-| 9 | Masdaliqa | unnamed | 76 |
-| 10 | North Borula | unnamed | 37 |
+| 4 | Kishodara | Destmiasto | 101 |
+| 5 | Bilamilha | Qafilasima | 20 |
+| 6 | Sahradayma | Qati | 19 |
+| 7 | Bilaghuru | Asima | 27 |
+| 8 | Mamlabisa | Dhahab | 23 |
+| 9 | Masdaliqa | Manjamnas | 76 |
+| 10 | North Borula | Medina | 37 |
 | 11 | Mamlaglasa | Umahl (replaces the earlier Ahl Sruth) | 84 |
 | 12 | Rahmira | Ostoya | 41 |
-| 13 | South Borula | unnamed | 46 |
+| 13 | South Borula | Markazoloto | 46 |
 | 14 | Riotoka | Levinis | 60 |
 | 15 | Potoka | Pravinis | 64 |
 | 16 | Ankara | Carrowinish | 70 |
@@ -87,21 +93,21 @@ Rules (user, Nov 6):
 | # | Nation | Capital | City # |
 | --- | --- | --- | --- |
 | 1 | Nyumba Nyota | Nyota City | 1 |
-| 2 | Nyimbo Nyoka | Nyoka City | not on the globe yet |
+| 2 | Nyimbo Nyoka | Nyoka City | 67 |
 | 3 | Chimali | Yamali | 13 |
 | 4 | New Pazamani | Riunuru | 28 |
 | 5 | Pazamani | Lagoamani | 31 |
-| 6 | Kisolado | unnamed | 33 |
-| 7 | Docaso | unnamed | 40 |
-| 8 | Terra Livre | Ventania | not on the globe yet |
-| 9 | Serafina | Serafina City | not on the globe yet |
+| 6 | Kisolado | Kisiwavila | 33 |
+| 7 | Docaso | Lavila | 40 |
+| 8 | Terra Livre | Ventania | 69 |
+| 9 | Serafina | Serafina City | 72 |
 | 10 | Pescadoreino | Rosmarina | 45 |
 | 11 | Pascolia | Cavalla | 43 |
 | 12 | Altiva | Nascentia | 41 |
 | 13 | Floriente | Sosseriva | 52 |
-| 14 | Emanisola | unnamed | 51 |
+| 14 | Emanisola | Termekanisa | 51 |
 | 15 | Pariva | Mapprodo | 62 |
-| 16 | Crocevia | unnamed | 65 |
+| 16 | Crocevia | Agiatezza | 65 |
 | 17 | Nusolado | Pontapembe | 20 |
 
 ### Mesomara
@@ -112,10 +118,10 @@ Rules (user, Nov 6):
 | 2 | Thymia | Arconia | 58 |
 | 3 | Jalamarukora | Jalkora | 13 |
 | 4 | Marusarasa | Padmajan | 22 |
-| 5 | Iforia | unnamed | 20 |
+| 5 | Iforia | Poliviungo | 20 |
 | 6 | Purvapascima | Baghraj | 40 |
-| 7 | Vanaziwa | unnamed | 34 |
-| 8 | Zorora | unnamed | 59 |
+| 7 | Vanaziwa | Dawakendra | 34 |
+| 8 | Zorora | Bagimji | 59 |
 | 9 | Tsokasi | Bethemba | 47 |
 | 10 | Musanapasi | Gaziropa | 48 |
 | 11 | Fudonesia | Chelonizwe | 51 |
@@ -127,43 +133,43 @@ Rules (user, Nov 6):
 | # | Nation | Capital | City # |
 | --- | --- | --- | --- |
 | 1 | Kyorim | Sonhim | 2 |
-| 2 | West Kyorim | unnamed | 7 |
+| 2 | West Kyorim | Sudodosi | 7 |
 | 3 | Kitashio | Kitashio City | 13 |
 | 4 | Yongsol | Sannara | 12 |
 | 5 | Aversona | Brumenara | 59 |
 | 6 | Samizu | Samizu City | 24 |
 | 7 | Kangpaix | Pyeongsole | 18 |
 | 8 | Nakashio | Nakashio City | 19 |
-| 9 | West Hanara | unnamed | 30 |
-| 10 | East Hanara | unnamed | 60 |
-| 11 | Minamishio | unnamed | 35 |
+| 9 | West Hanara | Kawadosi | 30 |
+| 10 | East Hanara | Injungsim | 60 |
+| 11 | Minamishio | Machi | 35 |
 | 12 | Ansilva | Perdelle | 46 |
 | 13 | Inoriva | Hamasacre | 40 |
 | 14 | Morouge | Boisinabi | 42 |
 | 15 | Maquis | Bellenuit | 48 |
 | 16 | Point Dujour | Petit Matin | 58 |
-| 17 | Koshio | unnamed | 5 |
+| 17 | Koshio | Shiotoshi | 5 |
 | 18 | Goyorive | Goyo | 26 |
 | 19 | Sueshio | Sueshio City | 37 |
 | 20 | Ecumawa | Umaree | 36 |
-| 21 | Aubeterre Island | Aurore | none |
+| 21 | Aubeterre Island | Aurore | 77 |
 
 ### Elmiyaro
 
 | # | Nation | Capital | City # |
 | --- | --- | --- | --- |
-| 1 | Kynara | unnamed | 2 |
-| 2 | New Elvarheim | unnamed | 10 |
+| 1 | Kynara | Olborg | 2 |
+| 2 | New Elvarheim | Kolborg | 10 |
 | 3 | Byrland | Vindhjalm | 12 |
-| 4 | Delpardis | unnamed | 19 |
+| 4 | Delpardis | Darushahr | 19 |
 | 5 | Zamindel | Delmehr | 24 |
 | 6 | Golsabana | Reyshah | 28 |
 | 7 | Darmanheim | Ljonshire | 30 |
 | 8 | Lakbaga | Lakbaga City | 26 |
-| 9 | Afsunia | Barandicha | not on the globe yet |
+| 9 | Afsunia | Barandicha | 70 |
 | 10 | Storrio | Riosa | 47 |
 | 11 | Selvana | El Tramo | 50 |
-| 12 | Solribera | unnamed | 54 |
+| 12 | Solribera | Cuerovilla | 54 |
 | 13 | Pastoluna | Pastoluna City | 56 |
 | 14 | Urdey | Soley City | 13 |
 | 15 | Verdey | Jardey City | 14 |
@@ -173,30 +179,30 @@ Rules (user, Nov 6):
 
 | # | Nation | Capital | City # |
 | --- | --- | --- | --- |
-| 1 | Iltala | Idapaiva | not on the globe yet |
+| 1 | Iltala | Idapaiva | 110 |
 | 2 | Aamula | Aamula City | 5 |
-| 3 | Tagatamotu | unnamed | 12 |
+| 3 | Tagatamotu | Kapikala | 12 |
 | 4 | Alkuwahi | Mahinala | 15 |
-| 5 | Hikinamaa | unnamed | 11 |
+| 5 | Hikinamaa | Rikkitaone | 11 |
 | 6 | Asumaa | Savupuia | 25 |
 | 7 | Koitara | Pilvenui | 23 |
 | 8 | Tuakahi | Kuaahi | 30 |
-| 9 | Fenuaya | unnamed | 43 |
-| 10 | Intimaa | unnamed | 48 |
-| 11 | Manawapacha | unnamed | 56 |
+| 9 | Fenuaya | Pakamarka | 43 |
+| 10 | Intimaa | Hampikauppa | 48 |
+| 11 | Manawapacha | Yunka | 56 |
 | 12 | Hitupacha | Mayukula | 52 |
 | 13 | Pampala | Kallpamaa | 65 |
 | 14 | Karusuyu | Hatun Phuyu | 89 |
 | 15 | Sumachala | Collachala | 81 |
-| 16 | Malquipata | unnamed | 71 |
-| 17 | Cachi Cocha | unnamed | 68 |
+| 16 | Malquipata | Sarakancha | 71 |
+| 17 | Cachi Cocha | Chawpi | 68 |
 | 18 | Matavasa | Tokamoana | 75 |
-| 19 | Motu Malu | unnamed | 21 |
+| 19 | Motu Malu | Akoakoa | 21 |
 | 20 | Teina | Teina City | 35 |
 | 21 | Kimsapacha | Torumotu | 36 |
 | 22 | Sachamaa | Intisaari | 45 |
 | 23 | Iskay Islands | Rumi | 74 |
-| 24 | Puyupata | unnamed | 76 |
+| 24 | Puyupata | Marka | 76 |
 
 ## Known limits
 
