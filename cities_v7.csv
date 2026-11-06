@@ -1,0 +1,531 @@
+Continent,City #,Latitude,Longitude (deg east of map seam),Source
+Morasil,1,47.31,20.19,user
+Morasil,2,45.85,24.33,user
+Morasil,3,45.61,30.51,user
+Morasil,4,45.08,15.63,user
+Morasil,5,44.59,18.31,user
+Morasil,6,43.71,50.73,user
+Morasil,7,40.68,51.17,user
+Morasil,8,39.95,7.45,user
+Morasil,9,38.49,49.98,user
+Morasil,10,35.6,18.75,user
+Morasil,11,35.59,30.58,user
+Morasil,12,35.43,8.23,user
+Morasil,13,34.97,20.72,user
+Morasil,14,32.96,11.63,user
+Morasil,15,31.54,6.25,user
+Morasil,16,26.19,54.83,user
+Morasil,17,24.09,12.2,user
+Morasil,18,23.57,39.32,user
+Morasil,19,23.26,25.65,user
+Morasil,20,22.24,16.32,user
+Morasil,21,21.99,34.57,user
+Morasil,22,20.03,32.38,user
+Morasil,23,18.46,28.79,user
+Morasil,24,17.54,22.89,user
+Morasil,25,16.01,10.42,user
+Morasil,26,15.99,44.6,user
+Morasil,27,14.94,17.86,user
+Morasil,28,14.51,21.89,user
+Morasil,29,14.45,51.77,user
+Morasil,30,12.29,29.21,user
+Morasil,31,13.57,47.22,user
+Morasil,32,13.38,39.63,user
+Morasil,33,13.43,43.06,user
+Morasil,34,12.15,38.94,user
+Morasil,35,11.38,43.54,user
+Morasil,36,10.71,30.79,user
+Morasil,37,10.29,47.09,user
+Morasil,38,9.17,45.26,user
+Morasil,39,8.8,41.08,user
+Morasil,40,8.75,52.48,user
+Morasil,41,10.21,41.42,user
+Morasil,42,7.8,56.3,user
+Morasil,43,7.1,31.32,user
+Morasil,44,6.66,44.05,user
+Morasil,45,6.08,22.83,user
+Morasil,46,5.96,47.66,user
+Morasil,47,5.08,31.09,user
+Morasil,48,5.14,39.12,user
+Morasil,49,4.64,26.49,user
+Morasil,50,4.38,55.43,user
+Morasil,51,4.31,46.43,user
+Morasil,52,3.33,44.83,user
+Morasil,53,2.61,36.21,user
+Morasil,54,2.05,32.85,user
+Morasil,55,0.27,31.52,user
+Morasil,56,0.19,36.69,user
+Morasil,57,-3.44,33.48,user
+Morasil,58,-3.65,16.91,user
+Morasil,59,-5.75,46.02,user
+Morasil,60,-7.34,26.76,user
+Morasil,61,-7.48,55.74,user
+Morasil,62,-10.77,41.34,user
+Morasil,63,-12.51,32.2,user
+Morasil,64,-21.1,44.29,user
+Morasil,65,-25.79,29.71,user
+Morasil,66,-37.69,22.96,user
+Morasil,67,-41.59,29.67,user
+Morasil,68,-42.85,36.61,user
+Morasil,69,-42.93,24.22,user
+Morasil,70,-44.87,32.77,user
+Morasil,71,-48.48,41.35,user
+Morasil,72,-48.74,44.3,user
+Morasil,73,-50.6,19.23,user
+Morasil,74,-52.34,32.39,user
+Morasil,75,-52.41,24.77,user
+Morasil,76,19.96,38.5,user
+Morasil,77,1.38,46.42,user
+Morasil,78,50.12,20.38,added: river mouth (river network about 6692 km)
+Morasil,79,46.46,51.04,added: river mouth (river network about 2178 km) (moved to Rostrana coast)
+Morasil,80,31.96,4.04,added: river mouth (river network about 797 km)
+Morasil,81,-1.88,31.29,added: river mouth (river network about 5191 km)
+Morasil,82,-52.79,21.29,added: river mouth (river network about 2113 km)
+Morasil,83,3.38,26.88,added: lake shore (lake about 3351 km²)
+Morasil,84,3.12,32.12,added: lake shore (lake about 4038 km²)
+Morasil,85,2.29,34.71,added: lake shore (lake about 3351 km²)
+Morasil,86,45.88,27.71,added: ria harbour
+Morasil,87,42.62,7.12,added: ria harbour
+Morasil,88,41.79,14.88,added: ria harbour
+Morasil,89,39.38,11.54,added: ria harbour
+Morasil,90,35.62,16.04,added: ria harbour
+Morasil,91,14.21,54.54,added: estuary harbour
+Morasil,92,-23.96,26.96,added: estuary harbour
+Morasil,93,-37.71,28.29,added: ria harbour
+Morasil,94,-38.62,20.21,added: ria harbour
+Morasil,95,-45.46,42.46,added: ria harbour
+Morasil,96,-48.71,21.12,added: ria harbour
+Morasil,97,-50.04,48.04,added: ria harbour
+Morasil,98,-50.96,43.46,added: ria harbour
+Morasil,99,-54.04,28.46,added: fjord harbour
+Morasil,100,33.12,43.79,added for nation trait: Farming: no city in that land
+Morasil,101,29.71,22.46,added for nation trait: Mining: no city near the mining area
+Morasil,102,23.62,36.62,added for nation trait: Trade: no port or river city
+Morasil,103,16.46,37.79,added for nation trait: Mining: no city near the mining area
+Morasil,104,-16.21,25.21,added for nation trait: Fishing: fewer than 2 cities on the water
+Morasil,105,0.38,37.12,added: secondary market (Rahmira river meets the delta river)
+Morasil,106,44.29,37.71,added: Rostrana west-coast port
+Morasil,107,20.42,9.04,added: sea-lane port (Bilaghuru - Koitara)
+Solua,1,9.56,93.06,user
+Solua,2,9.15,87.64,user
+Solua,3,7.29,89.35,user
+Solua,4,7.15,98.9,user
+Solua,5,5.68,83.97,user
+Solua,6,3.93,82.66,user
+Solua,7,3.81,93.75,user
+Solua,8,3.67,81.34,user
+Solua,9,3.59,98.16,user
+Solua,10,2.27,91.4,user
+Solua,11,0.05,105.23,user
+Solua,12,-1.32,101.79,user
+Solua,13,-1.74,93.79,user
+Solua,14,-1.93,87.13,user
+Solua,15,-2.09,96.68,user
+Solua,16,-3.66,98.85,user
+Solua,17,-4.09,92.71,user
+Solua,18,-4.37,79.48,user
+Solua,19,-4.37,88.07,user
+Solua,20,-4.91,102.66,user
+Solua,21,-5.2,84.13,user
+Solua,22,-6.25,99.81,user
+Solua,23,-6.31,80.0,user
+Solua,24,-6.56,93.28,user
+Solua,25,-7.16,86.95,user
+Solua,26,-8.42,99.42,user
+Solua,27,-8.7,112.41,user
+Solua,28,-8.85,79.69,user
+Solua,29,-8.88,93.4,user
+Solua,30,-9.38,90.31,user
+Solua,31,-9.76,97.08,user
+Solua,32,-11.96,98.4,user
+Solua,33,-12.04,112.49,user
+Solua,34,-13.09,97.09,user
+Solua,35,-13.42,88.18,user
+Solua,36,-15.52,72.97,user
+Solua,37,-15.91,78.96,user
+Solua,38,-17.53,67.7,user
+Solua,39,-18.82,71.28,user
+Solua,40,-20.95,72.98,user
+Solua,41,-21.48,82.97,user
+Solua,42,-23.96,80.27,user
+Solua,43,-25.02,78.18,user
+Solua,44,-25.75,87.65,user
+Solua,45,-27.72,66.47,user
+Solua,46,-29.13,62.52,user
+Solua,47,-29.2,84.14,user
+Solua,48,-29.44,88.61,user
+Solua,49,-29.73,68.43,user
+Solua,50,-29.88,74.54,user
+Solua,51,-29.98,104.43,user
+Solua,52,-30.08,98.12,user
+Solua,53,-31.15,72.61,user
+Solua,54,-31.59,85.68,user
+Solua,55,-31.94,88.75,user
+Solua,56,-32.0,97.7,user
+Solua,57,-32.18,67.81,user
+Solua,58,-33.17,77.63,user
+Solua,59,-33.58,80.56,user
+Solua,60,-34.11,89.99,user
+Solua,61,-36.67,80.12,user
+Solua,62,-37.79,86.48,user
+Solua,63,-40.96,99.39,user
+Solua,64,-41.4,96.34,user
+Solua,65,-41.49,92.18,user
+Solua,66,7.96,79.04,added for nation trait: Fishing: fewer than 2 cities on the water
+Solua,67,6.62,93.04,added for nation trait: Farming: no city in that land
+Solua,68,-10.79,84.88,added for nation trait: Fishing: fewer than 2 cities on the water
+Solua,69,-20.04,78.54,added for nation trait: Herding: no city in that land
+Solua,70,-21.54,87.21,added for nation trait: Herding: no city in that land
+Solua,71,-30.71,105.96,added for nation trait: Tourism: no city near the attraction
+Solua,72,-18.79,84.96,added: strait port (Serafina)
+Solua,73,-30.96,98.54,added: delta port (Floriente)
+Solua,74,11.09,94.91,added: sea-lane port (Nyumba Nyota - Euelia)
+Solua,75,-19.56,64.06,added: sea-lane port (Potoka - Docaso)
+Mesomara,1,41.37,99.84,user
+Mesomara,2,38.47,105.67,user
+Mesomara,3,38.17,163.44,user
+Mesomara,4,34.52,91.7,user
+Mesomara,5,34.33,146.59,user
+Mesomara,6,34.04,130.96,user
+Mesomara,7,33.58,137.17,user
+Mesomara,8,33.36,116.17,user
+Mesomara,9,32.9,110.12,user
+Mesomara,10,32.57,125.36,user
+Mesomara,11,32.36,105.0,user
+Mesomara,12,32.24,164.82,user
+Mesomara,13,32.0,141.77,user
+Mesomara,14,29.45,115.81,user
+Mesomara,15,28.71,155.9,user
+Mesomara,16,28.08,152.64,user
+Mesomara,17,27.56,101.17,user
+Mesomara,18,27.28,142.47,user
+Mesomara,19,26.87,125.47,user
+Mesomara,20,22.75,147.76,user
+Mesomara,21,22.64,105.91,user
+Mesomara,22,20.98,123.41,user
+Mesomara,23,18.91,116.38,user
+Mesomara,24,18.05,124.64,user
+Mesomara,25,17.27,136.99,user
+Mesomara,26,16.65,132.79,user
+Mesomara,27,15.75,147.33,user
+Mesomara,28,12.76,126.0,user
+Mesomara,29,10.99,142.07,user
+Mesomara,30,8.65,136.2,user
+Mesomara,31,6.34,122.16,user
+Mesomara,32,6.39,127.9,user
+Mesomara,33,6.03,149.93,user
+Mesomara,34,4.0,140.41,user
+Mesomara,35,3.44,132.35,user
+Mesomara,36,2.67,147.97,user
+Mesomara,37,0.43,142.89,user
+Mesomara,38,-1.25,127.6,user
+Mesomara,39,-1.3,137.25,user
+Mesomara,40,-1.39,134.58,user
+Mesomara,41,-2.71,152.33,user
+Mesomara,42,-4.58,145.2,user
+Mesomara,43,-5.96,149.86,user
+Mesomara,44,-6.5,129.91,user
+Mesomara,45,-9.97,139.2,user
+Mesomara,46,-10.57,134.98,user
+Mesomara,47,-15.18,136.04,user
+Mesomara,48,-19.85,145.24,user
+Mesomara,49,-21.44,148.74,user
+Mesomara,50,-24.33,144.65,user
+Mesomara,51,-34.4,141.2,user
+Mesomara,52,39.29,143.71,added: river mouth (river network about 843 km)
+Mesomara,53,35.54,127.88,added: river mouth (river network about 3606 km)
+Mesomara,54,14.54,148.88,added: river mouth (river network about 2901 km)
+Mesomara,55,4.96,153.62,added: river mouth (river network about 2688 km)
+Mesomara,56,-2.38,154.21,added: river mouth (river network about 5821 km)
+Mesomara,57,-34.96,138.96,added: river mouth (river network about 2456 km)
+Mesomara,58,35.62,117.29,added: lake shore (lake about 37810 km²)
+Mesomara,59,9.88,151.54,added: lake shore (lake about 35748 km²)
+Mesomara,60,-4.79,134.12,added: lake shore (lake about 3265 km²)
+Mesomara,61,-6.38,146.62,added: lake shore (lake about 32396 km²)
+Mesomara,62,43.54,104.62,added: estuary harbour
+Mesomara,63,-8.62,132.79,added: estuary harbour
+Mesomara,64,-14.29,148.04,added: estuary harbour
+Mesomara,65,42.71,153.79,added for nation trait: Fishing: fewer than 2 cities on the water
+Mesomara,66,13.04,119.38,added for nation trait: Trade: no port or river city
+Mesomara,67,-24.29,135.46,added for nation trait: Mining: no city near the mining area
+Mesomara,68,-17.38,147.29,added for nation trait: Fishing: fewer than 2 cities on the water
+Mesomara,69,-39.71,145.12,added for nation trait: Forest Goods: no city in that land
+Mesomara,70,25.33,157.17,added: sea-lane port (Iforia - Kitashio)
+Mesomara,71,1.25,122.58,added: sea-lane port (Nusolado - Purvapascima)
+Mesomara,72,19.08,105.58,added: sea-lane port (Nyumba Nyota - Euelia)
+Kamon,1,39.66,199.2,user
+Kamon,2,36.86,196.75,user
+Kamon,3,34.26,203.29,user
+Kamon,4,31.83,197.65,user
+Kamon,5,31.24,173.85,user
+Kamon,6,29.23,200.64,user
+Kamon,7,28.63,193.99,user
+Kamon,8,26.9,194.03,user
+Kamon,9,26.39,198.74,user
+Kamon,10,25.84,204.63,user
+Kamon,11,24.76,192.04,user
+Kamon,12,20.9,195.91,user
+Kamon,13,20.59,169.16,user
+Kamon,14,17.76,173.34,user
+Kamon,15,16.77,190.42,user
+Kamon,16,10.66,206.22,user
+Kamon,17,8.15,202.62,user
+Kamon,18,4.07,191.59,user
+Kamon,19,1.43,206.8,user
+Kamon,20,-0.06,198.68,user
+Kamon,21,-1.18,209.41,user
+Kamon,22,-3.02,190.18,user
+Kamon,23,-3.56,195.68,user
+Kamon,24,-4.31,177.66,user
+Kamon,25,-7.55,180.68,user
+Kamon,26,-9.09,199.77,user
+Kamon,27,-9.27,188.73,user
+Kamon,28,-10.43,178.91,user
+Kamon,29,-10.5,181.46,user
+Kamon,30,-11.45,168.47,user
+Kamon,31,-13.41,191.03,user
+Kamon,32,-13.94,178.15,user
+Kamon,33,-16.44,181.33,user
+Kamon,34,-21.17,213.31,user
+Kamon,35,-21.4,184.97,user
+Kamon,36,-24.35,211.18,user
+Kamon,37,-24.74,180.75,user
+Kamon,38,-28.08,202.77,user
+Kamon,39,-32.52,218.01,user
+Kamon,40,-34.14,195.69,user
+Kamon,41,-34.78,226.21,user
+Kamon,42,-35.43,207.57,user
+Kamon,43,-35.77,213.3,user
+Kamon,44,-37.34,189.74,user
+Kamon,45,-37.42,217.19,user
+Kamon,46,-38.11,183.54,user
+Kamon,47,-38.41,209.19,user
+Kamon,48,-39.49,218.33,user
+Kamon,49,-40.97,225.27,user
+Kamon,50,-42.85,176.14,user
+Kamon,51,40.29,196.04,added: river mouth (river network about 11059 km)
+Kamon,52,39.54,201.79,added: river mouth (river network about 1260 km)
+Kamon,53,23.71,203.21,added: river mouth (river network about 1390 km)
+Kamon,54,0.21,184.12,added: river mouth (river network about 750 km)
+Kamon,55,-14.79,183.71,added: river mouth (river network about 1344 km)
+Kamon,56,-16.29,179.12,added: river mouth (river network about 8027 km)
+Kamon,57,-30.21,217.46,added: river mouth (river network about 1529 km)
+Kamon,58,-36.21,230.46,added: river mouth (river network about 760 km)
+Kamon,59,9.46,205.88,added: lake shore (lake about 64191 km²)
+Kamon,60,-10.21,177.88,added: lake shore (lake about 12030 km²)
+Kamon,61,-10.71,189.21,added: lake shore (lake about 17874 km²)
+Kamon,62,-17.71,171.38,added: estuary harbour
+Kamon,63,-39.79,213.12,added: estuary harbour
+Kamon,64,12.29,165.62,added for nation trait: Fishing: fewer than 2 cities on the water
+Kamon,65,17.12,181.12,added for nation trait: Mining: no city near the mining area
+Kamon,66,-1.62,175.21,added for nation trait: Farming: no city in that land
+Kamon,67,-5.21,187.21,added for nation trait: Mining: no city near the mining area
+Kamon,68,-4.38,204.79,added for nation trait: Fishing: fewer than 2 cities on the water
+Kamon,69,2.88,210.21,added for nation trait: Mining: no city near the mining area
+Kamon,70,-16.46,165.88,added for nation trait: Fishing: fewer than 2 cities on the water
+Kamon,71,-26.12,186.96,added for nation trait: Mining: no city near the mining area
+Kamon,72,-34.54,177.79,added for nation trait: Fishing: fewer than 2 cities on the water
+Kamon,73,-31.96,187.79,added for nation trait: Fishing: fewer than 2 cities on the water
+Kamon,74,-31.62,216.21,added for nation trait: Mining: no city near the mining area
+Kamon,75,-28.38,232.46,added for nation trait: Mining: no city near the mining area
+Kamon,76,-7.38,202.71,added for nation trait: Fishing: fewer than 2 cities on the water
+Kamon,77,-43.96,231.96,added for nation trait: Forest Goods: no city in that land
+Kamon,78,20.46,163.58,added: sea-lane port (Iforia - Kitashio)
+Kamon,79,22.0,215.5,added: sea-lane port (Kyorim - Delpardis)
+Kamon,80,-9.58,168.08,added: sea-lane port (Vanaziwa - West Hanara)
+Kamon,81,35.08,210.96,added: sea-lane port (Kyorim - New Elvarheim)
+Elmiyaro,1,34.79,265.92,user
+Elmiyaro,2,34.05,247.62,user
+Elmiyaro,3,33.49,263.7,user
+Elmiyaro,4,30.63,235.15,user
+Elmiyaro,5,30.09,244.01,user
+Elmiyaro,6,28.56,253.13,user
+Elmiyaro,7,28.41,259.04,user
+Elmiyaro,8,27.38,270.16,user
+Elmiyaro,9,26.99,232.09,user
+Elmiyaro,10,26.74,253.6,user
+Elmiyaro,11,26.64,248.1,user
+Elmiyaro,12,26.32,267.33,user
+Elmiyaro,13,26.21,274.32,user
+Elmiyaro,14,23.58,271.69,user
+Elmiyaro,15,22.96,275.69,user
+Elmiyaro,16,22.65,252.59,user
+Elmiyaro,17,21.41,268.63,user
+Elmiyaro,18,21.15,243.31,user
+Elmiyaro,19,20.05,227.54,user
+Elmiyaro,20,19.5,232.46,user
+Elmiyaro,21,18.96,273.52,user
+Elmiyaro,22,17.12,231.69,user
+Elmiyaro,23,16.12,247.49,user
+Elmiyaro,24,15.75,242.29,user
+Elmiyaro,25,15.19,261.03,user
+Elmiyaro,26,14.75,270.62,user
+Elmiyaro,27,14.34,233.7,user
+Elmiyaro,28,13.93,227.57,user
+Elmiyaro,29,13.77,248.1,user
+Elmiyaro,30,12.14,252.06,user
+Elmiyaro,31,11.23,246.16,user
+Elmiyaro,32,10.78,229.59,user
+Elmiyaro,33,10.62,224.33,user
+Elmiyaro,34,10.13,239.92,user
+Elmiyaro,35,10.12,263.64,user
+Elmiyaro,36,9.94,270.6,user
+Elmiyaro,37,9.29,244.18,user
+Elmiyaro,38,8.79,256.93,user
+Elmiyaro,39,7.64,235.64,user
+Elmiyaro,40,6.93,242.37,user
+Elmiyaro,41,5.48,224.16,user
+Elmiyaro,42,2.57,253.88,user
+Elmiyaro,43,1.77,243.49,user
+Elmiyaro,44,0.9,227.46,user
+Elmiyaro,45,0.45,234.17,user
+Elmiyaro,46,-0.11,260.44,user
+Elmiyaro,47,-1.08,249.09,user
+Elmiyaro,48,-1.7,240.13,user
+Elmiyaro,49,-1.74,254.21,user
+Elmiyaro,50,-4.08,232.97,user
+Elmiyaro,51,-7.39,256.33,user
+Elmiyaro,52,-8.54,241.19,user
+Elmiyaro,53,-10.09,249.93,user
+Elmiyaro,54,-10.82,244.62,user
+Elmiyaro,55,-12.27,248.75,user
+Elmiyaro,56,-13.75,254.09,user
+Elmiyaro,57,-17.21,257.68,user
+Elmiyaro,58,-21.44,257.0,user
+Elmiyaro,59,-29.13,244.74,user
+Elmiyaro,60,34.54,243.21,added: river mouth (river network about 2391 km)
+Elmiyaro,61,34.04,267.88,added: river mouth (river network about 1307 km)
+Elmiyaro,62,22.21,228.62,added: river mouth (river network about 3114 km)
+Elmiyaro,63,14.21,266.54,added: river mouth (river network about 1177 km)
+Elmiyaro,64,2.54,260.96,added: river mouth (river network about 713 km)
+Elmiyaro,65,-1.71,231.29,added: river mouth (river network about 1371 km)
+Elmiyaro,66,-7.88,254.21,added: river mouth (river network about 6609 km)
+Elmiyaro,67,23.38,240.21,added: lake shore (lake about 8335 km²)
+Elmiyaro,68,38.71,260.54,added: estuary harbour
+Elmiyaro,69,34.04,240.29,added: estuary harbour
+Elmiyaro,70,4.79,231.38,added for nation trait: Mining: no city near the mining area
+Elmiyaro,71,-15.62,243.29,added for nation trait: Mining: no city near the mining area
+Elmiyaro,72,-19.79,252.29,added for nation trait: Fishing: fewer than 2 cities on the water
+Elmiyaro,73,18.12,249.88,added: cataracts town (foot of the cataracts)
+Elmiyaro,74,20.12,250.71,added: upper cataracts town
+Elmiyaro,75,21.09,225.25,added: sea-lane port (Kyorim - Delpardis)
+Elmiyaro,76,39.62,249.56,added: sea-lane port (Kyorim - New Elvarheim)
+Hoakamotu,1,53.64,315.15,user
+Hoakamotu,2,53.12,341.73,user
+Hoakamotu,3,52.03,354.07,user
+Hoakamotu,4,49.46,330.9,user
+Hoakamotu,5,45.88,344.62,user
+Hoakamotu,6,43.17,353.73,user
+Hoakamotu,7,35.48,336.33,user
+Hoakamotu,8,34.83,345.36,user
+Hoakamotu,9,33.32,298.46,user
+Hoakamotu,10,32.75,309.14,user
+Hoakamotu,11,31.48,346.47,user
+Hoakamotu,12,30.74,301.96,user
+Hoakamotu,13,28.2,303.65,user
+Hoakamotu,14,27.3,301.95,user
+Hoakamotu,15,26.47,311.0,user
+Hoakamotu,16,26.1,303.95,user
+Hoakamotu,17,25.3,300.15,user
+Hoakamotu,18,24.6,342.45,user
+Hoakamotu,19,24.11,323.19,user
+Hoakamotu,20,23.2,299.75,user
+Hoakamotu,21,21.2,295.05,user
+Hoakamotu,22,21.46,312.35,user
+Hoakamotu,23,18.18,332.05,user
+Hoakamotu,24,17.83,326.96,user
+Hoakamotu,25,16.63,318.22,user
+Hoakamotu,26,15.35,296.61,user
+Hoakamotu,27,14.21,313.69,user
+Hoakamotu,28,12.55,322.9,user
+Hoakamotu,29,11.64,287.93,user
+Hoakamotu,30,11.4,293.56,user
+Hoakamotu,31,10.74,320.29,user
+Hoakamotu,32,10.23,326.65,user
+Hoakamotu,33,8.32,305.19,user
+Hoakamotu,34,6.81,287.84,user
+Hoakamotu,35,6.07,284.25,user
+Hoakamotu,36,6.12,338.22,user
+Hoakamotu,37,5.72,307.85,user
+Hoakamotu,38,4.94,294.46,user
+Hoakamotu,39,3.69,335.45,user
+Hoakamotu,40,1.81,339.89,user
+Hoakamotu,41,1.88,287.54,user
+Hoakamotu,42,1.47,296.19,user
+Hoakamotu,43,1.52,322.95,user
+Hoakamotu,44,-0.77,328.69,user
+Hoakamotu,45,-2.13,334.23,user
+Hoakamotu,46,-2.38,316.8,user
+Hoakamotu,47,-2.76,313.58,user
+Hoakamotu,48,-3.64,324.88,user
+Hoakamotu,49,-5.85,291.16,user
+Hoakamotu,50,-8.39,300.6,user
+Hoakamotu,51,-9.2,302.05,user
+Hoakamotu,52,-10.36,307.82,user
+Hoakamotu,53,-11.09,313.39,user
+Hoakamotu,54,-11.09,289.68,user
+Hoakamotu,55,-11.47,318.03,user
+Hoakamotu,56,-11.81,296.03,user
+Hoakamotu,57,-12.2,278.59,user
+Hoakamotu,58,-12.28,332.46,user
+Hoakamotu,59,-13.01,285.34,user
+Hoakamotu,60,-13.32,315.51,user
+Hoakamotu,61,-14.06,301.52,user
+Hoakamotu,62,-15.93,340.83,user
+Hoakamotu,63,-15.92,335.4,user
+Hoakamotu,64,-16.56,306.26,user
+Hoakamotu,65,-17.5,322.76,user
+Hoakamotu,66,-17.92,290.39,user
+Hoakamotu,67,-18.3,276.95,user
+Hoakamotu,68,-18.81,331.67,user
+Hoakamotu,69,-19.56,308.13,user
+Hoakamotu,70,-21.3,282.65,user
+Hoakamotu,71,-22.29,308.75,user
+Hoakamotu,72,-23.13,316.5,user
+Hoakamotu,73,-23.3,278.15,user
+Hoakamotu,74,-24.2,280.95,user
+Hoakamotu,75,-24.28,339.2,user
+Hoakamotu,76,-24.83,295.88,user
+Hoakamotu,77,-26.29,325.99,user
+Hoakamotu,78,-26.85,332.75,user
+Hoakamotu,79,-27.21,337.5,user
+Hoakamotu,80,-28.29,312.71,user
+Hoakamotu,81,-28.76,304.08,user
+Hoakamotu,82,-29.15,346.96,user
+Hoakamotu,83,-30.95,305.93,user
+Hoakamotu,84,-31.41,299.85,user
+Hoakamotu,85,-31.93,334.53,user
+Hoakamotu,86,-32.36,340.89,user
+Hoakamotu,87,-32.72,330.05,user
+Hoakamotu,88,-33.64,331.61,user
+Hoakamotu,89,-43.69,284.15,user
+Hoakamotu,90,-49.98,292.76,user
+Hoakamotu,91,63.0,333.65,added: river mouth (river network about 1731 km)
+Hoakamotu,92,50.3,326.05,added: river mouth (river network about 799 km)
+Hoakamotu,93,47.7,327.85,added: river mouth (river network about 2830 km)
+Hoakamotu,94,34.6,342.75,added: river mouth (river network about 821 km)
+Hoakamotu,95,14.2,317.15,added: river mouth (river network about 777 km)
+Hoakamotu,96,4.9,331.25,added: river mouth (river network about 1642 km)
+Hoakamotu,97,-0.7,314.75,added: river mouth (river network about 1154 km)
+Hoakamotu,98,-6.0,307.95,added: river mouth (river network about 3552 km)
+Hoakamotu,99,-13.4,277.15,added: river mouth (river network about 8791 km)
+Hoakamotu,100,-13.4,334.25,added: river mouth (river network about 4462 km)
+Hoakamotu,101,-12.7,324.45,added: lake shore (lake about 11458 km²)
+Hoakamotu,102,63.1,339.45,added: estuary harbour
+Hoakamotu,103,21.8,329.05,added: estuary harbour
+Hoakamotu,104,14.4,333.25,added: estuary harbour
+Hoakamotu,105,-3.1,329.45,added: estuary harbour
+Hoakamotu,106,-38.8,337.45,added: fjord harbour
+Hoakamotu,107,-49.7,274.05,added: fjord harbour
+Hoakamotu,108,-52.9,278.05,added: fjord harbour
+Hoakamotu,109,-52.9,292.15,added: fjord harbour
+Hoakamotu,110,43.7,336.65,added for nation trait: Tourism: no city near the attraction
+Hoakamotu,111,55.7,334.85,added for nation trait: Tourism: no city near the attraction
+Hoakamotu,112,33.5,318.75,added for nation trait: Fishing: fewer than 2 cities on the water
+Hoakamotu,113,24.9,350.25,added for nation trait: Forest Goods: no city in that land
+Hoakamotu,114,20.6,321.25,added for nation trait: Mining: no city near the mining area
+Hoakamotu,115,-7.8,330.45,added for nation trait: Fishing: fewer than 2 cities on the water
+Hoakamotu,116,-29.6,296.25,added for nation trait: Trade: no port or river city
+Hoakamotu,117,-29.0,318.95,added for nation trait: Fishing: fewer than 2 cities on the water
+Hoakamotu,118,-23.5,290.35,added for nation trait: Fishing: fewer than 2 cities on the water
+Hoakamotu,119,29.92,350.21,added: sea-lane port (Hikinamaa - Neulisa)
