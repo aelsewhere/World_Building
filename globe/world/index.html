@@ -415,10 +415,10 @@ function drawLabels() {
     taken.push(box);
     lctx.lineWidth = 3; lctx.strokeStyle = 'rgba(6,10,18,0.75)'; lctx.strokeText(text, x - w / 2, y); lctx.fillStyle = colour; lctx.fillText(text, x - w / 2, y);
   };
-  if (alt > 15000) { for (const c of contLabels) put(c.name.toUpperCase(), c.pos, '17px "Marcellus SC", Georgia, serif', '#f2d9a0', '3px'); return; }
-  const lim = alt > 9200 ? 30 : alt > 5000 ? 70 : nations.length;
+  if (alt > 26000) { for (const c of contLabels) put(c.name.toUpperCase(), c.pos, '17px "Marcellus SC", Georgia, serif', '#f2d9a0', '3px'); return; }
+  const lim = alt > 9200 ? 30 : alt > 5000 ? 70 : nations.length;   // nation names from the opening view in
   for (let k = 0; k < lim; k++) { const n = byArea[k]; put(n.name, n.pos, (n.area > 700000 ? 14 : 12) + 'px "Marcellus SC", Georgia, serif', '#ffffff', '1px'); }
-  if (alt < 5400 && $('optCities').checked) for (const c of cities) if (c.capital_of && c.pos) { const n = byGid[c.capital_of]; if (n.capital && n.capital !== 'unnamed') put(n.capital, c.pos, '12px "Source Sans 3", system-ui, sans-serif', '#ffe7a3', '0px', 20); }
+  if (alt < 6000 && $('optCities').checked) for (const c of cities) if (c.capital_of && c.pos) { const n = byGid[c.capital_of]; if (n.capital && n.capital !== 'unnamed') put(n.capital, c.pos, '12px "Source Sans 3", system-ui, sans-serif', '#ffe7a3', '0px', 20); }
 }
 
 // ---------------------------------------------------------------- hover data (loaded after the globe is showing)

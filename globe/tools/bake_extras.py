@@ -101,9 +101,47 @@ if f:
                 and near_core[sl][piece].min() < 70:
             drop[i] = True
     lines = m & ~drop[lab] & ~arrow
-    lines = skeletonize(lines)                                       # thin lines, like the continent sea lanes; dashes stay dashes
-    heads = ndi.binary_erosion(arrow, iterations=1)                  # arrowheads a little smaller
-    splat(ow, lines | heads, 0, 160, 1.5, (235, 60, 150), grow=0)
+    lines = skeletonize(lines)
+    # bridge the gap each removed number leaves: join the line ends (or arrowhead) on either side of it
+    ey, ex = np.nonzero(lines & (ndi.convolve(lines.astype(np.uint8), np.ones((3, 3), np.uint8), mode="constant") == 2))
+    ay, ax = np.nonzero(arrow)
+    for i, sl in enumerate(ndi.find_objects(lab), 1):
+        if not drop[i]: continue
+        y0, y1, x0, x1 = sl[0].start - 25, sl[0].stop + 25, sl[1].start - 25, sl[1].stop + 25
+        pts = [(y, x) for y, x in zip(ey, ex) if y0 <= y < y1 and x0 <= x < x1]
+        near = [(y, x) for y, x in zip(ay, ax) if y0 <= y < y1 and x0 <= x < x1]
+        if near:
+            cy, cx = (sl[0].start + sl[0].stop) / 2, (sl[1].start + sl[1].stop) / 2
+            pts.append(min(near, key=lambda p: (p[0] - cy) ** 2 + (p[1] - cx) ** 2))
+        best = None
+        for a1 in range(len(pts)):
+            for a2 in range(a1 + 1, len(pts)):
+                d = np.hypot(pts[a1][0] - pts[a2][0], pts[a1][1] - pts[a2][1])
+                if d <= 90 and (best is None or d > best[0]): best = (d, pts[a1], pts[a2])
+        if best:
+            (_, (ya, xa), (yb, xb)) = best
+            for t in np.linspace(0, 1, int(best[0]) + 2):
+                yy, xx = int(round(ya + (yb - ya) * t)), int(round(xa + (xb - xa) * t))
+                if not arrow[yy, xx]: lines[yy, xx] = True
+    # dotted like the continent sea lanes: walk along each line and keep 3 pixels in every 6
+    dots = np.zeros_like(lines)
+    lab2, n2 = ndi.label(lines, structure=np.ones((3, 3)))
+    ys, xs = np.nonzero(lines); pix = set(zip(ys.tolist(), xs.tolist())); seen = set()
+    nb = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+    def degree(p): return sum((p[0] + a, p[1] + b) in pix for a, b in nb)
+    for start in sorted(pix, key=degree):                            # start each line at an end
+        if start in seen: continue
+        queue = [(start, 0)]; seen.add(start)
+        while queue:
+            (y, x), d = queue.pop(0)
+            if d % 6 < 3: dots[y, x] = True
+            for a, b in nb:
+                q = (y + a, x + b)
+                if q in pix and q not in seen: seen.add(q); queue.append((q, d + 1))
+    heads = ndi.binary_erosion(arrow, iterations=3)                  # small arrowheads show the direction
+    mark = dots | heads
+    mark = mark | np.roll(mark, 1, 0) | np.roll(mark, 1, 1)          # two pixels thick, like the continent lanes
+    splat(ow, mark, 0, 160, 1.5, (235, 60, 150), grow=0)
     print("  world lanes:", int(drop.sum()), "number pieces removed,", int(ndi.label(core)[1]), "arrowheads")
     Image.fromarray(ow, "RGBA").save(os.path.join(out, "routes_world.png"), optimize=True)
     pic = Image.open(f).convert("RGB"); pic.thumbnail((2400, 2400))
