@@ -60,3 +60,12 @@ It is published as a private claude.ai page. When the maps change, re-run the pr
 With the climate files (world_t_jan/jul_data, world_p_jan/jul_data) the natural-colour map is painted realistically by `tools/realistic.py`: satellite-style colours made greener or drier by rainfall, natural edges between land-cover types, texture, treeline and snow from temperature (recorded snow is used for Morasil and Hoakamotu), coastlines drawn by recorded coast type (cliffs ragged with deep water close in, beaches in smooth arcs with sand, tropical lagoons, salt marsh, mangrove deltas with muddy water offshore, glacier fronts, black sand), rias cut inland as drowned valleys following the lowest ground, recorded fjords as dark channels joined to the sea, soft reef bands, an invented seabed, and a cloud picture. The rias reach up to about 55 km inland, so there the drawn coast departs from the recorded one (decided Nov 4); everywhere else it stays within about one cell. It needs numpy, Pillow and scipy. For a quick test of just the natural-colour map, set BAKE_ONLY=natural,natural-plain. The page adds sunlight (lit from where you look, or day and night by season and time), sun glint on water, and clouds.
 
 The page needs a web server (it loads its files with fetch), so double-clicking `index.html` will not work; use the published link.
+
+## Trade routes, nation maps, capitals and cities (Nov 6)
+
+`tools/bake_extras.py` runs after `bake_globe.py` and adds, without re-making the map pictures:
+- trade route layers traced from the route pictures by their legend colours (`routes_world.png`, `routes_continents.png`). Each continent picture covers its relief_v2 box from the build reference at 3x or 4x; the world sea-lane picture is the world map at 1/12 degree from relief row 160 (checked against the land: 99.5-100% of each picture's sea falls on sea);
+- the nation maps and route maps as pictures for the Atlas (`nations/`, `routes/`);
+- the capitals from the data pack's capital tables, and the cities from `cities_v7.csv`.
+
+    python tools/bake_extras.py PATH/TO/maps globe/world PATH/TO/trade_routes PATH/TO/nations cities_v7.csv globe/data-pack.md

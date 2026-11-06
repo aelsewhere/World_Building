@@ -49,6 +49,12 @@
   #nationList .c { font: 15px var(--font-display); letter-spacing: .05em; color: var(--brass); margin: 12px 0 3px; display: flex; justify-content: space-between; }
   #nationList .n { display: flex; justify-content: space-between; gap: 8px; cursor: pointer; padding: 2px 4px; margin: 0 -4px; border-radius: 3px; background: none; border: 0; width: calc(100% + 8px); text-align: left; }
   #nationList .n:hover, #nationList .n:focus-visible { background: rgba(217,181,107,0.12); }
+  [hidden] { display: none !important; }
+  #card img { width: 100%; border-radius: 4px; margin-top: 8px; cursor: zoom-in; background: #fff; }
+  #card .name { font: 20px var(--font-display); color: var(--brass); letter-spacing: .04em; }
+  #lightbox { position: fixed; inset: 0; background: rgba(4,6,10,.92); display: flex; align-items: center; justify-content: center; z-index: 20; cursor: zoom-out; padding: 16px; }
+  #lightbox img { max-width: 100%; max-height: 100%; }
+  .rbtn { font-size: 12px; padding: 3px 7px; }
   #status { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); font: 16px var(--font-display); letter-spacing: .1em; color: var(--ink-soft); }
   details summary { cursor: pointer; color: var(--ink-soft); margin-top: 12px; }
   details ul { margin: 6px 0 0; padding-left: 18px; color: var(--ink-soft); font-size: 12.5px; }
@@ -99,6 +105,10 @@
   <label><input type="checkbox" id="optGrid"> Latitude and longitude</label>
   <label><input type="checkbox" id="optAtmo" checked> Atmosphere</label>
   <label><input type="checkbox" id="optClouds"> Clouds</label>
+  <h2>Trade routes</h2>
+  <label><input type="checkbox" id="optLanes"> World sea lanes</label>
+  <label><input type="checkbox" id="optRoutes"> Continent trade routes</label>
+  <div id="routeLegend" class="legend" hidden></div>
   <h2>Sunlight</h2>
   <select id="sunMode" aria-label="Sunlight">
     <option value="view">Lit from where you look</option>
@@ -123,12 +133,16 @@
   <label title="The longitude number of the map's left edge (column 0). Not yet confirmed; probably 180°.">Seam longitude <input type="number" id="seam" value="-180" step="1" style="width:72px"></label>
 </div>
 
+<div id="lightbox" hidden></div>
 <div id="readout" class="panel"><span class="soft">Point at the globe to read the map.</span></div>
 <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button></div>
 
 <div id="atlas" class="panel">
   <h1>Atlas</h1>
+  <div id="card" hidden></div>
   <div id="summary"></div>
+  <h2>Trade route maps</h2>
+  <div id="routeMaps" class="row"></div>
   <div id="nationList"></div>
   <details><summary>Known limits of this data (Nov 4)</summary><ul>
     <li>Climate data is from the Pass 1 heights; Morasil's big southern island is now higher.</li>
@@ -152,7 +166,7 @@ const world = await (await fetch('world.json')).json();
 const S = world.summary, LEG = world.legend;
 const [TX, TY] = S.tiles, [MW, MH] = S.mesh, STEP = S.mesh_step;
 const nations = world.nations, cities = world.cities;
-const byIndex = []; nations.forEach((n) => { byIndex[n.i] = n; });
+const byIndex = [], byGid = {}; nations.forEach((n) => { byIndex[n.i] = n; byGid[n.gid] = n; });
 async function readPixels(url) {   // exact pixel values of a PNG (no colour correction)
   const bmp = await createImageBitmap(await (await fetch(url)).blob(), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
   const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
@@ -305,6 +319,16 @@ cloudMat.onBeforeCompile = (sh) => {
 };
 const clouds = new THREE.Mesh(base.geometry, cloudMat); clouds.visible = false; clouds.renderOrder = 3; clouds.frustumCulled = false; scene.add(clouds);
 let cloudsLoaded = false;
+// trade route layers, traced from the route maps; drawn just above the (raised) land
+function routeLayer(url) {
+  const m = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false });
+  m.onBeforeCompile = (sh) => { sh.uniforms.exag = exagU;
+    sh.vertexShader = 'attribute float height;\nuniform float exag;\n' + sh.vertexShader.replace('#include <begin_vertex>', 'vec3 transformed = position * (' + R.toFixed(1) + ' + 3.0 + height * 0.001 * exag);'); };
+  const mesh = new THREE.Mesh(base.geometry, m); mesh.visible = false; mesh.renderOrder = 2; mesh.frustumCulled = false; scene.add(mesh);
+  let loaded = false;
+  return async (on) => { mesh.visible = on; if (on && !loaded) { loaded = true; const t = await loadTex(url); m.map = t; m.needsUpdate = true; } redraw(); };
+}
+const showLanes = routeLayer('routes_world.png'), showRoutes = routeLayer('routes_continents.png');
 async function showClouds(on) {
   clouds.visible = on;
   if (on && !cloudsLoaded) { cloudsLoaded = true; const t = await loadTex('clouds.webp'); t.colorSpace = THREE.NoColorSpace; cloudMat.alphaMap = t; cloudMat.needsUpdate = true; }
@@ -344,10 +368,16 @@ function meshHeight(lat, lonE) { const j = Math.round((90 - lat) / STEP), i = Ma
 const cityGeo = new THREE.BufferGeometry();
 const cityPts = new THREE.Points(cityGeo, new THREE.PointsMaterial({ color: 0xffe7a3, size: 4.5, sizeAttenuation: false }));
 scene.add(cityPts);
+const capGeo = new THREE.BufferGeometry();
+const capPts = new THREE.Points(capGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 8, sizeAttenuation: false }));
+scene.add(capPts);
 function placeCities() {
   const pos = new Float32Array(cities.length * 3);
   cities.forEach((c, k) => { const v = dirOf(c.lat, c.lon).multiplyScalar(R + Math.max(0, meshHeight(c.lat, c.lon)) / 1000 * exag + 2); c.pos = v; pos.set([v.x, v.y, v.z], k * 3); });
   cityGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); cityGeo.computeBoundingSphere();
+  const caps = cities.filter((c) => c.capital_of), cp = new Float32Array(caps.length * 3);
+  caps.forEach((c, k) => cp.set([c.pos.x, c.pos.y, c.pos.z], k * 3));
+  capGeo.setAttribute('position', new THREE.BufferAttribute(cp, 3)); capGeo.computeBoundingSphere();
 }
 placeCities();
 
@@ -379,6 +409,7 @@ function drawLabels() {
   if (alt > 9000) { for (const c of contLabels) put(c.name.toUpperCase(), c.pos, '17px "Marcellus SC", Georgia, serif', '#f2d9a0', '3px'); return; }
   const lim = alt > 5500 ? 30 : alt > 3000 ? 70 : nations.length;
   for (let k = 0; k < lim; k++) { const n = byArea[k]; put(n.name, n.pos, (n.area > 700000 ? 14 : 12) + 'px "Marcellus SC", Georgia, serif', '#ffffff', '1px'); }
+  if (alt < 3000 && $('optCities').checked) for (const c of cities) if (c.capital_of && c.pos) { const n = byGid[c.capital_of]; if (n.capital && n.capital !== 'unnamed') put('★ ' + n.capital, c.pos, '12px "Source Sans 3", system-ui, sans-serif', '#ffe7a3', '0px'); }
 }
 
 // ---------------------------------------------------------------- hover data (loaded after the globe is showing)
@@ -414,7 +445,7 @@ function readout(p) {
     const e = info.eh[i] * 256 + info.el[i];
     rows.push(['Height', e ? '<span class="mono">' + (e - 1000).toLocaleString() + ' m</span>' : 'sea']);
     const n = byIndex[info.nat[i]];
-    if (n) { rows.push(['Nation', '<b>' + n.name + '</b> <span class="soft">· ' + CONTINENTS[n.c] + '</span>']); rows.push(['Area', '<span class="mono">' + km2(n.area) + '</span> <span class="soft">(' + mi2(n.area) + ')</span>']); }
+    if (n) { rows.push(['Nation', '<b>' + n.name + '</b> <span class="soft">· ' + CONTINENTS[n.c] + '</span>']); if (n.capital && n.capital !== 'unnamed') rows.push(['Capital', n.capital]); rows.push(['Area', '<span class="mono">' + km2(n.area) + '</span> <span class="soft">(' + mi2(n.area) + ')</span>']); }
     if (info.lu[i]) rows.push(['Land cover', (LEG.landuse[info.lu[i]] || ['code ' + info.lu[i]])[0]]);
     if (info.water[i]) rows.push(['Water', LEG.water.filter((w) => info.water[i] & w[0]).map((w) => w[1]).join(', ')]);
     const coast = info.cs[i] >> 3, snow = info.cs[i] & 7;
@@ -423,7 +454,7 @@ function readout(p) {
   } else rows.push(['', '<span class="soft">Loading map details…</span>']);
   let best = null, bd = 80;
   for (const c of cities) { const d = gc(lat, lonE, c.lat, c.lon); if (d < bd) { bd = d; best = c; } }
-  if (best) rows.push(['Near', best.continent + ' city ' + best.n + ' <span class="soft">(' + Math.round(bd) + ' km' + (best.source && best.source !== 'user' ? '; ' + best.source.replace(/^added: /, '') : '') + ')</span>']);
+  if (best) rows.push(['Near', best.continent + ' city ' + best.n + (best.capital_of ? ' <b>capital of ' + byGid[best.capital_of].name + '</b>' : '') + ' <span class="soft">(' + Math.round(bd) + ' km' + (best.source && best.source !== 'user' ? '; ' + best.source.replace(/^added: /, '') : '') + ')</span>']);
   $('readout').innerHTML = '<table>' + rows.map((r) => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('') + '</table>';
 }
 
@@ -448,7 +479,7 @@ cv.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; flyin
 cv.addEventListener('pointerup', (e) => {
   if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4) return;
   const p = pick(e); if (!p) return; readout(p);
-  if (!measure.on) return;
+  if (!measure.on) { if (info) { const ll = latLonOf(p), i = Math.min(info.h - 1, Math.floor((90 - ll.lat) / 180 * info.h)) * info.w + Math.min(info.w - 1, Math.floor(ll.lonE / 360 * info.w)); const n = byIndex[info.nat[i]]; if (n) showCard(n); } return; }
   const ll = latLonOf(p); if (!measure.a || measure.b) { measure.a = ll; measure.b = null; } else measure.b = ll; drawMeasure();
 });
 cv.addEventListener('pointermove', (e) => { if (e.pointerType !== 'mouse') return; if (!hoverEv) requestAnimationFrame(() => { readout(pick(hoverEv)); hoverEv = null; }); hoverEv = e; });
@@ -473,7 +504,7 @@ function stepFly() {
   camera.position.copy(v.multiplyScalar(R + Math.exp(Math.log(flying.a0) + (Math.log(flying.a1) - Math.log(flying.a0)) * s)));
   if (t >= 1) flying = null;
 }
-const flyToNation = (n) => flyTo(dirOf(n.lat, n.lon), Math.min(12000, Math.max(900, Math.sqrt(n.area) * 3.4)));
+const flyToNation = (n) => (showCard(n), flyTo(dirOf(n.lat, n.lon), Math.min(12000, Math.max(900, Math.sqrt(n.area) * 3.4))));
 
 // ---------------------------------------------------------------- panels
 function drawLegend() {
@@ -503,7 +534,7 @@ function drawAtlas() {
     nl += list.map((n) => '<button class="n" data-i="' + n.i + '"><span>' + n.name + '</span><span class="mono soft">' + km2(n.area) + '</span></button>').join('');
   }
   $('nationList').innerHTML = nl;
-  $('nationList').onclick = (e) => { const b = e.target.closest('[data-i]'); if (b) flyToNation(byIndex[+b.dataset.i]); };
+  $('nationList').onclick = (e) => { const b = e.target.closest('[data-i]'); if (b) { flyToNation(byIndex[+b.dataset.i]); showCard(byIndex[+b.dataset.i]); } };
   $('findList').innerHTML = nations.map((n) => '<option value="' + n.name.replace(/"/g, '&quot;') + '">').join('');
   $('files').innerHTML = Object.entries(S.files).map(([k, v]) => k + ': ' + (v || '<span class="warn">missing</span>')).join('<br>');
 }
@@ -511,7 +542,28 @@ $('find').addEventListener('change', () => { const q = $('find').value.trim().to
 $('mode').onchange = () => { style = $('mode').value; setStyle(); };
 $('optBorders').onchange = setStyle;
 $('optNames').onchange = redraw;
-$('optCities').onchange = () => { cityPts.visible = $('optCities').checked; redraw(); };
+$('optCities').onchange = () => { cityPts.visible = capPts.visible = $('optCities').checked; redraw(); };
+$('optLanes').onchange = () => { showLanes($('optLanes').checked); routeLegendShow(); };
+$('optRoutes').onchange = () => { showRoutes($('optRoutes').checked); routeLegendShow(); };
+function routeLegendShow() {
+  const sw = (c, t) => '<div><span class="sw" style="background:' + c + '"></span>' + t + '</div>';
+  $('routeLegend').hidden = !$('optLanes').checked && !$('optRoutes').checked;
+  $('routeLegend').innerHTML = ($('optLanes').checked ? sw('#e6288c', 'World sea lane (numbers as on the world map)') : '') +
+    ($('optRoutes').checked ? sw('#cd2828', 'Land route') + sw('#285ae6', 'River route') + sw('#14aab4', 'Sea lane or strait crossing') + sw('#b95ae6', 'Luxury sea lane') + sw('#ffcd28', 'Port or hub') : '') +
+    '<div class="soft">Traced from the route maps; open them under Trade route maps in the Atlas.</div>';
+}
+// nation card and picture viewer
+function showCard(n) {
+  const cap = n.capital ? (n.capital === 'unnamed' ? 'not named yet' : n.capital) + (n.capital_city ? ' <span class="soft">(city ' + n.capital_city + ')</span>' : ' <span class="soft">(no city on the globe yet)</span>') : '';
+  $('card').innerHTML = '<div class="name">' + n.name + '</div><div class="soft">' + CONTINENTS[n.c] + ', nation ' + n.n + '</div><table>' +
+    (cap ? '<tr><td>Capital</td><td>' + cap + '</td></tr>' : '') + '<tr><td>Area</td><td class="mono">' + km2(n.area) + '</td></tr><tr><td>Cities</td><td>' + n.cities + '</td></tr></table>' +
+    (n.map ? '<img src="' + n.map + '" alt="Map of ' + n.name + '">' : '');
+  $('card').hidden = false; $('atlas').scrollTop = 0;
+}
+$('card').onclick = (e) => { if (e.target.tagName === 'IMG') { $('lightbox').innerHTML = '<img src="' + e.target.src + '" alt="">'; $('lightbox').hidden = false; } };
+$('lightbox').onclick = () => { $('lightbox').hidden = true; };
+$('routeMaps').innerHTML = Object.entries(S.routes || {}).map(([k, v]) => '<button class="rbtn" data-pic="' + v.picture + '">' + (k === 'world' ? 'World sea lanes' : k) + '</button>').join('');
+$('routeMaps').onclick = (e) => { const b = e.target.closest('[data-pic]'); if (b) { $('lightbox').innerHTML = '<img src="' + b.dataset.pic + '" alt="">'; $('lightbox').hidden = false; } };
 $('optGrid').onchange = () => { grid.visible = $('optGrid').checked; redraw(); };
 $('optAtmo').onchange = () => { atmo.visible = $('optAtmo').checked; redraw(); };
 $('optClouds').onchange = () => showClouds($('optClouds').checked);
