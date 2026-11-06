@@ -81,7 +81,9 @@ if f:
     mapa = a[:1560]
     ow = np.zeros((OH, OW, 4), np.uint8)
     m = colour_mask(mapa, (168, 12, 84), 50, 20) & ~legend_boxes(mapa)
-    splat(ow, m, 0, 160, 1.5, (230, 40, 140), grow=1)
+    from skimage.morphology import skeletonize                       # thin the lanes to a one-pixel line, like the continent sea lanes
+    m = skeletonize(m)
+    splat(ow, m, 0, 160, 1.5, (230, 40, 140), grow=0)
     Image.fromarray(ow, "RGBA").save(os.path.join(out, "routes_world.png"), optimize=True)
     pic = Image.open(f).convert("RGB"); pic.thumbnail((2400, 2400))
     pic.save(os.path.join(out, "routes", "world.webp"), quality=82)
