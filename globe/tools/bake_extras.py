@@ -67,7 +67,13 @@ for name, (x0, y0, k) in BOX.items():
     skip = legend_boxes(a)
     for cname, col, tol, draw, minsize in CLASSES:
         m = colour_mask(a, col, tol, minsize) & ~skip
-        splat(ov, m, x0, y0, k, draw, grow=0)
+        if cname.endswith("hub"):                    # ports and hubs: a small dot at each symbol's centre
+            lab, n = ndi.label(m)
+            m = np.zeros_like(m)
+            for cy, cx in ndi.center_of_mass(np.ones_like(lab), lab, range(1, n + 1)): m[int(cy), int(cx)] = True
+            splat(ov, m, x0, y0, k, draw, grow=1)
+        else:
+            splat(ov, m, x0, y0, k, draw, grow=0)
     pic = Image.open(f).convert("RGB"); pic.thumbnail((1600, 1600))
     pic.save(os.path.join(out, "routes", name + ".webp"), quality=82)
     summary_routes[name] = {"file": os.path.basename(f), "picture": "routes/" + name + ".webp"}
@@ -80,10 +86,25 @@ if f:
     f = f[-1]; a = np.asarray(Image.open(f).convert("RGB")).astype(np.int16)
     mapa = a[:1560]
     ow = np.zeros((OH, OW, 4), np.uint8)
-    m = colour_mask(mapa, (168, 12, 84), 50, 20) & ~legend_boxes(mapa)
-    from skimage.morphology import skeletonize                       # thin the lanes to a one-pixel line, like the continent sea lanes
-    m = skeletonize(m)
-    splat(ow, m, 0, 160, 1.5, (230, 40, 140), grow=0)
+    m = (np.abs(mapa - np.array((168, 12, 84))).sum(2) < 50) & ~legend_boxes(mapa)
+    from skimage.morphology import skeletonize
+    thick = ndi.distance_transform_edt(m)
+    core = thick >= 3.5                                              # arrowheads: filled triangles, wider than the lines
+    near_core = ndi.distance_transform_edt(~core)
+    arrow = m & (near_core <= 6)
+    # lane numbers: small separate pieces next to an arrow (not dashes, which are short)
+    lab, n = ndi.label(m, structure=np.ones((3, 3)))
+    drop = np.zeros(n + 1, bool)
+    for i, sl in enumerate(ndi.find_objects(lab), 1):
+        piece = lab[sl] == i; hgt, wid = piece.shape
+        if piece.sum() < 400 and max(hgt, wid) >= 12 and max(hgt, wid) < 45 and not (arrow[sl] & piece).any() \
+                and near_core[sl][piece].min() < 70:
+            drop[i] = True
+    lines = m & ~drop[lab] & ~arrow
+    lines = skeletonize(lines)                                       # thin lines, like the continent sea lanes; dashes stay dashes
+    heads = ndi.binary_erosion(arrow, iterations=1)                  # arrowheads a little smaller
+    splat(ow, lines | heads, 0, 160, 1.5, (235, 60, 150), grow=0)
+    print("  world lanes:", int(drop.sum()), "number pieces removed,", int(ndi.label(core)[1]), "arrowheads")
     Image.fromarray(ow, "RGBA").save(os.path.join(out, "routes_world.png"), optimize=True)
     pic = Image.open(f).convert("RGB"); pic.thumbnail((2400, 2400))
     pic.save(os.path.join(out, "routes", "world.webp"), quality=82)

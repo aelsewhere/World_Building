@@ -362,6 +362,11 @@ function buildGrid() {
 buildGrid();
 
 // heights at any point, from the relief mesh grid (for placing things on the raised surface)
+function meshHeightMax(lat, lonE) {   // highest of the relief points around a spot, so markers sit above the surface
+  const j = Math.floor((90 - lat) / STEP), i = Math.floor(lonE / STEP); let m = 0;
+  for (const [a, b] of [[0, 0], [0, 1], [1, 0], [1, 1]]) { const jj = Math.min(MH - 1, j + a), ii = Math.min(MW - 1, i + b); m = Math.max(m, heights[jj * MW + ii]); }
+  return m;
+}
 function meshHeight(lat, lonE) { const j = Math.round((90 - lat) / STEP), i = Math.round(lonE / STEP); return heights[Math.min(MH - 1, Math.max(0, j)) * MW + Math.min(MW - 1, i)]; }
 
 // cities
@@ -369,11 +374,15 @@ const cityGeo = new THREE.BufferGeometry();
 const cityPts = new THREE.Points(cityGeo, new THREE.PointsMaterial({ color: 0xffe7a3, size: 4.5, sizeAttenuation: false }));
 scene.add(cityPts);
 const capGeo = new THREE.BufferGeometry();
-const capPts = new THREE.Points(capGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 8, sizeAttenuation: false }));
+const starTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); x.beginPath();
+  for (let k = 0; k < 10; k++) { const r = k % 2 ? 13 : 30, a = -Math.PI / 2 + k * Math.PI / 5; x.lineTo(32 + r * Math.cos(a), 32 + r * Math.sin(a)); }
+  x.closePath(); x.fillStyle = '#ffd34d'; x.fill(); x.lineWidth = 4; x.strokeStyle = 'rgba(40,25,0,.85)'; x.stroke(); return new THREE.CanvasTexture(c); })();
+const capPts = new THREE.Points(capGeo, new THREE.PointsMaterial({ map: starTex, size: 15, sizeAttenuation: false, transparent: true, alphaTest: 0.3 }));
+capPts.renderOrder = 6;
 scene.add(capPts);
 function placeCities() {
   const pos = new Float32Array(cities.length * 3);
-  cities.forEach((c, k) => { const v = dirOf(c.lat, c.lon).multiplyScalar(R + Math.max(0, meshHeight(c.lat, c.lon)) / 1000 * exag + 2); c.pos = v; pos.set([v.x, v.y, v.z], k * 3); });
+  cities.forEach((c, k) => { const v = dirOf(c.lat, c.lon).multiplyScalar(R + Math.max(0, meshHeightMax(c.lat, c.lon)) / 1000 * exag + 4); c.pos = v; pos.set([v.x, v.y, v.z], k * 3); });
   cityGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); cityGeo.computeBoundingSphere();
   const caps = cities.filter((c) => c.capital_of), cp = new Float32Array(caps.length * 3);
   caps.forEach((c, k) => cp.set([c.pos.x, c.pos.y, c.pos.z], k * 3));
@@ -395,10 +404,10 @@ function drawLabels() {
   lctx.clearRect(0, 0, innerWidth, innerHeight);
   if (!$('optNames').checked) return;
   const d = camera.position.length(), alt = d - R, camDir = camera.position.clone().normalize(), limit = R / d + 0.03;
-  const taken = [], put = (text, v, font, colour, spacing) => {
+  const taken = [], put = (text, v, font, colour, spacing, dy = 0) => {
     if (v.dot(camDir) / v.length() < limit) return;
     const s = tmpV.copy(v).project(camera); if (s.z > 1) return;
-    const x = (s.x + 1) / 2 * innerWidth, y = (1 - s.y) / 2 * innerHeight;
+    const x = (s.x + 1) / 2 * innerWidth, y = (1 - s.y) / 2 * innerHeight + dy;
     lctx.font = font; lctx.letterSpacing = spacing; const w = lctx.measureText(text).width, hgt = parseInt(font.match(/(\d+)px/)[1]);
     const box = [x - w / 2 - 3, y - hgt, x + w / 2 + 3, y + 4];
     if (box[2] < 0 || box[0] > innerWidth || box[3] < 0 || box[1] > innerHeight) return;
@@ -406,10 +415,10 @@ function drawLabels() {
     taken.push(box);
     lctx.lineWidth = 3; lctx.strokeStyle = 'rgba(6,10,18,0.75)'; lctx.strokeText(text, x - w / 2, y); lctx.fillStyle = colour; lctx.fillText(text, x - w / 2, y);
   };
-  if (alt > 9000) { for (const c of contLabels) put(c.name.toUpperCase(), c.pos, '17px "Marcellus SC", Georgia, serif', '#f2d9a0', '3px'); return; }
-  const lim = alt > 5500 ? 30 : alt > 3000 ? 70 : nations.length;
+  if (alt > 15000) { for (const c of contLabels) put(c.name.toUpperCase(), c.pos, '17px "Marcellus SC", Georgia, serif', '#f2d9a0', '3px'); return; }
+  const lim = alt > 9200 ? 30 : alt > 5000 ? 70 : nations.length;
   for (let k = 0; k < lim; k++) { const n = byArea[k]; put(n.name, n.pos, (n.area > 700000 ? 14 : 12) + 'px "Marcellus SC", Georgia, serif', '#ffffff', '1px'); }
-  if (alt < 3000 && $('optCities').checked) for (const c of cities) if (c.capital_of && c.pos) { const n = byGid[c.capital_of]; if (n.capital && n.capital !== 'unnamed') put('★ ' + n.capital, c.pos, '12px "Source Sans 3", system-ui, sans-serif', '#ffe7a3', '0px'); }
+  if (alt < 5400 && $('optCities').checked) for (const c of cities) if (c.capital_of && c.pos) { const n = byGid[c.capital_of]; if (n.capital && n.capital !== 'unnamed') put(n.capital, c.pos, '12px "Source Sans 3", system-ui, sans-serif', '#ffe7a3', '0px', 20); }
 }
 
 // ---------------------------------------------------------------- hover data (loaded after the globe is showing)
