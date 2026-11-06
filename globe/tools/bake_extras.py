@@ -202,6 +202,19 @@ for n in world["nations"]:
         pic = Image.open(maps_by[g]).convert("RGB"); pic.thumbnail((1000, 1000))
         pic.save(os.path.join(out, "nations", f"{g}.webp"), quality=82); n["map"] = f"nations/{g}.webp"
 for n in world["nations"]: n["cities"] = sum(1 for c in cities if c["nation"] == n["gid"])
+# name positions: the point of each nation deepest inside it (farthest from its borders), on a half-size grid
+gs = np.where((elev[::2, ::2] > 0) & (cont[::2, ::2] > 0) & (natn[::2, ::2] > 0), cont[::2, ::2].astype(np.int32) * 100 + natn[::2, ::2], 0)
+h2, w2 = gs.shape
+objs = ndi.find_objects(gs)
+for n in world["nations"]:
+    sl = objs[n["gid"] - 1] if n["gid"] - 1 < len(objs) else None
+    if sl is None: continue
+    y0, y1 = max(0, sl[0].start - 1), min(h2, sl[0].stop + 1); x0, x1 = max(0, sl[1].start - 1), min(w2, sl[1].stop + 1)
+    inside = gs[y0:y1, x0:x1] == n["gid"]
+    lat_mid = 90 - ((y0 + y1) / 2) * 180 / h2
+    d = ndi.distance_transform_edt(inside, sampling=(1, max(0.2, np.cos(np.radians(lat_mid)))))
+    yy, xx = np.unravel_index(np.argmax(d), d.shape)
+    n["llat"] = round(90 - (y0 + yy + 0.5) * 180 / h2, 3); n["llon"] = round((x0 + xx + 0.5) * 360 / w2, 3)
 world["cities"] = cities
 world["summary"]["files"]["cities"] = os.path.basename(cities_csv)
 world["summary"]["routes"] = summary_routes
