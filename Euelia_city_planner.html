@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Euelia city planner</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{--bg:#f4f2ee;--panel:#ffffff;--line:#d9d5cc;--ink:#26231e;--mute:#6f6a60}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font:14px/1.3 system-ui,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none}
+  #bar{position:absolute;left:0;right:0;top:0;display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;
+    padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--line);z-index:5}
+  [hidden]{display:none!important}
+  .grp{display:flex;gap:6px;align-items:center}
+  .grp.right{margin-left:auto}
+  #tools{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .seg{display:flex;align-items:center}
+  .seg>.lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-right:6px}
+  .seg>button{border-radius:0;margin-left:-1px}
+  .seg>button:first-of-type{border-radius:7px 0 0 7px;margin-left:0}
+  .seg>button:last-of-type{border-radius:0 7px 7px 0}
+  .seg>button:only-of-type{border-radius:7px}
+  .seg>button.on{position:relative;z-index:1}
+  button.quiet{border-color:transparent;background:transparent;color:#4a463e}
+  button.quiet:hover{background:#efece5;border-color:transparent}
+  button.primary{background:#2f6f57;border-color:#2f6f57;color:#fff}
+  button.danger{color:#b3261e}
+  details.menu{position:relative}
+  details.menu>summary{list-style:none;cursor:pointer;border:1px solid var(--line);border-radius:7px;padding:8px 11px;min-height:38px;background:#fff;display:flex;align-items:center;gap:6px}
+  details.menu>summary::-webkit-details-marker{display:none}
+  details.menu>summary::after{content:'▾';color:var(--mute);font-size:11px}
+  details.menu[open]>summary{border-color:var(--ink)}
+  .pop{position:absolute;right:0;top:44px;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;box-shadow:0 6px 24px rgba(0,0,0,.14);display:flex;flex-direction:column;gap:6px;min-width:210px}
+  .pop label.chk{padding:5px 4px;font-size:14px}
+  .pop button{text-align:left;width:100%}
+  .pop hr{border:0;border-top:1px solid var(--line);margin:2px 0;width:100%}
+  #opts{display:flex;align-items:center;gap:8px}
+  #city{max-width:190px}
+  summary .lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+  .pop.left{right:auto;left:0}
+  .pop h5{margin:6px 4px 0;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);font-weight:600}
+  .pop h5:first-child{margin-top:0}
+  .pop{gap:3px!important;max-height:calc(100vh - 70px);overflow:auto}
+  .pop button{display:flex;align-items:center;gap:8px;min-height:32px;padding:4px 10px;border-color:transparent}
+  .pop button:hover{background:#f1eee7;border-color:transparent}
+  .pop button.on:hover{background:var(--ink)}
+  .pop button kbd{margin-left:auto;font:11px system-ui;color:var(--mute);border:1px solid var(--line);border-radius:4px;padding:1px 5px;background:#faf9f6}
+  .pop button.on kbd{color:#ddd;background:transparent;border-color:#777}
+  #classes button.cls{justify-content:flex-start}
+  #zoom{position:absolute;right:12px;bottom:38px;z-index:6;display:flex;flex-direction:column;gap:0;box-shadow:0 2px 10px rgba(0,0,0,.12);border-radius:8px}
+  #zoom button{border-radius:0;margin-top:-1px;min-width:42px;padding:8px 6px}
+  #zoom button:first-child{border-radius:8px 8px 0 0;margin-top:0}
+  #zoom button:last-child{border-radius:0 0 8px 8px;font-size:12px}
+  .grp>span.lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-right:2px}
+  button,select,input[type=number]{font:inherit;color:inherit;background:#fff;border:1px solid var(--line);border-radius:7px;
+    padding:8px 11px;min-height:38px}
+  button{cursor:pointer;touch-action:manipulation}
+  button:hover{border-color:#b9b3a6}
+  button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  button:disabled{opacity:.4;cursor:default}
+  button.cls{display:flex;align-items:center;gap:7px}
+  button.cls i{display:inline-block;width:22px;border-radius:3px}
+  button.cls.on{background:#fff;color:var(--ink);border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+  select{max-width:230px}
+  label.chk{display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer}
+  #wrap{position:absolute;left:66px;right:0;bottom:26px}
+  #tools{position:absolute;left:0;bottom:26px;width:66px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;overflow-y:auto;z-index:4}
+  #tools button{width:56px;min-height:50px;padding:5px 0 3px;border-color:transparent;background:transparent;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:1px;color:#4a463e}
+  #tools button span{font-size:10.5px;line-height:1.1}
+  #tools button:hover{background:#efece5}
+  #tools button.on{background:var(--ink);color:#fff}
+  #tools hr{border:0;border-top:1px solid var(--line);width:40px;margin:3px 0}
+  #legend{position:absolute;right:12px;z-index:5;background:rgba(255,255,255,.93);border:1px solid var(--line);border-radius:9px;padding:6px 8px;font-size:12px;max-height:55%;overflow:auto;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+  #legend div{display:flex;align-items:center;gap:6px;padding:2px 2px;cursor:pointer;border-radius:4px;white-space:nowrap}
+  #legend div:hover{background:#f1eee7}
+  #legend div.off{opacity:.45}
+  #legend i{width:13px;height:13px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.18)}
+  #ctx{position:absolute;z-index:30;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:0 6px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:2px;min-width:200px;font-size:13px}
+  #ctx b{padding:4px 8px 2px;font-size:12px;color:var(--mute);font-weight:600}
+  #ctx button{text-align:left;border-color:transparent;min-height:32px;padding:4px 10px}
+  #ctx button:hover{background:#f1eee7}
+  #ctx select{min-height:32px;padding:3px 8px;margin:2px 4px}
+  #todo{left:76px;width:340px}
+  #todo .it{display:block;width:100%;text-align:left;margin:3px 0;min-height:32px;padding:5px 9px;border-color:#ece9e2}
+  #todo .it small{color:var(--mute);display:block}
+  #todo h4{margin:10px 0 3px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--mute)}
+  #todoBtn i{font-style:normal;background:#b3261e;color:#fff;border-radius:9px;padding:0 6px;margin-left:6px;font-size:11px}
+  #todoBtn i.ok{background:#2e7d4f}
+  canvas{display:block;width:100%;height:100%;touch-action:none;background:#f3f0e8;cursor:crosshair}
+  #status{position:absolute;left:0;right:0;bottom:0;height:26px;display:flex;justify-content:space-between;gap:12px;
+    align-items:center;padding:0 10px;background:var(--panel);border-top:1px solid var(--line);font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden}
+  #status b{color:var(--ink);font-weight:600}
+  #toast{position:absolute;left:50%;transform:translateX(-50%);bottom:40px;background:var(--ink);color:#fff;
+    padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9;max-width:80%}
+  #toast.show{opacity:.94}
+  .panel{position:absolute;z-index:8;width:350px;max-width:92%;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:12px 14px;box-shadow:0 6px 24px rgba(0,0,0,.14);font-size:13px;line-height:1.45;-webkit-user-select:text;user-select:text;max-height:76%;overflow:auto}
+  .panel h3{margin:0 0 6px;font-size:14px}
+  .panel ul{margin:0;padding-left:18px}
+  .panel li{margin:3px 0}
+  #help,#infoP{right:10px}
+  #pat{left:76px;-webkit-user-select:none;user-select:none}
+  #pat .row{display:flex;align-items:center;gap:8px;margin:8px 0}
+  #pat .row span{width:92px;color:var(--mute)}
+  #pat select,#pat input[type=number]{flex:1;min-width:0}
+  #pat input[type=range]{flex:1}
+  #allot{left:76px;width:340px}
+  #bld{left:76px;width:330px;-webkit-user-select:none;user-select:none}
+  #bld button{display:block;width:100%;text-align:left;margin:3px 0;min-height:34px;padding:6px 10px}
+  #bld button.have{background:#f1f6ee;border-color:#b9d3ad}
+  #bld .bc{display:inline-block;min-width:22px;margin-right:8px;padding:1px 5px;border-radius:9px;background:#e4e1d9;color:#6f6a60;text-align:center;font-size:12px}
+  #bld .bc.on{background:#2e7d4f;color:#fff}
+  #bld .bz{float:right;color:var(--mute);font-size:11px}
+  .warn{color:#b3261e;font-weight:600;margin:4px 0}
+  #bld h4{margin:10px 0 4px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--mute)}
+  #bld select{width:100%;min-height:36px}
+  #allot table{border-collapse:collapse;width:100%}
+  #allot td{padding:3px 4px;vertical-align:middle}
+  #allot input[type=number]{width:72px;min-height:28px;padding:3px 6px}
+  #allot input[type=text],#allot select{width:100%;min-height:32px;padding:4px 8px;border:1px solid var(--line);border-radius:7px;font:inherit;background:#fff}
+  .sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+  .barw{height:6px;background:#ece9e2;border-radius:3px;overflow:hidden;margin-top:2px}
+  .barw i{display:block;height:100%}
+  .over{color:#b3261e;font-weight:600}
+  kbd{font:12px ui-monospace,Consolas,monospace;background:#f1eee8;border:1px solid var(--line);border-radius:4px;padding:0 4px}
+  #dirty{color:#b3261e;font-weight:600}
+</style>
+</head>
+<body>
+<div id="bar">
+  <select id="city" title="Which settlement to plan"></select>
+  <div id="opts">
+    <details class="menu" data-for="draw round"><summary title="Which kind of line to draw"><span class="lbl">Line</span><b id="clsName"></b></summary><div class="pop left" id="classes"></div></details>
+    <select id="shape" data-for="draw" title="How the Draw tool draws"><option value="free">Freehand</option><option value="line">Straight line</option><option value="circle">Circle</option></select>
+    <label class="chk" data-for="draw" title="Straighten and smooth each freehand line you draw"><input type="checkbox" id="autoTidy" checked>Tidy</label>
+    <button id="patWhole" data-for="pattern" title="Use the whole size-guide circle as the area to fill, without circling it yourself">Fill whole place</button>
+    <select id="dtype" data-for="district" title="Which district the next circled area becomes"></select>
+    <button id="del" data-for="select district building" title="Delete the selected item (Delete)" disabled>Delete</button>
+    <button id="delgrp" data-for="select" title="Delete the whole pattern this street came from" disabled>Delete pattern</button>
+  </div>
+  <div class="grp right">
+    <div class="seg"><button id="undo" title="Undo (Ctrl+Z)">Undo</button><button id="redo" title="Redo (Ctrl+Y)">Redo</button></div>
+    <button id="todoBtn" title="What is still missing from this plan">To do</button>
+    <button id="allotBtn" title="How much of each district is placed">Allotments</button>
+    <details class="menu"><summary>View</summary><div class="pop">
+      <label class="chk"><input type="checkbox" id="showDist" checked>District colours</label>
+      <label class="chk"><input type="checkbox" id="showNames" checked>District names</label>
+      <label class="chk"><input type="checkbox" id="showLegend" checked>Colour key</label>
+      <label class="chk"><input type="checkbox" id="showBld" checked>Buildings</label>
+      <label class="chk"><input type="checkbox" id="showWalk" checked>Walk rings</label>
+      <label class="chk"><input type="checkbox" id="showGuide" checked>Size guide</label>
+      <label class="chk"><input type="checkbox" id="showMarks" checked>Edge markers</label>
+      <label class="chk"><input type="checkbox" id="showGrid" checked>Grid</label>
+      <hr>
+      <label class="chk" title="A new district joins a touching district of the same kind"><input type="checkbox" id="autoJoin" checked>Join touching districts</label>
+      <label class="chk" title="Off: fingers move and pinch the map, the stylus draws."><input type="checkbox" id="finger">Finger draws</label>
+    </div></details>
+    <details class="menu"><summary>Clean up</summary><div class="pop">
+      <button id="join" title="Extend loose street ends so they meet nearby streets">Join loose ends</button>
+      <button id="joinAll" title="Join every group of touching districts of the same kind into one. Residential areas are left alone.">Join touching districts</button>
+      <button id="clearWet" title="Trim streets and lanes that lie under water or a river. Avenues are kept as bridges.">Clear streets in water</button>
+      <hr>
+      <button id="clearBld" class="danger" title="Remove every building from this place. Streets and districts stay.">Clear all buildings</button>
+      <button id="clearAll" class="danger" title="Remove every street, water area, district and building from this place, to start over">Clear everything</button>
+    </div></details>
+    <details class="menu"><summary>More</summary><div class="pop">
+      <button id="open">Open a saved plan</button>
+      <button id="infoBtn" title="What is known about this place">About this place</button>
+      <button id="helpBtn">How to use the planner</button>
+    </div></details>
+    <button id="save" class="primary" title="Save this place's plan (Ctrl+S)">Save</button>
+  </div>
+</div>
+<div id="tools"><button data-tool="draw" title="Draw a street, river or railway by hand (D)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16 5l3 3L8 19l-4 1z M14 7l3 3"/></svg><span>Draw</span></button><button data-tool="pattern" title="Circle an area, then fill it with a street pattern (P)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z M4 10h16 M4 15h16 M10 4v16 M15 4v16"/></svg><span>Pattern</span></button><button data-tool="round" title="Tap a crossing to put a roundabout there (O)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v6 M12 16v6 M2 12h6 M16 12h6"/></svg><span>Round</span></button><hr><button data-tool="water" title="Circle a lake, or draw a shoreline and the sea fills outwards from it (W)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9c2-2 4-2 6 0s4 2 6 0 4-2 6 0 M3 15c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/></svg><span>Water</span></button><button data-tool="district" title="Tap a block to fill it with a district, or circle an area (A)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l7-3 9 4-2 10-9 2-6-5z"/></svg><span>District</span></button><button data-tool="building" title="Tap to add a building (B)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10l8-6 8 6v10z M10 20v-6h4v6"/></svg><span>Building</span></button><hr><button data-tool="select" title="Select a street, district or building (S)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 8-6 2-2 6z"/></svg><span>Select</span></button><button data-tool="erase" title="Rub out part of a street (E)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l9-9 6 6-7 7H8z M11 20h9"/></svg><span>Erase</span></button><button data-tool="cut" title="Circle an area to remove every street inside it (X)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/><path d="M9 9l6 6 M15 9l-6 6"/></svg><span>Clear</span></button><button data-tool="pan" title="Move the map (or hold Space) (M)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18 M3 12h18 M12 3l-3 3 M12 3l3 3 M12 21l-3-3 M12 21l3-3 M3 12l3-3 M3 12l3 3 M21 12l-3-3 M21 12l-3 3"/></svg><span>Move</span></button></div>
+<div id="legend" hidden></div>
+<div id="ctx" hidden></div>
+<div id="todo" class="panel" hidden></div>
+<div id="zoom"><button id="zin" title="Zoom in">+</button><button id="zout" title="Zoom out">−</button><button id="zfit" title="Show the whole place">Fit</button></div>
+<div id="wrap"><canvas id="c"></canvas></div>
+<div id="pat" class="panel" hidden>
+  <h3>Fill the circled area with streets</h3>
+  <div class="row"><span>Pattern</span><select id="patType"></select></div>
+  <div class="row"><span>Block size</span><input type="number" id="patBlock" min="20" max="1000" step="5"><span style="width:auto">m</span></div>
+  <div class="row"><span>Angle</span><input type="range" id="patAngle" min="0" max="359" value="0"><span id="patAngleV" style="width:34px">0°</span></div>
+  <div class="row"><button id="patAlign">Line up with nearest avenue, river or shore</button></div>
+  <div class="row"><label class="chk"><input type="checkbox" id="patRound" checked>Roundabouts where avenues cross</label></div>
+  <div class="row"><label class="chk"><input type="checkbox" id="patJoin" checked>Join to nearby streets</label></div>
+  <div class="row"><button id="patGo" class="on">Fill</button><button id="patCancel">Cancel</button></div>
+  <div style="color:var(--mute)">Not what you wanted? Press Undo, then circle the area again. Each fill comes out a little different.</div>
+</div>
+<div id="infoP" class="panel" hidden></div>
+<div id="allot" class="panel" hidden></div>
+<div id="bld" class="panel" hidden></div>
+<div id="help" class="panel" hidden>
+  <h3>How to use</h3>
+  <ul>
+    <li>Pick a <b>place</b>. The dashed circle is only a guide to how big it should be for its population. The markers round the edge show which way roads arrive and roughly where the water is.</li>
+    <li><b>Water</b>: circle an area for a lake or bay. For a coast, draw the shoreline as one open line: the sea fills outwards from it, on the side away from the centre. For rivers use the <b>River</b> line (about 45 m wide) or the <b>Wide river</b> line (about 250 m) with Draw.</li>
+    <li><b>Clear area</b>: circle an area to remove every street in it. <b>Clear streets in water</b> (in the Clean up menu) trims streets and lanes that lie under water or under a river. Avenues are kept: an avenue over water is a bridge.</li>
+    <li><b>Pattern</b>: circle an area, choose a pattern, block size and angle, then Fill. Mix patterns by filling different areas.</li>
+    <li>Patterns <b>join</b> to streets already beside them when you fill. <b>Join loose ends</b> does the same for the whole plan.</li>
+    <li><b>Draw</b>: add streets by hand. Ends snap to other streets.</li>
+    <li><b>District</b>: choose a district, then circle an area. One district can be drawn in several places. Tap a drawn district with this tool to select it, change it or delete it. A selected district shows a box: drag a corner square to resize it, or the round handle in the middle to move it. Buildings inside it go with it. <b>Allotments</b> shows how much of each is placed.</li>
+    <li><b>Building</b>: tap inside a drawn district and pick one of its buildings to place there. In a residential area you also choose its main housing type. A selected building can be dragged to move it; drag a corner square to resize it or the round handle to turn it. A town's single pieces can be placed inside or outside a district. Villages have no districts: tap anywhere and choose from every building.</li>
+    <li><b>Shape</b>: with Draw, choose Freehand, Straight line (drag from one end to the other) or Circle (press at the middle and drag out to the size you want). Works with every line type.</li>
+    <li><b>Whole-town layouts</b>: the pattern list also has three starting layouts for towns and cities: grown out from its centre, stretched along its main road, and grown back from the water. Each has a small dense centre, a wide looser belt of housing streets, and then only a few roads carrying on outwards with side lanes that thin out. The roads head for the arriving roads. Use <b>Fill whole place</b>, then change what you don't like. For the water layout, turn the Angle to point at the water.</li>
+    <li><b>Village layouts</b>: the pattern list ends with six small layouts for villages: one main street, crossroads, around a green, fork, cluster of lanes, and along the water. With Pattern chosen, <b>Fill whole place</b> uses the size-guide circle so you don't have to circle the village. Turn the Angle to point the main street the way you want.</li>
+    <li><b>Filling blocks</b>: with the District tool, tap inside a block (ground closed in by streets, water or other districts) to fill it with the chosen district. Circling by hand still works.</li>
+    <li><b>Joining</b>: a new district joins any district of the same kind it touches (or sits across one street from), and they become one area. Residential areas never join, so each keeps its own housing type. Turn this off in the View menu. Clean up has a button to join the ones already drawn.</li>
+    <li><b>Right-click or press and hold</b> on a street, district, building or empty ground for a short menu: change its type, delete it, fill the block, or add a building.</li>
+    <li><b>To do</b> lists what is still missing and jumps to it when tapped. The <b>colour key</b> at the right shows this place's districts; tap one to choose it.</li>
+    <li><b>Roundabout</b>: tap where streets cross to put a roundabout there. Patterns can also add them where their avenues cross.</li>
+    <li><b>Walk rings</b>: dotted rings show how many minutes on foot a spot is from the centre, at about 80 m a minute. The bar at the bottom shows the walk time for the line or area you are drawing.</li>
+    <li><b>Select</b>: tap a street to change its type, delete it, or delete the whole pattern it came from. Tap a water area to delete it.</li>
+    <li><b>Erase</b>: rub out part of a street.</li>
+    <li><b>Clear all</b> empties the place so you can start over. Undo brings it back. Your allotment numbers are kept.</li>
+    <li>Stylus or mouse draws; fingers move and pinch. Mouse wheel zooms; hold <kbd>Space</kbd> or right-drag to move.</li>
+    <li><b>Save</b> writes one file per place. The page also keeps a backup of each place in this browser.</li>
+    <li>Keys: <kbd>1</kbd>–<kbd>6</kbd> line type, <kbd>D</kbd> <kbd>P</kbd> <kbd>W</kbd> <kbd>A</kbd> <kbd>B</kbd> <kbd>S</kbd> <kbd>E</kbd> tools, <kbd>Ctrl+Z</kbd>, <kbd>Ctrl+Y</kbd>, <kbd>Ctrl+S</kbd>.</li>
+  </ul>
+</div>
+<div id="toast"></div>
+<div id="status"><span id="hint"></span><span id="info"></span></div>
+<input type="file" id="fileIn" accept=".json" hidden>
+<script>
+"use strict";
+const PLACES=[{"n":1,"name":"Kymodia","band":"Large village","pop":970,"fn":"Fishing","river":false,"roads":[["main",95],["big",264],["small",235]],"water":[355,15,1],"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":2,"name":"Gamosa","band":"Small village","pop":500,"fn":"Fishing","river":false,"roads":[["big",8],["big",241],["small",152],["small",99]],"water":[300,17,0],"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":3,"name":"Oistos","band":"Small village","pop":850,"fn":"To decide (was Naval Base)","river":false,"roads":[["main",29],["main",126],["small",289],["small",161]],"water":[40,24,0],"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":4,"name":"Nausonia","band":"Large village","pop":1080,"fn":"Fishing","river":false,"roads":[["main",125],["big",20],["big",194]],"water":[270,13,1],"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":5,"name":"Hiereia","band":"Small village","pop":550,"fn":"Sacred Grove","river":false,"roads":[["main",211],["main",37]],"water":[50,40,0],"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":6,"name":"Xenon","band":"Small town","pop":4400,"fn":"Border","river":false,"roads":[["main",264],["side",174]],"water":[0,29,0],"wkind":"Sea","res":1,"full":["Traveller's","Timber"],"pieces":["Apothecary","General Store"],"shares":{"Residential":88.3,"Traveller's":3.9,"Timber":7.8}},{"n":7,"name":"Xylona","band":"Middle town","pop":10500,"fn":"Timber","river":false,"roads":[["main",306],["big",94],["big",148]],"water":null,"wkind":"Sea","res":1,"full":["Timber","Shopping","Religious"],"pieces":["Apothecary","Town Hall"],"shares":{"Residential":77.6,"Timber":10.3,"Shopping":6.9,"Religious":5.2}},{"n":8,"name":"Kormaia","band":"Small town","pop":5800,"fn":"Timber","river":false,"roads":[["big",344],["big",227]],"water":[310,23,1],"wkind":"Sea","res":1,"full":["Timber","Healing"],"pieces":["General Store","Town Hall","Ferry Landing"],"shares":{"Residential":83.3,"Timber":11.1,"Healing":5.6}},{"n":9,"name":"Tektonia","band":"Middle town","pop":19500,"fn":"Timber","river":false,"roads":[["main",158],["main",339],["main",210]],"water":null,"wkind":"Sea","res":2,"full":["Timber","Healing","Shopping","Trade"],"pieces":["Town Hall","Inns"],"shares":{"Residential":71.5,"Timber":9.5,"Healing":4.8,"Shopping":6.3,"Trade":7.9}},{"n":10,"name":"Philomathes","band":"Small village","pop":570,"fn":"Library","river":false,"roads":[["main",228],["big",86]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":11,"name":"Neorion","band":"Small town","pop":6000,"fn":"Fishing","river":false,"roads":[["big",357],["big",230]],"water":[295,19,1],"wkind":"Sea","res":1,"full":["Fishing","Harbour"],"pieces":["Taverns","General Store","Town Hall"],"shares":{"Residential":83.3,"Fishing":5.6,"Harbour":11.1}},{"n":12,"name":"Polymelos","band":"Small town","pop":9000,"fn":"Library","river":false,"roads":[["main",95],["small",324],["small",260],["side",150]],"water":null,"wkind":"Sea","res":1,"full":["Education","Healing","Timber"],"pieces":["General Store","Town Hall","Shrines"],"shares":{"Residential":79.6,"Education":8.0,"Healing":5.3,"Timber":7.1}},{"n":13,"name":"Naupegosa","band":"Small village","pop":360,"fn":"Timber","river":false,"roads":[["big",326],["big",157],["small",194]],"water":null,"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":14,"name":"Sepion","band":"Large village","pop":1190,"fn":"Fishing","river":false,"roads":[["big",353],["big",255],["big",143],["small",76]],"water":[305,17,1],"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":15,"name":"Paisa","band":"Small village","pop":280,"fn":"Timber","river":false,"roads":[["main",234],["small",88]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":16,"name":"Adelphe","band":"Small village","pop":400,"fn":"Timber","river":false,"roads":[["main",22],["big",237],["side",204]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":17,"name":"Drymonia","band":"Small village","pop":690,"fn":"Timber","river":false,"roads":[["main",239],["main",356],["small",146]],"water":null,"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":18,"name":"Thynnaia","band":"Small town","pop":6400,"fn":"Fishing","river":false,"roads":[],"water":[0,12,1],"wkind":"Sea","res":1,"full":["Fishing","Harbour"],"pieces":["Apothecary","General Store","Town Hall"],"shares":{"Residential":83.3,"Fishing":5.6,"Harbour":11.1}},{"n":19,"name":"Chloros","band":"Small town","pop":9600,"fn":"Timber","river":false,"roads":[["main",222],["main",121],["small",187]],"water":null,"wkind":"Sea","res":1,"full":["Timber","Healing","Shopping"],"pieces":["Town Hall","Inns","Taverns"],"shares":{"Residential":77.6,"Timber":10.3,"Healing":5.2,"Shopping":6.9}},{"n":20,"name":"Melion","band":"Large village","pop":1370,"fn":"Timber","river":false,"roads":[["main",55],["main",284],["main",123],["small",231]],"water":null,"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":21,"name":"Ostreona","band":"Small town","pop":9200,"fn":"Fishing","river":false,"roads":[["big",22],["big",269],["small",225]],"water":[312,16,1],"wkind":"Sea","res":1,"full":["Fishing","Harbour","Timber"],"pieces":["Apothecary","General Store","Town Hall"],"shares":{"Residential":77.6,"Fishing":5.2,"Harbour":10.3,"Timber":6.9}},{"n":22,"name":"Agathos","band":"Small village","pop":600,"fn":"To decide (was Naval Base)","river":false,"roads":[["main",296],["big",19]],"water":[180,13,1],"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":23,"name":"Kalamia","band":"Small village","pop":650,"fn":"Lakeside","river":false,"roads":[["big",267],["big",70],["side",49]],"water":[197,17,1],"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":24,"name":"Alsos","band":"Small village","pop":660,"fn":"Sacred Grove","river":false,"roads":[["main",227],["main",84],["small",276]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":25,"name":"Genesis","band":"Small village","pop":350,"fn":"Timber","river":false,"roads":[["big",121],["small",31],["small",181],["small",343]],"water":null,"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":26,"name":"Daphne","band":"Small village","pop":590,"fn":"Holy Site","river":false,"roads":[["main",231],["big",63],["small",200],["side",125]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":27,"name":"Pissaia","band":"Small town","pop":8000,"fn":"Timber","river":false,"roads":[["main",3],["big",150]],"water":null,"wkind":"Lake","res":1,"full":["Timber","Farming","Religious"],"pieces":["Apothecary","Town Hall","General Store"],"shares":{"Residential":77.6,"Timber":10.3,"Farming":6.9,"Religious":5.2}},{"n":28,"name":"Phylax","band":"City","pop":50000,"fn":"Naval Base","river":false,"roads":[["main",241],["big",19],["big",169],["side",56]],"water":[305,20,1],"wkind":"Sea","res":4,"full":["Military","Timber","Trade","Healing","Government","Financial","Park","Shopping","Harbour","Public Works","Entertainment"],"pieces":[],"shares":{"Residential":50.7,"Military":6.4,"Timber":4.5,"Trade":5.7,"Healing":3.4,"Government":4.8,"Financial":2.3,"Park":6.8,"Shopping":3.0,"Harbour":6.8,"Public Works":2.2,"Entertainment":3.4}},{"n":29,"name":"Lakhi","band":"Small village","pop":240,"fn":"Healing Centre","river":false,"roads":[["big",87],["small",254]],"water":null,"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":30,"name":"Geranion","band":"Small village","pop":520,"fn":"River Village","river":false,"roads":[["main",244],["big",102]],"water":null,"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":31,"name":"Archaios","band":"Small village","pop":450,"fn":"To decide (was Naval Base)","river":false,"roads":[["big",0],["big",204],["side",322]],"water":[138,17,1],"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":32,"name":"Phrourion","band":"Middle town","pop":11500,"fn":"Garrison","river":false,"roads":[["main",203],["big",337],["side",149],["side",72]],"water":[270,23,0],"wkind":"Lake","res":1,"full":["Military","Shopping","Timber"],"pieces":["Apothecary","Town Hall"],"shares":{"Residential":76.2,"Military":10.2,"Shopping":6.8,"Timber":6.8}},{"n":33,"name":"Sophosa","band":"Middle town","pop":23000,"fn":"Library","river":false,"roads":[["main",309],["big",36],["big",228],["small",264]],"water":[165,19,1],"wkind":"Lake","res":2,"full":["Education","Shopping","Fishing","Harbour","Farming"],"pieces":["Apothecary","Town Hall"],"shares":{"Residential":68.6,"Education":6.9,"Shopping":6.1,"Fishing":3.1,"Harbour":9.2,"Farming":6.1}},{"n":34,"name":"Hygieia","band":"Large village","pop":1640,"fn":"Spa/Resort","river":false,"roads":[["big",147],["small",8]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":35,"name":"Tettix","band":"Small village","pop":490,"fn":"Lakeside","river":false,"roads":[["big",34],["big",247],["side",342]],"water":[110,10,1],"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":36,"name":"Panacea","band":"Small town","pop":5600,"fn":"Healing Centre","river":false,"roads":[["big",232],["small",43],["side",77]],"water":null,"wkind":"Sea","res":1,"full":["Healing","Timber"],"pieces":["General Store","Town Hall","Shrines"],"shares":{"Residential":84.1,"Healing":8.4,"Timber":7.5}},{"n":37,"name":"Aspis","band":"Small town","pop":10000,"fn":"Naval Base","river":false,"roads":[["big",84],["big",193],["small",266],["small",323]],"water":[132,22,0],"wkind":"Lake","res":1,"full":["Military","Harbour","Healing"],"pieces":["General Store","Town Hall","Granary"],"shares":{"Residential":75.0,"Military":10.0,"Harbour":10.0,"Healing":5.0}},{"n":38,"name":"Anatolia","band":"Small village","pop":740,"fn":"Lakeside","river":false,"roads":[["main",151],["main",77],["side",112]],"water":[287,8,1],"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":39,"name":"Ampelonia","band":"Large town","pop":35000,"fn":"Vineyard","river":false,"roads":[["main",190],["main",255],["main",347],["main",122],["small",289]],"water":null,"wkind":"Sea","res":3,"full":["Wine","Healing","Timber","Shopping","Trade","Traveller's","Government"],"pieces":["Waterworks","Taverns"],"shares":{"Residential":65.2,"Wine":8.0,"Healing":6.0,"Timber":3.7,"Shopping":5.7,"Trade":4.6,"Traveller's":4.0,"Government":2.8}},{"n":40,"name":"Oinopedon","band":"Large village","pop":2470,"fn":"Vineyard","river":false,"roads":[["main",242],["main",7],["main",113]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":41,"name":"Lethaia","band":"Small village","pop":560,"fn":"Vineyard","river":false,"roads":[["big",158],["big",327],["small",269]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":42,"name":"Pyrgos","band":"City","pop":220000,"fn":"Wine Market","river":true,"roads":[["main",155],["big",38],["big",244]],"water":null,"wkind":"Sea","res":8,"full":["Wine","Traveller's","Trade","Public Works","Park","Arts","Healing","Financial","Entertainment","Government","Shopping","Farming"],"pieces":[],"shares":{"Residential":49.1,"Wine":8.0,"Traveller's":2.3,"Trade":5.8,"Public Works":3.5,"Park":7.0,"Arts":4.1,"Healing":3.5,"Financial":1.5,"Entertainment":3.5,"Government":2.3,"Shopping":4.7,"Farming":4.7}},{"n":43,"name":"Chryseosia","band":"Large town","pop":38000,"fn":"Festival/Market","river":false,"roads":[["main",243],["big",60],["small",350]],"water":null,"wkind":"Sea","res":3,"full":["Wine","Entertainment","Shopping","Arts","Traveller's","Park"],"pieces":["Shrines","Apothecary"],"shares":{"Residential":65.3,"Wine":8.6,"Entertainment":4.5,"Shopping":3.9,"Arts":4.3,"Traveller's":4.3,"Park":9.1}},{"n":44,"name":"Basilissa","band":"Large village","pop":2670,"fn":"Vineyard","river":false,"roads":[["main",355],["main",65],["main",288],["side",245]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":45,"name":"Trygaia","band":"Large town","pop":32000,"fn":"Vineyard","river":false,"roads":[["main",256],["main",70],["small",189]],"water":null,"wkind":"Sea","res":3,"full":["Wine","Shopping","Trade","Traveller's","Entertainment"],"pieces":["Apothecary","Town Hall"],"shares":{"Residential":68.4,"Wine":10.2,"Shopping":6.3,"Trade":5.2,"Traveller's":5.1,"Entertainment":4.8}},{"n":46,"name":"Aedonia","band":"Middle town","pop":13000,"fn":"Library","river":false,"roads":[["main",302],["main",86]],"water":null,"wkind":"Sea","res":1,"full":["Education","Farming","Shopping","Government"],"pieces":["Apothecary","Shrines"],"shares":{"Residential":74.4,"Education":7.4,"Farming":6.6,"Shopping":6.6,"Government":5.0}},{"n":47,"name":"Doxa","band":"Small village","pop":420,"fn":"Lakeside","river":false,"roads":[["big",58],["big",241]],"water":[160,10,1],"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":48,"name":"Kolpos","band":"Middle town","pop":20000,"fn":"Fishing","river":false,"roads":[["main",237],["main",335],["big",103]],"water":[270,17,1],"wkind":"Sea","res":2,"full":["Fishing","Healing","Shopping","Harbour","Government"],"pieces":["Shrines","Taverns"],"shares":{"Residential":70.3,"Fishing":4.7,"Healing":4.7,"Shopping":6.2,"Harbour":9.4,"Government":4.7}},{"n":49,"name":"Amethystos","band":"Small village","pop":770,"fn":"Vineyard","river":false,"roads":[["main",29],["main",240]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":50,"name":"Nomisma","band":"Large town","pop":39000,"fn":"Festival/Market","river":true,"roads":[["main",59],["big",287]],"water":null,"wkind":"Sea","res":3,"full":["Entertainment","Shopping","Farming","Harbour","Trade","Park"],"pieces":["Town Hall","Apothecary"],"shares":{"Residential":58.7,"Entertainment":9.0,"Shopping":5.5,"Farming":3.6,"Harbour":8.2,"Trade":6.8,"Park":8.2}},{"n":51,"name":"Ampela","band":"Large town","pop":41000,"fn":"Vineyard","river":false,"roads":[["main",255],["main",336],["main",89],["side",184]],"water":null,"wkind":"Sea","res":3,"full":["Wine","Timber","Shopping","Trade","Traveller's","Healing","Entertainment"],"pieces":["Town Hall","Railway Station"],"shares":{"Residential":65.4,"Wine":8.0,"Timber":3.7,"Shopping":5.7,"Trade":4.6,"Traveller's":4.0,"Healing":4.3,"Entertainment":4.3}},{"n":52,"name":"Eosia","band":"Large town","pop":28000,"fn":"Healing Centre","river":false,"roads":[["main",287],["big",180],["small",64]],"water":null,"wkind":"Sea","res":2,"full":["Healing","Wine","Education","Shopping","Park","Traveller's"],"pieces":["Shrines","Railway Station"],"shares":{"Residential":64.2,"Healing":8.3,"Wine":3.9,"Education":8.3,"Shopping":3.9,"Park":5.8,"Traveller's":5.6}},{"n":53,"name":"Lamprosia","band":"Middle town","pop":22000,"fn":"Healing Centre","river":false,"roads":[["big",173],["big",34],["big",308],["big",247],["big",105]],"water":null,"wkind":"Sea","res":2,"full":["Healing","Shopping","Farming","Wine","Education"],"pieces":["Town Hall","Taverns"],"shares":{"Residential":69.7,"Healing":7.0,"Shopping":6.2,"Farming":6.2,"Wine":6.2,"Education":4.7}},{"n":54,"name":"Georgia","band":"Middle town","pop":17500,"fn":"Farm","river":true,"roads":[["main",359],["main",239]],"water":null,"wkind":"Sea","res":2,"full":["Farming","Shopping","Harbour","Government"],"pieces":["Taverns","Shrines"],"shares":{"Residential":70.3,"Farming":9.4,"Shopping":6.2,"Harbour":9.4,"Government":4.7}},{"n":55,"name":"Kyamites","band":"Small town","pop":7000,"fn":"Farm","river":false,"roads":[["big",16],["big",142],["small",298]],"water":null,"wkind":"Sea","res":1,"full":["Farming","Shopping","Healing"],"pieces":["Town Hall","Shrines","Taverns"],"shares":{"Residential":77.6,"Farming":10.3,"Shopping":6.9,"Healing":5.2}},{"n":56,"name":"Agora","band":"Middle town","pop":13500,"fn":"Festival/Market","river":false,"roads":[["main",123],["big",278]],"water":null,"wkind":"Sea","res":2,"full":["Shopping","Entertainment","Farming","Government"],"pieces":["Inns","Shrines"],"shares":{"Residential":74.4,"Shopping":6.6,"Entertainment":7.4,"Farming":6.6,"Government":5.0}},{"n":57,"name":"Emporia","band":"Middle town","pop":24000,"fn":"Festival/Market","river":false,"roads":[["main",210],["main",125],["big",28]],"water":null,"wkind":"Sea","res":2,"full":["Shopping","Entertainment","Wine","Farming","Park"],"pieces":["Apothecary","Shrines"],"shares":{"Residential":66.7,"Shopping":5.9,"Entertainment":6.7,"Wine":5.9,"Farming":5.9,"Park":8.9}},{"n":58,"name":"Gaia","band":"Small town","pop":9900,"fn":"Farm","river":false,"roads":[["big",251]],"water":null,"wkind":"Sea","res":1,"full":["Farming","Shopping","Healing"],"pieces":["Town Hall","Shrines","Taverns"],"shares":{"Residential":77.6,"Farming":10.3,"Shopping":6.9,"Healing":5.2}},{"n":59,"name":"Dionia","band":"Large town","pop":27000,"fn":"Vineyard","river":false,"roads":[["big",164],["big",13],["small",110],["small",238]],"water":null,"wkind":"Sea","res":2,"full":["Wine","Farming","Shopping","Entertainment","Trade"],"pieces":["Apothecary","Town Hall"],"shares":{"Residential":66.1,"Wine":9.4,"Farming":6.2,"Shopping":6.2,"Entertainment":7.1,"Trade":5.0}},{"n":60,"name":"Thyra","band":"Small town","pop":8700,"fn":"Farm","river":false,"roads":[["big",41],["big",188],["small",283]],"water":[140,15,0],"wkind":"Lake","res":1,"full":["Farming","Shopping","Healing"],"pieces":["Town Hall","Shrines","Taverns"],"shares":{"Residential":77.6,"Farming":10.3,"Shopping":6.9,"Healing":5.2}},{"n":61,"name":"Keleutha","band":"Large village","pop":1320,"fn":"Lakeside","river":false,"roads":[["main",211],["main",53],["big",164]],"water":[288,10,1],"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":62,"name":"Stoma","band":"City","pop":350000,"fn":"Port City","river":true,"roads":[["main",286],["side",76]],"water":[300,28,1],"wkind":"Sea","res":12,"full":["Harbour","Government","Financial","Entertainment","Public Works","Industrial","Healing","Traveller's","Religious","Arts","Shopping","Trade","Park","Education","Fishing","Military"],"pieces":[],"shares":{"Residential":47.6,"Harbour":5.8,"Government":1.9,"Financial":1.9,"Entertainment":1.9,"Public Works":2.9,"Industrial":4.4,"Healing":2.9,"Traveller's":2.9,"Religious":2.9,"Arts":1.1,"Shopping":3.9,"Trade":4.9,"Park":3.8,"Education":2.9,"Fishing":2.9,"Military":5.4}},{"n":63,"name":"Propylaia","band":"City","pop":120000,"fn":"River Port","river":true,"roads":[["main",329],["big",230],["side",271]],"water":null,"wkind":"Sea","res":6,"full":["Farming","Trade","Shopping","Healing","Public Works","Government","Religious","Park","Harbour"],"pieces":[],"shares":{"Residential":54.0,"Farming":6.8,"Trade":6.1,"Shopping":4.9,"Healing":3.7,"Public Works":2.4,"Government":2.4,"Religious":5.1,"Park":7.3,"Harbour":7.3}},{"n":64,"name":"Porthmos","band":"Large village","pop":1770,"fn":"River Port","river":true,"roads":[["main",212],["main",20],["side",75]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":65,"name":"Eleutheros","band":"Large village","pop":2090,"fn":"River Port","river":true,"roads":[["main",351]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":66,"name":"Kallilimena","band":"Large village","pop":1680,"fn":"River Port","river":true,"roads":[["main",298],["big",97]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":67,"name":"Thalassa","band":"Large village","pop":2840,"fn":"River Port","river":true,"roads":[["main",24],["main",195],["main",264]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":68,"name":"Thronos","band":"Large town","pop":37000,"fn":"River Port","river":true,"roads":[["main",3],["big",119],["big",216]],"water":null,"wkind":"Sea","res":3,"full":["Harbour","Trade","Farming","Shopping","Government","Traveller's","Public Works"],"pieces":["Healers' Houses","Fish Market"],"shares":{"Residential":61.7,"Harbour":8.3,"Trade":6.9,"Farming":5.6,"Shopping":7.8,"Government":4.2,"Traveller's":2.8,"Public Works":2.7}},{"n":69,"name":"Kallirrhoe","band":"Large town","pop":30000,"fn":"River Port","river":true,"roads":[],"water":null,"wkind":"Sea","res":2,"full":["Harbour","Trade","Farming","Shopping","Traveller's","Healing"],"pieces":["Town Hall","Taverns"],"shares":{"Residential":66.1,"Harbour":8.7,"Trade":7.2,"Farming":3.8,"Shopping":5.8,"Traveller's":4.1,"Healing":4.3}},{"n":70,"name":"Komarosa","band":"Middle town","pop":18000,"fn":"Farm","river":true,"roads":[["main",135],["main",264]],"water":null,"wkind":"Sea","res":2,"full":["Farming","Shopping","Harbour","Government"],"pieces":["Apothecary","Shrines"],"shares":{"Residential":70.3,"Farming":9.4,"Shopping":6.2,"Harbour":9.4,"Government":4.7}},{"n":71,"name":"Syke","band":"Middle town","pop":24500,"fn":"Farm","river":true,"roads":[["big",89],["big",276]],"water":null,"wkind":"Sea","res":2,"full":["Farming","Religious","Harbour","Government","Healing"],"pieces":["Inns","Taverns"],"shares":{"Residential":68.3,"Farming":9.1,"Religious":4.5,"Harbour":9.1,"Government":4.5,"Healing":4.5}},{"n":72,"name":"Rhaphanos","band":"Large town","pop":31000,"fn":"Farm","river":true,"roads":[["main",207],["main",96],["main",246],["small",355]],"water":null,"wkind":"Sea","res":3,"full":["Farming","Harbour","Shopping","Trade","Public Works"],"pieces":["Healers' Houses","Library"],"shares":{"Residential":66.7,"Farming":8.4,"Harbour":9.0,"Shopping":3.9,"Trade":7.5,"Public Works":4.5}},{"n":73,"name":"Soya","band":"Small town","pop":8300,"fn":"Farm","river":true,"roads":[["main",201]],"water":null,"wkind":"Sea","res":1,"full":["Farming","Harbour","Shopping"],"pieces":["Apothecary","Town Hall","Shrines"],"shares":{"Residential":73.8,"Farming":9.8,"Harbour":9.8,"Shopping":6.6}},{"n":74,"name":"Orthrosa","band":"Small town","pop":4100,"fn":"Border","river":false,"roads":[["big",279],["small",215]],"water":null,"wkind":"Lake","res":1,"full":["Military","Timber"],"pieces":["Apothecary","General Store"],"shares":{"Residential":81.8,"Military":10.9,"Timber":7.3}},{"n":75,"name":"Iatrosa","band":"Large village","pop":1240,"fn":"Healing Centre","river":false,"roads":[["main",311],["main",59]],"water":[220,15,1],"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":76,"name":"Demetera","band":"Large town","pop":36000,"fn":"Farm","river":true,"roads":[["main",332],["main",81],["main",202]],"water":null,"wkind":"Sea","res":3,"full":["Farming","Harbour","Trade","Shopping","Healing","Religious"],"pieces":["Road and Bridge Depot","Brewery"],"shares":{"Residential":66.1,"Farming":5.7,"Harbour":8.6,"Trade":7.1,"Shopping":3.7,"Healing":2.8,"Religious":6.0}},{"n":77,"name":"Ainigma","band":"Large town","pop":43000,"fn":"University","river":true,"roads":[["main",256],["main",121]],"water":null,"wkind":"Sea","res":3,"full":["Education","Harbour","Farming","Trade","Shopping","Healing","Arts","Government"],"pieces":["Inns","Railway Station"],"shares":{"Residential":63.0,"Education":5.6,"Harbour":8.0,"Farming":3.5,"Trade":4.3,"Shopping":5.3,"Healing":4.0,"Arts":3.7,"Government":2.6}},{"n":78,"name":"Kalyptra","band":"City","pop":280000,"fn":"Trade","river":true,"roads":[["main",162],["big",356]],"water":[30,19,1],"wkind":"Lake","res":8,"full":["Fishing","Shopping","Traveller's","Trade","Government","Park","Public Works","Healing","Harbour","Financial","Industrial","Entertainment"],"pieces":[],"shares":{"Residential":51.4,"Fishing":3.2,"Shopping":4.4,"Traveller's":2.2,"Trade":5.5,"Government":2.1,"Park":4.3,"Public Works":3.3,"Healing":4.6,"Harbour":6.6,"Financial":1.4,"Industrial":7.7,"Entertainment":3.3}},{"n":79,"name":"Chloe","band":"Middle town","pop":12000,"fn":"Inns","river":false,"roads":[["main",60],["big",233],["side",137]],"water":[299,16,1],"wkind":"Lake","res":1,"full":["Traveller's","Park","Fishing"],"pieces":["Apothecary","Town Hall"],"shares":{"Residential":80.3,"Traveller's":5.4,"Park":10.7,"Fishing":3.6}},{"n":80,"name":"Koria","band":"Large village","pop":910,"fn":"Farm","river":false,"roads":[["main",306],["main",189],["small",74],["side",127]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":81,"name":"Soteria","band":"Middle town","pop":25000,"fn":"Garrison","river":true,"roads":[["main",213],["main",28],["side",289]],"water":null,"wkind":"Sea","res":2,"full":["Military","Farming","Harbour","Shopping","Government"],"pieces":["Apothecary","Weigh House"],"shares":{"Residential":66.2,"Military":8.8,"Farming":5.9,"Harbour":8.8,"Shopping":5.9,"Government":4.4}},{"n":82,"name":"Zephyria","band":"City","pop":300000,"fn":"Capital","river":false,"roads":[["main",352],["main",297],["main",168]],"water":[45,25,0],"wkind":"Lake","res":10,"full":["Government","Financial","Traveller's","Education","Public Works","Shopping","Trade","Entertainment","Religious","Arts","Healing","Military","Industrial","Park","Harbour"],"pieces":[],"shares":{"Residential":41.5,"Government":4.2,"Financial":3.0,"Traveller's":3.0,"Education":3.0,"Public Works":3.0,"Shopping":4.0,"Trade":7.0,"Entertainment":3.0,"Religious":3.0,"Arts":2.0,"Healing":3.0,"Military":4.0,"Industrial":4.5,"Park":5.9,"Harbour":5.9}},{"n":83,"name":"Marmarosa","band":"City","pop":160000,"fn":"Trade","river":false,"roads":[["main",338],["small",63]],"water":null,"wkind":"Lake","res":7,"full":["Timber","Traveller's","Healing","Financial","Arts","Government","Public Works","Park","Shopping","Trade","Harbour"],"pieces":[],"shares":{"Residential":51.6,"Timber":6.6,"Traveller's":3.4,"Healing":2.3,"Financial":3.4,"Arts":1.5,"Government":3.5,"Public Works":3.5,"Park":7.1,"Shopping":6.6,"Trade":5.9,"Harbour":4.6}},{"n":84,"name":"Iasis","band":"Small village","pop":880,"fn":"Spa/Resort","river":false,"roads":[["main",232],["main",18],["side",181]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":85,"name":"Atra","band":"Small village","pop":630,"fn":"Lakeside","river":false,"roads":[["big",35],["big",187]],"water":[302,9,1],"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":86,"name":"Tyche","band":"City","pop":75000,"fn":"Trade","river":false,"roads":[["main",358],["main",156],["side",299]],"water":null,"wkind":"Lake","res":4,"full":["Trade","Timber","Traveller's","Park","Financial","Government","Public Works","Religious"],"pieces":[],"shares":{"Residential":58.5,"Trade":6.8,"Timber":7.7,"Traveller's":3.8,"Park":8.2,"Financial":2.7,"Government":4.1,"Public Works":4.1,"Religious":4.1}},{"n":87,"name":"Moirai","band":"Large town","pop":25000,"fn":"Crafts","river":false,"roads":[["main",245],["main",22],["main",141],["small",301]],"water":[180,16,1],"wkind":"Sea","res":2,"full":["Arts","Trade","Fishing","Harbour","Farming","Shopping"],"pieces":["Herb Drying House","Town Hall"],"shares":{"Residential":69.0,"Arts":4.1,"Trade":7.4,"Fishing":4.1,"Harbour":5.7,"Farming":5.9,"Shopping":3.8}},{"n":88,"name":"Omma","band":"Large village","pop":1550,"fn":"Seaside","river":false,"roads":[["main",117],["main",349],["main",199]],"water":[168,13,1],"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":89,"name":"Elaia","band":"Large town","pop":33000,"fn":"Spa/Resort","river":false,"roads":[["main",354],["main",174],["small",111],["side",233]],"water":null,"wkind":"Lake","res":3,"full":["Healing","Farming","Traveller's","Entertainment","Park","Shopping"],"pieces":["Railway Station","Sacred Spring"],"shares":{"Residential":64.1,"Healing":7.5,"Farming":6.0,"Traveller's":5.0,"Entertainment":4.5,"Park":9.0,"Shopping":3.9}},{"n":90,"name":"Haliesis","band":"Middle town","pop":23500,"fn":"Fishing","river":false,"roads":[["big",342],["big",161],["small",52],["side",127]],"water":[270,15,1],"wkind":"Lake","res":2,"full":["Fishing","Shopping","Harbour","Timber","Government"],"pieces":["Apothecary","Taverns"],"shares":{"Residential":69.2,"Fishing":4.6,"Shopping":6.2,"Harbour":9.2,"Timber":6.2,"Government":4.6}},{"n":91,"name":"Halikyma","band":"Middle town","pop":10000,"fn":"Fishing","river":false,"roads":[["main",279],["main",164],["small",46]],"water":[232,20,0],"wkind":"Sea","res":1,"full":["Fishing","Trade","Farming"],"pieces":["Apothecary","Town Hall"],"shares":{"Residential":78.9,"Fishing":5.3,"Trade":8.8,"Farming":7.0}},{"n":92,"name":"Kardia","band":"Large village","pop":1480,"fn":"Lakeside","river":false,"roads":[["big",152],["big",11]],"water":[38,14,1],"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":93,"name":"Kometes","band":"Large village","pop":2110,"fn":"Gatherer","river":false,"roads":[["main",52],["main",315],["main",209],["small",162]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":94,"name":"Helonia","band":"Large village","pop":1710,"fn":"Lakeside","river":false,"roads":[["big",152],["big",7],["small",293]],"water":[40,14,1],"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":95,"name":"Aphroessa","band":"Large village","pop":1400,"fn":"Seaside","river":false,"roads":[["main",292],["main",129],["main",6]],"water":[182,16,1],"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":96,"name":"Hydrousa","band":"Large village","pop":1960,"fn":"Lakeside","river":false,"roads":[["main",157],["big",74],["big",304]],"water":[15,9,1],"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":97,"name":"Limnion","band":"Large village","pop":1810,"fn":"Lakeside","river":false,"roads":[["big",80],["big",306],["big",163]],"water":[18,9,1],"wkind":"Lake","res":null,"full":[],"pieces":[]},{"n":98,"name":"Kantharosa","band":"Small village","pop":820,"fn":"Gatherer","river":false,"roads":[["main",104],["main",319],["small",73]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":99,"name":"Bomosa","band":"Middle town","pop":21500,"fn":"Plantation","river":false,"roads":[["main",341],["big",164]],"water":null,"wkind":"Sea","res":2,"full":["Farming","Shopping","Government","Trade"],"pieces":["Shrines","Taverns"],"shares":{"Residential":71.5,"Farming":9.5,"Shopping":6.3,"Government":4.8,"Trade":7.9}},{"n":100,"name":"Arachia","band":"Small town","pop":4900,"fn":"Crafts","river":false,"roads":[["main",182]],"water":null,"wkind":"Sea","res":1,"full":["Arts","Trade"],"pieces":["Apothecary","General Store"],"shares":{"Residential":84.9,"Arts":5.7,"Trade":9.4}},{"n":101,"name":"Phosphoria","band":"Middle town","pop":25000,"fn":"Plantation","river":false,"roads":[["main",87],["main",289],["side",177]],"water":null,"wkind":"Sea","res":2,"full":["Farming","Trade","Government","Healing"],"pieces":["Shrines","Taverns"],"shares":{"Residential":72.6,"Farming":9.7,"Trade":8.1,"Government":4.8,"Healing":4.8}},{"n":102,"name":"Kairos","band":"Large town","pop":45000,"fn":"Plantation","river":false,"roads":[["main",195],["main",170]],"water":null,"wkind":"Sea","res":3,"full":["Farming","Industrial","Trade","Shopping","Healing","Traveller's","Government","Public Works"],"pieces":["Shrines","Taverns"],"shares":{"Residential":58.5,"Farming":7.4,"Industrial":9.2,"Trade":6.6,"Shopping":5.3,"Healing":3.9,"Traveller's":2.6,"Government":2.6,"Public Works":3.9}},{"n":103,"name":"Adyton","band":"Small village","pop":330,"fn":"Gatherer","river":false,"roads":[["big",9],["big",187]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":104,"name":"Helia","band":"Small town","pop":6800,"fn":"University","river":false,"roads":[["big",271],["big",53]],"water":null,"wkind":"Sea","res":1,"full":["Education","Shopping"],"pieces":["Apothecary","Town Hall","Shrines"],"shares":{"Residential":84.1,"Education":8.4,"Shopping":7.5}},{"n":105,"name":"Peribolos","band":"Small village","pop":460,"fn":"Seaside","river":false,"roads":[["main",298],["small",106],["side",20]],"water":[242,12,1],"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":106,"name":"Eudaimonia","band":"Small village","pop":300,"fn":"Farm","river":false,"roads":[["main",265],["side",146]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":107,"name":"Lachania","band":"Small village","pop":710,"fn":"Farm","river":false,"roads":[["main",244],["main",108]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":108,"name":"Kyklos","band":"Middle town","pop":16500,"fn":"Farm","river":false,"roads":[["main",258],["main",103]],"water":[202,15,1],"wkind":"Sea","res":2,"full":["Farming","Industrial","Harbour","Government"],"pieces":["Apothecary","Shrines"],"shares":{"Residential":67.1,"Farming":9.0,"Industrial":10.4,"Harbour":9.0,"Government":4.5}},{"n":109,"name":"Anthologia","band":"Small town","pop":3000,"fn":"Gatherer","river":false,"roads":[["small",98]],"water":null,"wkind":"Sea","res":1,"full":["Healing","Farming"],"pieces":["General Store","Town Hall"],"shares":{"Residential":84.1,"Healing":8.4,"Farming":7.5}},{"n":110,"name":"Nyxia","band":"Small village","pop":370,"fn":"Library","river":false,"roads":[["big",58],["big",175]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":111,"name":"Thyella","band":"Large village","pop":1890,"fn":"Seaside","river":false,"roads":[["main",325],["main",138],["side",16]],"water":[215,10,1],"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":112,"name":"Aletheia","band":"Middle town","pop":14000,"fn":"University","river":false,"roads":[["big",166],["big",339],["small",255],["small",290]],"water":null,"wkind":"Sea","res":2,"full":["Education","Park","Government","Healing"],"pieces":["Shrines","Taverns"],"shares":{"Residential":73.1,"Education":7.3,"Park":9.8,"Government":4.9,"Healing":4.9}},{"n":113,"name":"Nomos","band":"Small town","pop":3200,"fn":"Border","river":false,"roads":[["big",248]],"water":null,"wkind":"Sea","res":1,"full":["Military","Public Works"],"pieces":["Apothecary","General Store"],"shares":{"Residential":83.3,"Military":11.1,"Public Works":5.6}},{"n":114,"name":"Aristaeus","band":"Small village","pop":610,"fn":"Gatherer","river":false,"roads":[["big",324],["big",67],["big",223],["small",282],["small",19]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":115,"name":"Sozoa","band":"Small village","pop":320,"fn":"Library","river":false,"roads":[["big",41],["big",225],["small",96]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":116,"name":"Pandocheion","band":"Small town","pop":7600,"fn":"Inns","river":false,"roads":[["big",195],["big",23],["small",301]],"water":null,"wkind":"Sea","res":1,"full":["Traveller's","Healing","Farming"],"pieces":["General Store","Town Hall","Shrines"],"shares":{"Residential":81.7,"Traveller's":5.5,"Healing":5.5,"Farming":7.3}},{"n":117,"name":"Panta Rhei","band":"Middle town","pop":16000,"fn":"Library","river":false,"roads":[["big",50],["big",280],["big",321],["small",203]],"water":null,"wkind":"Sea","res":2,"full":["Education","Shopping","Government","Healing"],"pieces":["Inns","Taverns"],"shares":{"Residential":75.7,"Education":7.6,"Shopping":6.7,"Government":5.0,"Healing":5.0}},{"n":118,"name":"Rhodonia","band":"Middle town","pop":11000,"fn":"Gatherer","river":false,"roads":[["main",256],["main",84],["main",190]],"water":null,"wkind":"Sea","res":1,"full":["Healing","Shopping","Farming"],"pieces":["Town Hall","Weigh House"],"shares":{"Residential":78.2,"Healing":7.8,"Shopping":7.0,"Farming":7.0}},{"n":119,"name":"Peristera","band":"Large village","pop":2520,"fn":"To decide (was Naval Base)","river":false,"roads":[["main",323],["main",359],["main",132],["small",72]],"water":[182,6,1],"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":120,"name":"Aetheria","band":"Small town","pop":4700,"fn":"Border","river":false,"roads":[["big",209],["big",354]],"water":null,"wkind":"Sea","res":1,"full":["Military","Timber"],"pieces":["Apothecary","General Store"],"shares":{"Residential":81.8,"Military":10.9,"Timber":7.3}},{"n":121,"name":"Heron","band":"Large village","pop":1210,"fn":"Inns","river":false,"roads":[["main",287],["side",97]],"water":[217,13,1],"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":122,"name":"Oros","band":"Small village","pop":260,"fn":"Mountain Sanctuary","river":false,"roads":[["big",243],["big",56]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":123,"name":"Hodos","band":"City","pop":100000,"fn":"Market","river":false,"roads":[["main",275],["main",129],["main",13],["small",82],["small",203]],"water":null,"wkind":"Sea","res":5,"full":["Trade","Shopping","Traveller's","Financial","Arts","Park","Entertainment","Education","Public Works","Healing","Government"],"pieces":[],"shares":{"Residential":52.5,"Trade":6.2,"Shopping":4.9,"Traveller's":6.8,"Financial":2.5,"Arts":2.5,"Park":7.4,"Entertainment":3.7,"Education":2.4,"Public Works":3.7,"Healing":3.7,"Government":3.7}},{"n":124,"name":"Atrapos","band":"Small village","pop":210,"fn":"Garrison","river":false,"roads":[["big",292],["small",8],["small",167]],"water":null,"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":125,"name":"Mesembria","band":"Small town","pop":5000,"fn":"Border","river":false,"roads":[["big",203],["big",340]],"water":null,"wkind":"Sea","res":1,"full":["Military","Timber"],"pieces":["Apothecary","General Store","Town Hall"],"shares":{"Residential":81.8,"Military":10.9,"Timber":7.3}},{"n":126,"name":"Chorosa","band":"Middle town","pop":15000,"fn":"Market","river":false,"roads":[["main",266],["main",21]],"water":[180,10,1],"wkind":"Sea","res":2,"full":["Shopping","Trade","Harbour","Public Works"],"pieces":["Apothecary","Town Hall"],"shares":{"Residential":69.3,"Shopping":9.2,"Trade":7.7,"Harbour":9.2,"Public Works":4.6}},{"n":127,"name":"Naos","band":"Small village","pop":200,"fn":"Holy Site","river":false,"roads":[["main",134]],"water":[175,25,0],"wkind":"Sea","res":null,"full":[],"pieces":[]},{"n":128,"name":"Anaklasis","band":"Small town","pop":3900,"fn":"University","river":false,"roads":[["big",187]],"water":[142,19,0],"wkind":"Sea","res":1,"full":["Education","Public Works"],"pieces":["Apothecary","General Store"],"shares":{"Residential":85.7,"Education":8.6,"Public Works":5.7}}];
+const CLS={
+  avenue:{label:'Avenue',color:'#1f1f1f',m:16,px:2.6},
+  street:{label:'Street',color:'#5b5b5b',m:10,px:1.7},
+  lane:{label:'Lane',color:'#8c8c8c',m:5,px:1},
+  river:{label:'River',color:'#4f9fd8',m:45,px:3},
+  wriver:{label:'Wide river',color:'#4f9fd8',m:250,px:5},
+  rail:{label:'Railway',color:'#222',m:9,px:3}
+};
+const KEYS=['avenue','street','lane','river','wriver','rail'], ORDER=['wriver','river','lane','street','avenue','rail'];
+const notStreet=c=>c==='river'||c==='wriver'||c==='rail';
+const ROADC={rail:['Railway','#111',4.5],main:['Main road','#d81f1f',4.5],big:['Big road','#f28a00',3.6],small:['Small road','#14964a',2.8],side:['Country path','#8d3cc4',2]};
+const PATTERNS=[['grid','Regular grid',100],['angled','Grid with diagonal avenues',100],['broken','Broken grid',100],['rings','Rings and spokes',120],
+  ['tangle','Old-town tangle',55],['warped','Winding parallel streets',90],['loops','Loops and dead ends',110],['sparse','Sparse',300],
+  ['v_line','Village: one main street',100],['v_cross','Village: crossroads',100],['v_green','Village: around a green',100],['v_fork','Village: fork in the road',100],['v_cluster','Village: cluster of lanes',100],['v_shore','Village: along the water',100],
+  ['c_natural','Whole town: grown out from its centre',100],['c_road','Whole town: stretched along its main road',100],['c_shore','Whole town: grown back from the water',100]];
+const DIST={Residential:'#e3d3ab',Government:'#8f86c9',Financial:'#5f9e83',Entertainment:'#d98aae','Public Works':'#9aa1a8',Industrial:'#8f7765',
+  Healing:'#d9776f',"Traveller's":'#c9a15a',Religious:'#b9a0d6',Arts:'#e39a78',Shopping:'#dcc03f',Trade:'#b98352',Park:'#8fc490',Education:'#7fa8d6',
+  Fishing:'#6fbfc7',Military:'#7d8a5c',Harbour:'#4f7fa6',Farming:'#b9cc7a',Wine:'#9a5375',Timber:'#5a8f6e'};
+const WEIGHT={Residential:45,Industrial:7,Harbour:6,Park:6,Trade:5,Shopping:4,Military:4,Farming:4,Wine:4,Timber:4,Government:3,Education:3,Healing:3,
+  Religious:3,'Public Works':3,Entertainment:3,Arts:2,"Traveller's":2,Financial:2,Fishing:2};
+const BLD={"Wine":[["Winery","Vineyard"],["Cellars","Cooperage","Bottle/Glass Works","Wine Merchants' Hall","Tasting Houses","Wine Warehouse","Vintners' Guild Hall"]],"Fishing":[["Fishing Docks/Landing","Fish Market"],["Smokehouse","Salt House","Net Loft","Boat Builders","Ice House","Cannery","Fishers' Guild Hall"]],"Farming":[["Fields/Farmland","Barns and Stables","Pasture","Dairy","Stockyard"],["Granary","Mill","Olive Grove","Olive Press","Cotton Gin House","Produce Market","Seed Store","Irrigation Works","Plantation House","Farmers' Guild Hall","Butcher","Wool Shed","Poultry Yard","Apiary"]],"Timber":[["Managed Forest/Logging Camp","Lumber Yard","Paper Mill","Tree Nursery"],["Sawmill","Carpenters' Workshops","Charcoal Kilns","Timber Warehouse","Cart and Wagon Works","Foresters' Lodge","Woodworkers' Guild Hall"]],"Harbour":[["Fishing Docks","Piers and Quays","Ferry Landing"],["Harbourmaster's Office","Lighthouse","Shipyard/Dry Dock","Customs House","Cargo Warehouses","Chandlery","Sailmakers and Rope Walk","Sailors' Lodgings","Breakwater/Seawall","Mariners' Guild Hall"]],"Traveller's":[["Inns","Hostels/Boarding Houses"],["Coaching Station","Stables and Coach House","Eating Houses and Taverns","Travellers' Bathhouse","Guides' and Porters' Office","Goods and Luggage Storage","Supply and Map Shop","Post and Message Office","Money Changer","Innkeepers' Guild Hall"]],"Healing":[["Hospital/Infirmary","Apothecary","Bathhouse","Hot Springs/Spa","Hospice"],["Healers' Houses","Herb Garden","Herb Drying House","Rest House","Midwives' House","Healers' School","Healers' Guild Hall"]],"Education":[["University","Library"],["Children's School","Archive/Records Hall","Lecture Halls","Student Lodgings","Printers and Bookbinders","Museum","Observatory","Botanical Garden","Laboratories and Workshops","Healers' School","Religious School","Art School","Scholars' Guild Hall"]],"Religious":[["Temple","Shrines","Sacred Grove","Monastery/Convent","Burial Ground","Bell or Prayer Tower","Sacred Spring/Ritual Bath"],["Pilgrims' Lodging","Priests' Residences","Religious School","Almshouse/Charity Kitchen","Procession Square","Relic House"]],"Shopping":[["Shop Streets/Arcades","Covered Market Hall","Open-air Market Square"],["Booksellers","Jewellers","Tea/Coffee Houses","Second-hand Shops","Shopkeepers' Guild Hall","Grocers/Bakers","Tailors/Cloth Shops","General Store","Street Food Stalls","Art Supply Shop","Butcher"]],"Trade":[["Merchants' Exchange","Wholesale Warehouses","Auction House","Craft Workshops","Foreign Merchants' Quarter"],["Caravan Yard/Wagon Depot","Weigh House","Rail Goods Yard","Merchants' Offices","Trade Inspectors' Office","Packing Yard","Merchants' Guild Hall"]],"Arts":[["Artists' Studios","Gallery","Theatre","Music Hall","Artisan Studios","Public Art Square"],["Sculpture Yard","Art School","Art Supply Shops","Poets' and Writers' House","Instrument Makers","Artists' Guild Hall"]],"Entertainment":[["Taverns and Alehouses","Festival Ground","Fairground/Circus","Gambling House","Restaurants","Brewery"],["Games Hall","Sports Ground/Arena","Racecourse","Dance Hall","Pleasure Garden","Street Performers' Square"]],"Government":[["City/Town Hall","Council Chamber","Courthouse","Public Square/Forum"],["Records Office","Tax Office","Jail","Watch House","Ruler's Residence","Envoys' Houses","Ministry Offices","Fire Watch Station","Mint","Officials' Guild Hall"]],"Financial":[["Bank","Mint","Treasury/Vault"],["Counting House","Money Changer","Loan Office","Insurance House","Assay Office","Pawnbroker","Tax Office","Notaries' and Accountants' Offices","Bankers' Guild Hall"]],"Military":[["Barracks","Fortress/Citadel","Naval Yard","Armoury","Drill Ground","Border Post/Gatehouse"],["Walls and Watchtowers","Officers' Quarters","Military Academy","Military Stables","Military Hospital","Supply Depot","Signal Station","Stockade"]],"Park":[["Public Park/Green","Formal Gardens","Pond/Boating Lake","Playground","Woodland/Nature Reserve","Monuments and Memorials","Greenhouse/Conservatory","Community Gardens"],["Bandstand","Tree-lined Promenade","Picnic Lawn","Aviary/Menagerie","Gardeners' Lodge","Gardeners' Guild Hall"]],"Residential":[["Cottages/Detached Houses","Row Houses","Apartment Buildings","Courtyard Houses","Manor Houses"],["Bathhouse","Communal Well/Fountain","Wash House","Communal Oven/Kitchen","Neighbourhood Square","Community Hall","Corner Shop","Children's School"]],"Industrial":[["Factory","Textile Mill","Foundry/Ironworks","Brickworks and Kilns","Glassworks","Tannery","Machine Shops","Mine/Quarry","Dye Works"],["Goods Warehouses","Workers' Canteen","Makers' Guild Hall"]],"Public Works":[["Power House","Waterworks/Pumping Station","Reservoir/Water Tower","Sewer Works","Engineers' Yard","Road and Bridge Depot"],["Public Cemetery","Waste and Recycling Yard","Fire Station","Railway Station","Surveyors' Office","Public Works Office","Engineers' Guild Hall"]]};
+const SNAP=10, PICK=11, ERASE_R=9, DENS={City:120,'Large town':80,'Middle town':80,'Small town':80,'Large village':40,'Small village':40};
+const BANDS=['City','Large town','Middle town','Small town','Large village','Small village'];
+const $=id=>document.getElementById(id);
+const cv=$('c'), ctx=cv.getContext('2d'), wrap=$('wrap');
+
+let place=null, R=1000, streets=[], areas=[], undoStack=[], redoStack=[], nextId=1, dirty=false, fileHandle=null;
+let view={s:.1,tx:0,ty:0}, tool='pattern', cls='street', sel=null, snapMark=null, pending=null;
+let allot={}, showDist=true, buildings=[], bldAt=null, showBld=true, bldDist='Residential', areaDrag=null;
+let autoTidy=true, showNames=true, showGuide=true, showMarks=true, showGrid=true, showWalk=true, fingerDraw=false, spaceDown=false;
+let CW=0,CH=0,DPR=1,needDraw=false;
+
+/* ---------- geometry ---------- */
+function segNearest(px,py,a,b){
+  const dx=b[0]-a[0],dy=b[1]-a[1],l2=dx*dx+dy*dy;
+  let t=l2?((px-a[0])*dx+(py-a[1])*dy)/l2:0; t=t<0?0:t>1?1:t;
+  const x=a[0]+t*dx,y=a[1]+t*dy;
+  return {x,y,t,d2:(px-x)*(px-x)+(py-y)*(py-y)};
+}
+function bbox(pts){let a=1e12,b=1e12,c=-1e12,d=-1e12;for(const p of pts){if(p[0]<a)a=p[0];if(p[1]<b)b=p[1];if(p[0]>c)c=p[0];if(p[1]>d)d=p[1]}return[a,b,c,d]}
+function mk(c,pts,id,grp){return {id:id||nextId++,cls:c,pts,bb:bbox(pts),grp:grp||0}}
+function mkArea(type,pts,id,ex){return {id:id||nextId++,type,pts,bb:bbox(pts),wealth:(ex&&ex.wealth)||'',religion:(ex&&ex.religion)||'',housing:(ex&&ex.housing)||''}}
+function centre(pts){let x=0,y=0;for(const p of pts){x+=p[0];y+=p[1]}return[x/pts.length,y/pts.length]}
+function lengthOf(pts){let l=0;for(let i=1;i<pts.length;i++)l+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);return l}
+function areaOf(pts){let a=0;for(let i=0,j=pts.length-1;i<pts.length;j=i++)a+=(pts[j][0]+pts[i][0])*(pts[j][1]-pts[i][1]);return Math.abs(a/2)}
+function inPoly(x,y,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];
+  if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])c=!c}return c}
+function nearestStreet(list,x,y,maxD){
+  let best=null,m2=maxD*maxD;
+  for(const r of list){
+    const bb=r.bb; if(x<bb[0]-maxD||x>bb[2]+maxD||y<bb[1]-maxD||y>bb[3]+maxD) continue;
+    for(let i=0;i<r.pts.length-1;i++){
+      const n=segNearest(x,y,r.pts[i],r.pts[i+1]);
+      if(n.d2<m2){m2=n.d2;best={road:r,seg:i,x:n.x,y:n.y,d:Math.sqrt(n.d2)}}
+    }
+  }
+  return best;
+}
+function findSnap(list,x,y){
+  const n=nearestStreet(list,x,y,SNAP/view.s); if(!n) return null;
+  const a=n.road.pts[n.seg], b=n.road.pts[n.seg+1], vr=4/view.s;
+  if(Math.hypot(n.x-a[0],n.y-a[1])<vr) return {x:a[0],y:a[1],road:n.road,vertex:true};
+  if(Math.hypot(n.x-b[0],n.y-b[1])<vr) return {x:b[0],y:b[1],road:n.road,vertex:true};
+  return {x:n.x,y:n.y,road:n.road,seg:n.seg};
+}
+function applySnap(list,s){
+  if(!s||!s.road||s.vertex) return list;
+  return list.map(r=>r!==s.road?r:mk(r.cls,r.pts.slice(0,s.seg+1).concat([[s.x,s.y]],r.pts.slice(s.seg+1)),r.id,r.grp));
+}
+function rdp(pts,tol){
+  if(pts.length<3) return pts.slice();
+  const keep=new Uint8Array(pts.length); keep[0]=keep[pts.length-1]=1;
+  const st=[[0,pts.length-1]];
+  while(st.length){
+    const [a,b]=st.pop(); let md=0,mi=-1;
+    for(let i=a+1;i<b;i++){const d=segNearest(pts[i][0],pts[i][1],pts[a],pts[b]).d2; if(d>md){md=d;mi=i}}
+    if(mi>0&&md>tol*tol){keep[mi]=1;st.push([a,mi],[mi,b])}
+  }
+  return pts.filter((p,i)=>keep[i]);
+}
+function tidyStroke(raw){
+  const minD=1.2/view.s; let pts=[raw[0]];
+  for(let i=1;i<raw.length;i++){const q=pts[pts.length-1]; if(Math.hypot(raw[i][0]-q[0],raw[i][1]-q[1])>=minD) pts.push(raw[i])}
+  const last=raw[raw.length-1]; if(pts[pts.length-1]!==last) pts.push(last);
+  for(let pass=0;pass<2;pass++){
+    const o=pts.map(p=>p.slice());
+    for(let i=1;i<pts.length-1;i++){o[i][0]=.25*pts[i-1][0]+.5*pts[i][0]+.25*pts[i+1][0];o[i][1]=.25*pts[i-1][1]+.5*pts[i][1]+.25*pts[i+1][1]}
+    pts=o;
+  }
+  return rdp(pts,.45/view.s);
+}
+function eraseFrom(list,x,y,r){
+  let changed=false; const out=[];
+  for(const rd of list){
+    const bb=rd.bb;
+    if(x<bb[0]-r||x>bb[2]+r||y<bb[1]-r||y>bb[3]+r){out.push(rd);continue}
+    let hit=false;
+    for(let i=0;i<rd.pts.length-1&&!hit;i++) if(segNearest(x,y,rd.pts[i],rd.pts[i+1]).d2<r*r) hit=true;
+    if(!hit){out.push(rd);continue}
+    changed=true;
+    const step=r/3, dense=[], orig=[];
+    for(let i=0;i<rd.pts.length-1;i++){
+      const a=rd.pts[i],b=rd.pts[i+1],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/step));
+      for(let k=0;k<n;k++){dense.push([a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n]);orig.push(k===0)}
+    }
+    dense.push(rd.pts[rd.pts.length-1]);orig.push(true);
+    let run=[],first=true;
+    const flush=()=>{ if(run.length>1&&lengthOf(run.map(q=>q.p))>2/view.s){
+        out.push(mk(rd.cls,run.filter((q,i)=>q.o||i===0||i===run.length-1).map(q=>q.p),first?rd.id:undefined,rd.grp)); first=false } run=[] };
+    for(let i=0;i<dense.length;i++){
+      const p=dense[i];
+      if((p[0]-x)*(p[0]-x)+(p[1]-y)*(p[1]-y)<r*r) flush(); else run.push({p,o:orig[i]});
+    }
+    flush();
+  }
+  return changed?out:list;
+}
+
+/* ---------- street patterns ---------- */
+const rnd=(a,b)=>a+Math.random()*(b-a);
+function clipLine(pts,poly,step){
+  const out=[]; let run=[];
+  const push=()=>{ if(run.length>1) out.push(run); run=[] };
+  for(let i=0;i<pts.length-1;i++){
+    const a=pts[i],b=pts[i+1],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/step));
+    for(let k=0;k<n;k++){const p=[a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n]; if(inPoly(p[0],p[1],poly)) run.push(p); else push()}
+  }
+  const l=pts[pts.length-1]; if(inPoly(l[0],l[1],poly)) run.push(l); push();
+  return out.map(r=>rdp(r,.8)).filter(r=>lengthOf(r)>step*1.5);
+}
+function circle(cx,cy,r,n){const o=[];for(let i=0;i<=n;i++){const a=i/n*6.28318;o.push([cx+r*Math.cos(a),cy+r*Math.sin(a)])}return o}
+function generate(type,poly,b,angDeg){
+  // work in a local frame: origin at the area's centre, turned by the chosen angle
+  let cx=0,cy=0; for(const p of poly){cx+=p[0];cy+=p[1]} cx/=poly.length; cy/=poly.length;
+  const an=angDeg*Math.PI/180, ca=Math.cos(an), sa=Math.sin(an);
+  const toL=p=>{const x=p[0]-cx,y=p[1]-cy;return[x*ca+y*sa,-x*sa+y*ca]}, toW=p=>[cx+p[0]*ca-p[1]*sa,cy+p[0]*sa+p[1]*ca];
+  const lp=poly.map(toL), bb=bbox(lp); let maxR=0; for(const p of lp) maxR=Math.max(maxR,Math.hypot(p[0],p[1]));
+  const x0=Math.floor(bb[0]/b)*b, x1=Math.ceil(bb[2]/b)*b, y0=Math.floor(bb[1]/b)*b, y1=Math.ceil(bb[3]/b)*b;
+  const nx=Math.round((x1-x0)/b), ny=Math.round((y1-y0)/b), L=[];           // L: [class, points] in the local frame
+  const add=(c,pts)=>L.push([c,pts]);
+  const ph=[rnd(0,6.28),rnd(0,6.28),rnd(0,6.28),rnd(0,6.28)];
+  const warp=(p,A,W)=>[p[0]+A*(Math.sin(p[1]/W+ph[0])+.5*Math.sin(p[1]/(W*.43)+ph[1])), p[1]+A*(Math.sin(p[0]/W+ph[2])+.5*Math.sin(p[0]/(W*.47)+ph[3]))];
+  const sample=(a,c,st)=>{const n=Math.max(1,Math.ceil(Math.hypot(c[0]-a[0],c[1]-a[1])/st)),o=[];for(let k=0;k<=n;k++)o.push([a[0]+(c[0]-a[0])*k/n,a[1]+(c[1]-a[1])*k/n]);return o};
+  const cuts=(a0,a1,lo,hi)=>{ const o=[a0]; let v=a0; while(v<a1){ v+=b*rnd(lo,hi); o.push(v) } return o };
+  const junctions=[];
+  if(type==='grid'||type==='angled'||type==='broken'){
+    // blocks are rectangles of uneven size: short side about b, long side 1.5 to 2.4 times that
+    const brk=type==='broken', ys=cuts(y0-b,y1+b,.8,1.25), xs=cuts(x0-b,x1+b,1.5,2.4), oy=Math.floor(rnd(0,5)), ox=Math.floor(rnd(0,3));
+    const avY=j=>(j+oy)%5===0, avX=i=>(i+ox)%3===0, X0=xs[0], X1=xs[xs.length-1], keep=brk?.66:.86;
+    for(let j=0;j<ys.length;j++){
+      if(avY(j)||!brk){ add(avY(j)?'avenue':'street',[[X0,ys[j]],[X1,ys[j]]]); continue }
+      let run=[]; for(let i=0;i<xs.length-1;i++){ if(Math.random()<.8){ if(!run.length) run.push([xs[i],ys[j]]); run.push([xs[i+1],ys[j]]) } else { if(run.length>1) add('street',run); run=[] } } if(run.length>1) add('street',run);
+    }
+    const stag=ys.map(()=>Math.random()<(brk?.4:.28));
+    for(let i=0;i<xs.length;i++){
+      if(avX(i)){ add('avenue',[[xs[i],ys[0]],[xs[i],ys[ys.length-1]]]); for(let j=0;j<ys.length;j++) if(avY(j)) junctions.push([xs[i],ys[j]]); continue }
+      let run=[]; const flush=()=>{ if(run.length>1) add('street',run); run=[] };
+      for(let j=0;j<ys.length-1;j++){
+        if(stag[j]){ flush(); if(i<xs.length-1&&Math.random()<keep){ const x=(xs[i]+xs[i+1])/2; add('street',[[x,ys[j]],[x,ys[j+1]]]) } }
+        else if(Math.random()<keep){ if(!run.length) run.push([xs[i],ys[j]]); run.push([xs[i],ys[j+1]]) } else flush();
+      }
+      flush();
+    }
+    if(type==='angled'){
+      const d=maxR*1.2;
+      for(const [a,off] of [[rnd(25,40),rnd(-.25,.25)*maxR],[rnd(-60,-45),rnd(-.25,.25)*maxR]]){
+        const t=a*Math.PI/180,ux=Math.cos(t),uy=Math.sin(t);
+        add('avenue',[[-ux*d-uy*off,-uy*d+ux*off],[ux*d-uy*off,uy*d+ux*off]]);
+      }
+    }
+  }else if(type==='rings'){
+    const nr=Math.ceil(maxR/b);
+    for(let k=1;k<=nr;k++) add(k%3===0?'avenue':'street',circle(0,0,k*b,Math.max(40,Math.round(k*14))));
+    let n=8, from=.6*b, off=rnd(0,.78);
+    while(from<maxR){
+      for(let i=0;i<n;i++){ const a=off+i/n*6.28318; add(n===8?'avenue':'street',[[from*Math.cos(a),from*Math.sin(a)],[maxR*Math.cos(a),maxR*Math.sin(a)]]) }
+      let rr=from; while(6.28318*rr/n<2.6*b&&rr<maxR) rr+=b;      // add more spokes once the gaps get wide
+      from=rr; off+=3.14159/n; if(n>=64) break; n*=2;
+      if(from>=maxR) break;
+    }
+  }else if(type==='tangle'){
+    const P=[]; for(let i=0;i<=nx;i++){P.push([]);for(let j=0;j<=ny;j++)P[i].push([x0+i*b+rnd(-.36,.36)*b,y0+j*b+rnd(-.36,.36)*b])}
+    for(let i=0;i<=nx;i++){ let run=[]; for(let j=0;j<=ny;j++){ run.push(P[i][j]); if(Math.random()<.2){ if(run.length>1) add(i%5===0?'street':'lane',run); run=Math.random()<.5?[P[i][j]]:[] } } if(run.length>1) add(i%5===0?'street':'lane',run) }
+    for(let j=0;j<=ny;j++){ let run=[]; for(let i=0;i<=nx;i++){ run.push(P[i][j]); if(Math.random()<.2){ if(run.length>1) add(j%5===0?'street':'lane',run); run=Math.random()<.5?[P[i][j]]:[] } } if(run.length>1) add(j%5===0?'street':'lane',run) }
+  }else if(type==='warped'){
+    const A=.8*b, W=3.4*b, m=2*A;
+    cuts(y0-m,y1+m,.75,1.3).forEach((y,j)=>add(j%6===0?'avenue':'street',sample([x0-m,y],[x1+m,y],b/3).map(p=>warp(p,A,W))));
+    cuts(x0-m,x1+m,2,3.6).forEach(x=>add('street',sample([x,y0-m],[x,y1+m],b/3).map(p=>warp(p,A,W))));
+  }else if(type==='loops'){
+    const A=.9*b, W=4*b, sp=3*b, m=2*A, cols=[];
+    for(let j=0;j*sp<=y1-y0+2*m;j++){ const y=y0-m+j*sp; cols.push(sample([x0-m,y],[x1+m,y],b/3).map(p=>warp(p,A,W))) }
+    for(let i=0;i*sp<=x1-x0+2*m;i++){ const x=x0-m+i*sp; cols.push(sample([x,y0-m],[x,y1+m],b/3).map(p=>warp(p,A,W))) }
+    for(const c of cols){
+      add('street',c); let side=1;
+      for(let k=2;k<c.length-2;k+=3){
+        if(Math.random()<.22) continue;
+        const tx=c[k+1][0]-c[k-1][0], ty=c[k+1][1]-c[k-1][1], tl=Math.hypot(tx,ty)||1, nxv=-ty/tl*side, nyv=tx/tl*side; side=-side;
+        const len=rnd(.75,1.25)*b, bend=rnd(-.3,.3)*b, e=[c[k][0]+nxv*len+tx/tl*bend, c[k][1]+nyv*len+ty/tl*bend];
+        const mid=[c[k][0]+nxv*len*.5+tx/tl*bend*.2, c[k][1]+nyv*len*.5+ty/tl*bend*.2];
+        add('lane',[c[k],mid,e]);
+        if(Math.random()<.7){ const rr=.17*b; add('lane',circle(e[0]+nxv*rr,e[1]+nyv*rr,rr,14)) }
+      }
+    }
+  }else if(type==='sparse'){
+    const n=Math.max(3,Math.min(7,Math.round(areaOf(poly)/(b*b*9))));
+    for(let k=0;k<n;k++){
+      const a0=rnd(0,6.28318); let p=[maxR*Math.cos(a0),maxR*Math.sin(a0)], h=Math.atan2(-p[1],-p[0])+rnd(-.7,.7), turn=0; const o=[p];
+      for(let s=0;s<500;s++){ turn=.85*turn+rnd(-.06,.06); h+=turn; p=[p[0]+Math.cos(h)*b/3,p[1]+Math.sin(h)*b/3]; o.push(p); if(Math.hypot(p[0],p[1])>maxR*1.15) break }
+      add('street',o);
+    }
+  }
+  if(type.slice(0,2)==='v_'){
+    const wig=(a,c)=>sample(a,c,b/3).map(q=>warp(q,b*.1,b*2.4)), XL=x0-b, XR=x1+b, hh=Math.max(b,(y1-y0)/2);
+    const lanesOff=(xa,xb,sides,lo,hi)=>{ if(xb-xa<b*.6) return; for(const x of cuts(xa+b*rnd(.3,.8),xb-b*.4,1.1,1.9)){ const sd=sides.length>1?(Math.random()<.5?1:-1):sides[0], len=Math.min(hh,b*rnd(lo,hi)); add('lane',wig([x,0],[x,sd*len])) } };
+    if(type==='v_line'){
+      add('street',wig([XL,0],[XR,0])); lanesOff(x0,x1,[1,-1],.8,2.2);
+      const sd=Math.random()<.5?1:-1, yb=sd*b*1.25, xa=x0+(x1-x0)*.22, xb=x0+(x1-x0)*.78; add('lane',wig([xa,yb],[xb,yb])); add('lane',wig([xa,0],[xa,yb])); add('lane',wig([xb,0],[xb,yb]));
+    }else if(type==='v_cross'){
+      add('street',wig([XL,0],[XR,0])); add('street',wig([0,y0-b],[0,y1+b])); const q=b*1.3;
+      for(const [sx,sy] of [[1,1],[-1,-1],[1,-1],[-1,1]].slice(0,Math.random()<.5?2:3)){ add('lane',wig([sx*q,0],[sx*q,sy*q])); add('lane',wig([sx*q,sy*q],[0,sy*q])) }
+      lanesOff(q+b*.3,x1,[1,-1],.7,1.5); lanesOff(x0,-q-b*.3,[1,-1],.7,1.5);
+    }else if(type==='v_green'){
+      const rx=b*1.15, ry=b*.7, g=[]; for(let k=0;k<=28;k++){ const t=k/28*6.28318; g.push([rx*Math.cos(t),ry*Math.sin(t)]) } add('street',g);
+      add('street',wig([-rx,0],[XL,0]).map((q,i)=>i?q:[-rx,0])); add('street',wig([rx,0],[XR,0]).map((q,i)=>i?q:[rx,0])); add('street',wig([0,ry],[0,y1+b]).map((q,i)=>i?q:[0,ry])); add('lane',wig([0,-ry],[0,-ry-b*1.6]).map((q,i)=>i?q:[0,-ry]));
+      lanesOff(rx+b*.4,x1,[1,-1],.8,1.8); lanesOff(x0,-rx-b*.4,[1,-1],.8,1.8);
+    }else if(type==='v_fork'){
+      const ye=Math.max(b*1.5,Math.min(hh,.5*XR)); add('street',wig([XL,0],[0,0])); add('street',wig([0,0],[XR,-ye])); add('street',wig([0,0],[XR,ye]));
+      const t=.55; add('lane',wig([XR*t,-ye*t],[XR*t,ye*t])); lanesOff(x0,-b*.5,[1,-1],.8,1.8);
+    }else if(type==='v_cluster'){
+      const g=b*.85, nx2=Math.max(2,Math.round(Math.min(maxR*.5,b*3.2)/g)), N={};
+      for(let i=-nx2;i<=nx2;i++) for(let j=-nx2;j<=nx2;j++){ if(i*i+j*j>nx2*nx2+1) continue; N[i+','+j]=j===0?warp([i*g,0],b*.1,b*2.4):[i*g+rnd(-.28,.28)*g,j*g+rnd(-.28,.28)*g] }
+      for(const k in N){ const [i,j]=k.split(',').map(Number); if(j!==0&&N[(i+1)+','+j]&&Math.random()<.72) add('lane',[N[k],N[(i+1)+','+j]]); if(N[i+','+(j+1)]&&Math.random()<.78) add('lane',[N[k],N[i+','+(j+1)]]) }
+      add('street',wig([XL,0],[XR,0]));
+    }else{   // v_shore: the water is on the side with no lanes; turn the angle to face it
+      add('street',wig([XL,0],[XR,0])); lanesOff(x0,x1,[1],1,2.2); const xa=x0+(x1-x0)*.15, xb=x0+(x1-x0)*.85, yb=b*1.3; add('lane',wig([xa,yb],[xb,yb])); add('lane',wig([xa,0],[xa,yb])); add('lane',wig([xb,0],[xb,yb]));
+    }
+  }
+  const out=[], grp=nextId++, step=Math.max(3,Math.min(12,b/8));
+  for(const [c,pts] of L) for(const run of clipLine(pts.map(toW),poly,step)) out.push(mk(c,run,undefined,grp));
+  out.grp=grp; out.junctions=junctions.map(toW).filter(q=>inPoly(q[0],q[1],poly));
+  return out;
+}
+
+/* ---------- shorelines and clearing streets ---------- */
+function seaPoly(line){
+  const a=line[0], z=line[line.length-1], m=line[line.length>>1], BIG=Math.max(12*R,20000), nrm=t=>{ while(t>Math.PI) t-=2*Math.PI; while(t<=-Math.PI) t+=2*Math.PI; return t };
+  const ta=Math.atan2(a[1],a[0]), tz=Math.atan2(z[1],z[0]), tm=Math.atan2(m[1],m[0]); let d=nrm(ta-tz); const dm=nrm(tm-tz);
+  if(!(Math.sign(dm)===Math.sign(d)&&Math.abs(dm)<=Math.abs(d))) d=d-Math.sign(d||1)*2*Math.PI;     // go round the side the shore faces
+  const out=line.slice(), n=Math.max(8,Math.ceil(Math.abs(d)/.12)); for(let k=0;k<=n;k++){ const t=tz+d*k/n; out.push([BIG*Math.cos(t),BIG*Math.sin(t)]) }
+  return out;
+}
+function inWater(x,y){
+  for(const a of areas) if(a.type==='water'&&x>=a.bb[0]&&x<=a.bb[2]&&y>=a.bb[1]&&y<=a.bb[3]&&inPoly(x,y,a.pts)) return true;
+  for(const r of streets){ if(r.cls!=='river'&&r.cls!=='wriver') continue; const h=CLS[r.cls].m/2; if(x<r.bb[0]-h||x>r.bb[2]+h||y<r.bb[1]-h||y>r.bb[3]+h) continue;
+    for(let i=0;i<r.pts.length-1;i++) if(segNearest(x,y,r.pts[i],r.pts[i+1]).d2<h*h) return true }
+  return false;
+}
+function clearStreets(test,keepAv){
+  const out=[]; let n=0;
+  for(const r of streets){
+    if(notStreet(r.cls)||(keepAv&&r.cls==='avenue')){ out.push(r); continue }
+    const runs=[]; let run=[], hit=false; const push=()=>{ if(run.length>1) runs.push(run); run=[] };
+    for(let i=0;i<r.pts.length-1;i++){ const a=r.pts[i],b=r.pts[i+1],k=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/6));
+      for(let j=0;j<(i===r.pts.length-2?k+1:k);j++){ const q=[a[0]+(b[0]-a[0])*j/k,a[1]+(b[1]-a[1])*j/k]; if(test(q[0],q[1])){ hit=true; push() } else run.push(q) } }
+    push();
+    if(!hit){ out.push(r); continue }
+    n++; for(const q of runs){ const t=rdp(q,.4); if(lengthOf(t)>8) out.push(mk(r.cls,t,undefined,r.grp)) }
+  }
+  return {list:out,n};
+}
+
+/* ---------- roundabouts, lining up, block sizes ---------- */
+const BASEB={City:80,'Large town':70,'Middle town':60,'Small town':50,'Large village':45,'Small village':40}, WALK=80;   // WALK: metres walked in a minute
+function defBlock(type){ const pz=PATTERNS.find(q=>q[0]===type); return Math.round((BASEB[place.band]||60)*(pz?pz[2]:100)/100/5)*5 }
+function roundR(){ return Math.max(14,Math.min(34,.34*(BASEB[place.band]||60))) }
+function addRound(list,x,y,r,c,grp){ return eraseFrom(list,x,y,r*.97).concat([mk(c,circle(x,y,r,28),undefined,grp)]) }
+function alignAngle(poly){
+  let cx=0,cy=0; for(const q of poly){cx+=q[0];cy+=q[1]} cx/=poly.length; cy/=poly.length;
+  let best=null,bd=Infinity,what='';
+  const tryLine=(pts,label)=>{ for(let i=0;i<pts.length-1;i++){ const a=pts[i],b=pts[i+1]; if(Math.hypot(b[0]-a[0],b[1]-a[1])<1) continue; const d=segNearest(cx,cy,a,b).d2; if(d<bd){bd=d;best=[a,b];what=label} } };
+  for(const r of streets) if(r.cls==='avenue'||r.cls==='river'||r.cls==='wriver') tryLine(r.pts,r.cls==='avenue'?'avenue':'river');
+  for(const a of areas) if(a.type==='water') tryLine(a.pts,'shore');
+  if(!best) return null;
+  let ang=Math.atan2(best[1][1]-best[0][1],best[1][0]-best[0][0])*180/Math.PI; ang=((ang%90)+90)%90;
+  return {angle:Math.round(ang)%90,what};
+}
+
+/* ---------- whole-town starting layouts ---------- */
+function cutStreets(list,keep){            // keep only the parts of each street where keep(x,y) is true
+  const out=[];
+  for(const r of list){ const runs=[]; let run=[], hit=false; const push=()=>{ if(run.length>1) runs.push(run); run=[] };
+    for(let i=0;i<r.pts.length-1;i++){ const a=r.pts[i],b=r.pts[i+1],k=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/6));
+      for(let j=0;j<(i===r.pts.length-2?k+1:k);j++){ const q=[a[0]+(b[0]-a[0])*j/k,a[1]+(b[1]-a[1])*j/k]; if(keep(q[0],q[1])) run.push(q); else { hit=true; push() } } }
+    push(); if(!hit){ out.push(r); continue } for(const q of runs){ const t=rdp(q,.4); if(lengthOf(t)>8) out.push(mk(r.cls,t,undefined,r.grp)) } }
+  return out;
+}
+function layout(type,poly,b,angDeg){
+  // a small dense centre, a wide looser belt of housing streets around it, then only a few roads carrying on outwards with side lanes thinning out
+  let px=0,py=0; for(const q of poly){px+=q[0];py+=q[1]} px/=poly.length; py/=poly.length;
+  let RR=0, rmin=Infinity; for(const q of poly){ const d=Math.hypot(q[0]-px,q[1]-py); RR=Math.max(RR,d); rmin=Math.min(rmin,d) }
+  const whole=rmin>RR*.94, grp=nextId++, big=place.band==='City', a0=angDeg*Math.PI/180; let out=[];
+  const shore=type==='c_shore', ux=Math.cos(a0), uy=Math.sin(a0);
+  const cx=shore?px+ux*RR*.5:px, cy=shore?py+uy*RR*.5:py, K=shore?1.3:1, sh=RR*.62;          // by the water the centre sits near the shore
+  const pct=t=>(PATTERNS.find(q=>q[0]===t)||[0,0,100])[2]/100, TAU=6.28318;
+  const noisy=(base,amp)=>{ const ph=[1,2,3,5].map(k=>[k,rnd(0,TAU),rnd(.4,1)]); return a=>base*(1+amp*(ph[0][2]*Math.sin(ph[0][0]*a+ph[0][1])+ph[1][2]*Math.sin(ph[1][0]*a+ph[1][1])+.6*ph[2][2]*Math.sin(ph[2][0]*a+ph[2][1])+.4*ph[3][2]*Math.sin(ph[3][0]*a+ph[3][1]))/2.2) };
+  const stretch=a=>type==='c_road'?1+.32*Math.cos(2*(a-a0)):1;
+  const nc=noisy(RR*(big?.2:.17)*K,.28), nm=noisy(RR*.5*K,.2), ns=noisy(RR*.9*K,.2);
+  const rc=a=>nc(a), rm=a=>nm(a)*stretch(a), rs=a=>ns(a)*stretch(a);
+  const P=(r,a)=>[cx+r*Math.cos(a),cy+r*Math.sin(a)];
+  const add=(c,pts)=>{ if(pts.length>1) out.push(mk(c,pts,undefined,grp)) };
+  const sub=(t,pl,ang,f)=>{ for(const q of generate(t,pl,Math.max(20,b*pct(t)*f),((ang%360)+360)%360)) out.push(q) };
+  // the roads out of town: the arriving roads first, then a few more in the widest gaps
+  let A=[]; const main=[];
+  for(const rd of place.roads||[]){ const t=rd[1]*Math.PI/180, a=((Math.atan2(-Math.cos(t),Math.sin(t))%TAU)+TAU)%TAU; if(!A.some(q=>Math.abs(Math.atan2(Math.sin(q-a),Math.cos(q-a)))<.55)){ A.push(a); main.push(a) } }
+  if(type==='c_road'&&!A.length){ A.push(((a0%TAU)+TAU)%TAU, ((a0+3.14159)%TAU+TAU)%TAU); main.push(A[0],A[1]) }
+  if(!A.length){ A.push(rnd(0,TAU)); main.push(A[0]) }
+  const want=big?6:place.band==='Large town'?5:4; A.sort((x,y)=>x-y);
+  while(A.length<want){ let gi=0,g=0; for(let i=0;i<A.length;i++){ const d=(i===A.length-1?A[0]+TAU:A[i+1])-A[i]; if(d>g){g=d;gi=i} } A.push((A[gi]+g*rnd(.42,.58))%TAU); A.sort((x,y)=>x-y) }
+  if(shore) A=A.filter(a=>Math.cos(a)*ux+Math.sin(a)*uy<.25);
+  if(!A.length) A=[a0+3.14159];
+  const S=A.map(a=>{ const isMain=main.includes(a), end=RR*K*(isMain?rnd(1.35,1.65):rnd(1.0,1.3))*stretch(a), ph=rnd(0,TAU), f=rnd(.7,1.4), amp=rnd(.05,.11);
+    return {a,isMain,end,at:r=>a+amp*Math.sin(r/(RR*K)*3.1*f+ph)*Math.min(1,r/(RR*.25))} });
+  const sp=(s,ra,rb)=>{ const o=[], n=Math.max(2,Math.ceil(Math.abs(rb-ra)/28)); for(let k=0;k<=n;k++){ const r=ra+(rb-ra)*k/n; o.push(P(r,s.at(r))) } return o };
+  // 1 the dense old centre
+  { const pl=[]; for(let k=0;k<44;k++){ const a=k/44*TAU; pl.push(P(rc(a),a)) } sub('tangle',pl,rnd(0,90),1) }
+  // 2 the roads themselves: streets inside the centre, avenues through the housing belt, plain roads beyond it
+  for(const s of S){ const r1=rc(s.a)*.9, r2=rs(s.a); add('street',sp(s,RR*.02,r1)); add('avenue',sp(s,r1,s.isMain?s.end:r2)); if(!s.isMain) add('street',sp(s,r2,s.end)) }
+  // 3 the housing belt, in wedges between the roads: tighter near the centre, looser further out, with a ragged outer edge
+  const edges=[]; for(let i=0;i<S.length;i++){ const s=S[i], t=S[(i+1)%S.length], gap=(t.a-s.a+TAU)%TAU||TAU; if(shore&&gap>3.3) continue;
+    const cuts=gap>1.7?[0,.5,1]:[0,1]; for(let c=0;c<cuts.length-1;c++) edges.push([s,t,gap,cuts[c],cuts[c+1]]) }
+  for(const [s,t,gap,f0,f1] of edges){
+    const ang=(f,r)=>f===0?s.at(r):f===1?s.at(r)*0+((t.at(r)-t.a)+s.a+gap):s.a+gap*f, near=f0===0?s.a:s.a+gap;
+    for(const [ra,rb,pats,fac] of [[rc,rm,['broken','warped','broken'],rnd(1.05,1.3)],[rm,rs,['loops','warped','loops','broken'],rnd(1.5,2)]]){
+      const side=(f,inward)=>{ const o=[]; for(let k=0;k<=10;k++){ const u=inward?1-k/10:k/10, am=s.a+gap*f, r=ra(am)+(rb(am)-ra(am))*u; o.push(P(r,ang(f,r))) } return o };
+      const arc=(rf,fa,fb)=>{ const o=[], n=Math.max(4,Math.ceil(gap*Math.abs(fb-fa)*RR/60)); for(let k=1;k<n;k++){ const f=fa+(fb-fa)*k/n, am=s.a+gap*f; o.push(P(rf(am),am)) } return o };
+      const pl=side(f0,false).concat(arc(rb,f0,f1),side(f1,true),arc(ra,f1,f0)), pt=pats[Math.floor(rnd(0,pats.length))];
+      sub(pt,pl,near*180/Math.PI+(pt==='warped'?90:0)+rnd(-8,8),fac);
+    }
+  }
+  // 4 beyond the housing: side lanes off each road, further apart and shorter the further out they are
+  for(const s of S){ const r0=rs(s.a); let r=r0+b*rnd(1,2.5);
+    while(r<s.end-b){ const t=(r-r0)/Math.max(1,s.end-r0), p0=P(r,s.at(r)), dir=s.at(r)+(Math.random()<.5?1:-1)*rnd(1.1,2), len=b*rnd(2,5.5)*(1-.65*t), o=[p0]; let h=dir, q=p0;
+      for(let k=0;k<Math.ceil(len/20);k++){ h+=rnd(-.12,.12); q=[q[0]+Math.cos(h)*20,q[1]+Math.sin(h)*20]; o.push(q) }
+      add('lane',o);
+      if(Math.random()<.4*(1-t)){ const m=o[o.length>>1]; let h2=h+(Math.random()<.5?1:-1)*rnd(1,1.8), q2=m; const o2=[m]; for(let k=0;k<Math.ceil(len*.5/20);k++){ h2+=rnd(-.12,.12); q2=[q2[0]+Math.cos(h2)*20,q2[1]+Math.sin(h2)*20]; o2.push(q2) } add('lane',o2) }
+      r+=b*rnd(2.2,4)*(1+2.5*t) } }
+  if(shore){ const keep=(x,y)=>(x-px)*ux+(y-py)*uy<=sh; out=cutStreets(out,keep); const L=RR*.75;
+    out.push(mk('avenue',[[px+ux*sh+uy*L,py+uy*sh-ux*L],[px+ux*sh-uy*L,py+uy*sh+ux*L]],undefined,grp)); out=cutStreets(out,(x,y)=>{ const dx=x-cx, dy=y-cy, a=Math.atan2(dy,dx); return Math.hypot(dx,dy)<=rs(a)*1.02||(x-px)*ux+(y-py)*uy<sh-3 }) }
+  if(!whole) out=cutStreets(out,(x,y)=>inPoly(x,y,poly));
+  out.grp=grp; out.junctions=[]; return out;
+}
+
+/* ---------- joining loose ends ---------- */
+function joinEnds(list,focus,maxD){
+  const Wk=list.map(r=>({id:r.id,cls:r.cls,grp:r.grp,pts:r.pts.slice(),bb:r.bb.slice(),ch:false}));
+  const near=(w,p,d,otherGrp)=>{ let best=null,m2=d*d;
+    for(const o of Wk){ if(o===w||notStreet(o.cls)||(otherGrp&&w.grp&&o.grp===w.grp)) continue; const bb=o.bb; if(p[0]<bb[0]-d||p[0]>bb[2]+d||p[1]<bb[1]-d||p[1]>bb[3]+d) continue;
+      for(let i=0;i<o.pts.length-1;i++){ const n=segNearest(p[0],p[1],o.pts[i],o.pts[i+1]); if(n.d2<m2){m2=n.d2;best={o,i,x:n.x,y:n.y}} } }
+    return best };
+  const ray=(w,p,u,d)=>{ let best=null,bt=d; const qx=p[0]+u[0]*d,qy=p[1]+u[1]*d,x0=Math.min(p[0],qx),x1=Math.max(p[0],qx),y0=Math.min(p[1],qy),y1=Math.max(p[1],qy);
+    for(const o of Wk){ if(o===w||notStreet(o.cls)) continue; const bb=o.bb; if(x1<bb[0]||x0>bb[2]||y1<bb[1]||y0>bb[3]) continue;
+      for(let i=0;i<o.pts.length-1;i++){ const a=o.pts[i],b=o.pts[i+1],ex=b[0]-a[0],ey=b[1]-a[1],den=u[0]*ey-u[1]*ex; if(Math.abs(den)<1e-9) continue;
+        const t=((a[0]-p[0])*ey-(a[1]-p[1])*ex)/den, q=((a[0]-p[0])*u[1]-(a[1]-p[1])*u[0])/den;
+        if(t>.5&&t<bt&&q>=0&&q<=1){bt=t;best={o,i,x:p[0]+u[0]*t,y:p[1]+u[1]*t}} } }
+    return best };
+  let n=0;
+  for(const w of Wk){
+    if(notStreet(w.cls)||w.pts.length<2) continue;
+    const a=w.pts[0], z=w.pts[w.pts.length-1]; if(Math.hypot(a[0]-z[0],a[1]-z[1])<1) continue;      // a closed loop
+    for(const end of [0,1]){
+      const p=end?w.pts[w.pts.length-1]:w.pts[0], q=end?w.pts[w.pts.length-2]:w.pts[1];
+      if(near(w,p,1.2,false)) continue;                                                              // already meets a street
+      const Ln=Math.hypot(p[0]-q[0],p[1]-q[1])||1, u=[(p[0]-q[0])/Ln,(p[1]-q[1])/Ln];
+      const h=ray(w,p,u,maxD)||near(w,p,maxD*.55,true); if(!h) continue;
+      if(focus&&!focus.has(w.id)&&!focus.has(h.o.id)) continue;
+      const pt=[h.x,h.y]; if(end) w.pts.push(pt); else w.pts.unshift(pt); w.ch=true; w.bb=bbox(w.pts);
+      const A=h.o.pts[h.i],B=h.o.pts[h.i+1];
+      if(Math.hypot(A[0]-h.x,A[1]-h.y)>.5&&Math.hypot(B[0]-h.x,B[1]-h.y)>.5){ h.o.pts.splice(h.i+1,0,pt); h.o.ch=true }
+      n++;
+    }
+  }
+  return {list:Wk.map((w,k)=>w.ch?mk(w.cls,w.pts,w.id,w.grp):list[k]),n};
+}
+
+/* ---------- districts and allotments ---------- */
+const haOf=()=>place.pop/(DENS[place.band]||80);
+const isVillage=()=>/village/i.test(place.band);
+function distNames(){ if(isVillage()) return []; const n=['Residential'].concat(place.full); for(const a of areas) if(a.type!=='water'&&!n.includes(a.type)) n.push(a.type); return n }
+function defAllot(){ if(place.shares){ const o={}; for(const k in place.shares) o[k]=Math.round(haOf()*place.shares[k]/100); return o }
+  const names=['Residential'].concat(place.full); let sum=0; for(const k of names) sum+=WEIGHT[k]||3; const o={}; for(const k of names) o[k]=Math.round(haOf()*(WEIGHT[k]||3)/sum); return o }
+function allotOf(name){ return name in allot?allot[name]:(defAllot()[name]||0) }
+function placedOf(name){ let s=0; for(const a of areas) if(a.type===name) s+=areaOf(a.pts); return s/1e4 }
+function fillTypes(){
+  const d=$('dtype'), cur=d.value; d.innerHTML='';
+  const mine=['Residential'].concat(place.full), rest=Object.keys(DIST).filter(k=>!mine.includes(k));
+  const grp=(label,list)=>{ if(!list.length) return; const og=document.createElement('optgroup'); og.label=label; for(const k of list){const o=document.createElement('option');o.value=k;o.textContent=k;og.appendChild(o)} d.appendChild(og) };
+  grp('This place',mine); grp('Not assigned here',rest); d.value=mine.includes(cur)||rest.includes(cur)?cur:'Residential';
+}
+function renderAllot(){
+  const el=$('allot'); if(el.hidden) return;
+  const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  let h='<h3>'+esc(place.name)+': allotments</h3>';
+  const a=sel&&sel.k==='a'&&areas.find(q=>q.id===sel.id);
+  if(a&&a.type!=='water'){
+    h+='<div style="border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:10px"><b>Selected area</b>: '+(areaOf(a.pts)/1e4).toFixed(1)+' ha';
+    h+='<div style="margin-top:6px"><select id="aType">'+Object.keys(DIST).map(k=>'<option'+(k===a.type?' selected':'')+'>'+esc(k)+'</option>').join('')+'</select></div>';
+    if(a.type==='Residential') h+='<div style="margin-top:6px"><input type="text" id="aWealth" placeholder="Wealth (your own words)" value="'+esc(a.wealth)+'"></div><div style="margin-top:6px"><input type="text" id="aRel" placeholder="Religion (your own words)" value="'+esc(a.religion)+'"></div>';
+    h+='</div>';
+  }
+  let tp=0,ta=0; h+='<table>';
+  for(const k of distNames()){
+    const al=allotOf(k), pl=placedOf(k), pc=al?pl/al*100:0; tp+=pl; ta+=al;
+    const need=k==='Residential'?(areas.some(q=>q.type===k&&!q.housing)?'<div style="color:#b3261e;font-size:12px">'+areas.filter(q=>q.type===k&&!q.housing).length+' area(s) with no housing type</div>':''):(placedOf(k)>0&&!mandatoryOk(k)?'<div style="color:#b3261e;font-size:12px">⚠ needs a mandatory building</div>':'');
+    const cnt=k==='Residential'?' <span style="color:var(--mute)">('+areas.filter(q=>q.type===k).length+(place.res?' of '+place.res:'')+' areas)</span>':'';
+    h+='<tr><td><span class="sw" style="background:'+DIST[k]+'"></span>'+esc(k)+cnt+need+'<div class="barw"><i style="width:'+Math.min(100,pc)+'%;background:'+DIST[k]+'"></i></div></td>'+
+       '<td style="text-align:right;white-space:nowrap"'+(pc>100.5?' class="over"':'')+'>'+pl.toFixed(pl<10?1:0)+' of</td><td style="white-space:nowrap"><input type="number" min="0" step="1" data-al="'+esc(k)+'" value="'+al+'"> ha</td></tr>';
+  }
+  h+='<tr><td><b>Total</b></td><td style="text-align:right"><b>'+Math.round(tp)+' of</b></td><td><b>'+Math.round(ta)+' ha</b></td></tr></table>';
+  h+='<div style="color:var(--mute);margin-top:8px">Size guide for '+place.pop.toLocaleString()+' people: about '+Math.round(haOf()).toLocaleString()+' ha. Change any allotment by typing a new number. Overlapping areas are each counted in full.</div>';
+  h+='<div style="margin-top:8px"><button id="alReset">Reset allotments to the defaults</button></div>';
+  el.innerHTML=h;
+  el.querySelectorAll('input[data-al]').forEach(i=>i.onchange=()=>{ allot[i.dataset.al]=Math.max(0,+i.value||0); dirty=true; autosave(); ui(); renderAllot() });
+  $('alReset').onclick=()=>{ allot={}; dirty=true; autosave(); ui(); renderAllot() };
+  const upd=f=>{ const cur=areas.find(q=>q.id===sel.id); if(cur) commit(streets,areas.map(q=>q===cur?f(cur):q)) };
+  if($('aType')) $('aType').onchange=e=>upd(c=>mkArea(e.target.value,c.pts,c.id,c));
+  if($('aWealth')) $('aWealth').onchange=e=>upd(c=>mkArea(c.type,c.pts,c.id,{wealth:e.target.value,religion:c.religion,housing:c.housing}));
+  if($('aRel')) $('aRel').onchange=e=>upd(c=>mkArea(c.type,c.pts,c.id,{wealth:c.wealth,religion:e.target.value,housing:c.housing}));
+}
+
+/* ---------- resize and move areas ---------- */
+function selArea(){ return (tool==='select'||tool==='district')&&sel&&sel.k==='a'?areas.find(q=>q.id===sel.id):null }
+function handlesOf(a){ const b=a.bb; return [[b[0],b[1]],[b[2],b[1]],[b[2],b[3]],[b[0],b[3]],[(b[0]+b[2])/2,(b[1]+b[3])/2]] }
+function hitHandle(m){ const a=selArea(); if(!a) return null; const H=handlesOf(a), r=16/view.s; let best=null,bd=r*r;
+  H.forEach((h,i)=>{ const d=(h[0]-m[0])*(h[0]-m[0])+(h[1]-m[1])*(h[1]-m[1]); if(d<bd){bd=d;best=i} }); return best==null?null:{a,i:best} }
+function startAreaDrag(e,h,m){ const a=h.a, H=handlesOf(a); areaDrag={id:e.pointerId,areaId:a.id,i:h.i,pts:a.pts,m0:m,anchor:h.i<4?H[(h.i+2)%4]:null,corner:H[h.i],baseA:areas,baseB:buildings,moved:false} }
+function moveAreaDrag(m){ const d=areaDrag; let f;
+  if(d.i===4){ const dx=m[0]-d.m0[0], dy=m[1]-d.m0[1]; f=p=>[p[0]+dx,p[1]+dy] }
+  else { const ax=d.anchor[0], ay=d.anchor[1], w=d.corner[0]-ax, h=d.corner[1]-ay; const fx=Math.max(.05,w?(m[0]-ax)/w:1), fy=Math.max(.05,h?(m[1]-ay)/h:1); f=p=>[ax+(p[0]-ax)*fx,ay+(p[1]-ay)*fy] }
+  d.moved=true;
+  areas=d.baseA.map(q=>q.id===d.areaId?mkArea(q.type,d.pts.map(f),q.id,q):q);
+  buildings=d.baseB.map(b=>{ if(!inPoly(b.x,b.y,d.pts)) return b; const t=f([b.x,b.y]); return Object.assign({},b,{x:t[0],y:t[1]}) });
+  draw();
+}
+function endAreaDrag(cancel){ const d=areaDrag; areaDrag=null; const na=areas, nb=buildings; areas=d.baseA; buildings=d.baseB; if(cancel||!d.moved){ draw(); return } commit(streets,joinTouching(na,d.areaId),nb) }
+
+/* ---------- move, resize and turn a building ---------- */
+let bDrag=null;
+function selBld(){ return (tool==='select'||tool==='building')&&sel&&sel.k==='b'?buildings.find(q=>q.id===sel.id):null }
+function bldBox(b){ const z=sizeOfB(b), k=Math.max(1,(z[2]?12:7)/(z[0]*view.s)); return {hw:z[0]*k/2,hh:z[1]*k/2,k} }
+function bldLocal(b,m){ const dx=m[0]-b.x, dy=m[1]-b.y, c=Math.cos(b.a||0), sn=Math.sin(b.a||0); return [dx*c+dy*sn,-dx*sn+dy*c] }
+function hitBld(m){ const b=selBld(); if(!b) return null; const B=bldBox(b), l=bldLocal(b,m), r=14/view.s;
+  if(Math.hypot(l[0],l[1]+B.hh+26/view.s)<r) return {b,mode:'turn'};
+  if(Math.abs(Math.abs(l[0])-B.hw)<r&&Math.abs(Math.abs(l[1])-B.hh)<r) return {b,mode:'size'};
+  if(Math.abs(l[0])<=B.hw+r*.3&&Math.abs(l[1])<=B.hh+r*.3) return {b,mode:'move'};
+  return null }
+function moveBDrag(m){ const d=bDrag, o=d.o; let q=Object.assign({},o);
+  if(d.mode==='move'){ q.x=o.x+m[0]-d.m0[0]; q.y=o.y+m[1]-d.m0[1] }
+  else if(d.mode==='turn'){ q.a=Math.round((Math.atan2(m[1]-o.y,m[0]-o.x)+Math.PI/2)*100)/100 }
+  else { const l=bldLocal(o,m); q.w=Math.max(3,Math.round(2*Math.abs(l[0])/d.k)); q.h=Math.max(3,Math.round(2*Math.abs(l[1])/d.k)) }
+  d.moved=true; buildings=d.base.map(b=>b.id===o.id?q:b); draw(); }
+function endBDrag(cancel){ const d=bDrag; bDrag=null; const nb=buildings; buildings=d.base; if(cancel||!d.moved){ draw(); return } commit(streets,areas,nb); sel={k:'b',id:d.o.id}; ui(); draw() }
+
+/* ---------- buildings ---------- */
+function areaAt(m){ return areas.filter(q=>q.type!=='water'&&inPoly(m[0],m[1],q.pts)).sort((x,y)=>areaOf(x.pts)-areaOf(y.pts))[0]||null }
+function buildingAt(m){ let best=null,d2=Infinity; const pk=(PICK/view.s)*(PICK/view.s); for(const b of buildings){ const dx=m[0]-b.x, dy=m[1]-b.y, d=dx*dx+dy*dy, z=sizeOfB(b), c=Math.cos(b.a||0), sn=Math.sin(b.a||0), lx=dx*c+dy*sn, ly=-dx*sn+dy*c, f=z[2]?.3:.5;
+    if((d<pk||(Math.abs(lx)<z[0]*f&&Math.abs(ly)<z[1]*f))&&d<d2){d2=d;best=b} } return best }
+const SIZES={a:[8,6],b:[12,9],c:[20,14],d:[40,25],e:[80,50],y:[50,35,1],f:[100,70,1],g:[200,140,1],h:[400,300,1]};   // metres; third value marks open ground
+const SZ={"Shrines":"a","Bell or Prayer Tower":"a","Street Food Stalls":"a","Monuments and Memorials":"a","Bandstand":"a","Communal Well/Fountain":"a","Tasting Houses":"b","Smokehouse":"b","Seed Store":"b","Butcher":"b","Lighthouse":"b","Chandlery":"b","Guides' and Porters' Office":"b","Supply and Map Shop":"b","Money Changer":"b","Apothecary":"b","Healers' Houses":"b","Herb Drying House":"b","Midwives' House":"b","Priests' Residences":"b","Relic House":"b","Booksellers":"b","Jewellers":"b","Tea/Coffee Houses":"b","Second-hand Shops":"b","Grocers/Bakers":"b","Tailors/Cloth Shops":"b","General Store":"b","Art Supply Shop":"b","Art Supply Shops":"b","Weigh House":"b","Poets' and Writers' House":"b","Instrument Makers":"b","Watch House":"b","Fire Watch Station":"b","Loan Office":"b","Assay Office":"b","Pawnbroker":"b","Signal Station":"b","Gardeners' Lodge":"b","Cottages/Detached Houses":"b","Row Houses":"b","Wash House":"b","Communal Oven/Kitchen":"b","Corner Shop":"b","Surveyors' Office":"b","Cellars":"c","Cooperage":"c","Salt House":"c","Net Loft":"c","Ice House":"c","Dairy":"c","Mill":"c","Olive Press":"c","Wool Shed":"c","Carpenters' Workshops":"c","Foresters' Lodge":"c","Harbourmaster's Office":"c","Sailors' Lodgings":"c","Inns":"c","Hostels/Boarding Houses":"c","Eating Houses and Taverns":"c","Travellers' Bathhouse":"c","Goods and Luggage Storage":"c","Post and Message Office":"c","Rest House":"c","Printers and Bookbinders":"c","Observatory":"c","Sacred Spring/Ritual Bath":"c","Sacred Spring":"c","Pilgrims' Lodging":"c","Almshouse/Charity Kitchen":"c","Craft Workshops":"c","Merchants' Offices":"c","Trade Inspectors' Office":"c","Artists' Studios":"c","Artisan Studios":"c","Taverns and Alehouses":"c","Taverns":"c","Gambling House":"c","Restaurants":"c","Records Office":"c","Tax Office":"c","Envoys' Houses":"c","Counting House":"c","Insurance House":"c","Notaries' and Accountants' Offices":"c","Border Post/Gatehouse":"c","Walls and Watchtowers":"c","Officers' Quarters":"c","Courtyard Houses":"c","Community Hall":"c","Workers' Canteen":"c","Fire Station":"c","Public Works Office":"c","Winery":"d","Bottle/Glass Works":"d","Wine Merchants' Hall":"d","Wine Warehouse":"d","Fish Market":"d","Boat Builders":"d","Cannery":"d","Barns and Stables":"d","Granary":"d","Cotton Gin House":"d","Plantation House":"d","Sawmill":"d","Timber Warehouse":"d","Cart and Wagon Works":"d","Customs House":"d","Coaching Station":"d","Stables and Coach House":"d","Bathhouse":"d","Hospice":"d","Healers' School":"d","Library":"d","Children's School":"d","Archive/Records Hall":"d","Lecture Halls":"d","Student Lodgings":"d","Museum":"d","Laboratories and Workshops":"d","Religious School":"d","Art School":"d","Temple":"d","Merchants' Exchange":"d","Auction House":"d","Gallery":"d","Theatre":"d","Music Hall":"d","Brewery":"d","Games Hall":"d","Dance Hall":"d","City/Town Hall":"d","Town Hall":"d","Council Chamber":"d","Courthouse":"d","Jail":"d","Ministry Offices":"d","Mint":"d","Bank":"d","Treasury/Vault":"d","Armoury":"d","Military Stables":"d","Military Hospital":"d","Supply Depot":"d","Stockade":"d","Greenhouse/Conservatory":"d","Apartment Buildings":"d","Manor Houses":"d","Glassworks":"d","Tannery":"d","Machine Shops":"d","Dye Works":"d","Power House":"d","Waterworks/Pumping Station":"d","Waterworks":"d","Paper Mill":"e","Cargo Warehouses":"e","Sailmakers and Rope Walk":"e","Hospital/Infirmary":"e","Monastery/Convent":"e","Covered Market Hall":"e","Wholesale Warehouses":"e","Ruler's Residence":"e","Barracks":"e","Military Academy":"e","Factory":"e","Textile Mill":"e","Foundry/Ironworks":"e","Goods Warehouses":"e","Railway Station":"e","Poultry Yard":"y","Apiary":"y","Charcoal Kilns":"y","Ferry Landing":"y","Herb Garden":"y","Packing Yard":"y","Sculpture Yard":"y","Street Performers' Square":"y","Playground":"y","Picnic Lawn":"y","Neighbourhood Square":"y","Fishing Docks/Landing":"f","Fishing Docks":"f","Produce Market":"f","Irrigation Works":"f","Lumber Yard":"f","Hot Springs/Spa":"f","Sacred Grove":"f","Burial Ground":"f","Procession Square":"f","Shop Streets/Arcades":"f","Open-air Market Square":"f","Foreign Merchants' Quarter":"f","Caravan Yard/Wagon Depot":"f","Public Art Square":"f","Public Square/Forum":"f","Formal Gardens":"f","Pond/Boating Lake":"f","Community Gardens":"f","Tree-lined Promenade":"f","Aviary/Menagerie":"f","Brickworks and Kilns":"f","Reservoir/Water Tower":"f","Sewer Works":"f","Engineers' Yard":"f","Road and Bridge Depot":"f","Waste and Recycling Yard":"f","Stockyard":"g","Olive Grove":"g","Tree Nursery":"g","Piers and Quays":"g","Shipyard/Dry Dock":"g","Breakwater/Seawall":"g","University":"g","Botanical Garden":"g","Rail Goods Yard":"g","Festival Ground":"g","Fairground/Circus":"g","Sports Ground/Arena":"g","Pleasure Garden":"g","Fortress/Citadel":"g","Naval Yard":"g","Drill Ground":"g","Public Park/Green":"g","Public Cemetery":"g","Vineyard":"h","Fields/Farmland":"h","Pasture":"h","Managed Forest/Logging Camp":"h","Racecourse":"h","Woodland/Nature Reserve":"h","Mine/Quarry":"h","Scholars' Guild Hall":"d","Gardeners' Guild Hall":"d","Shopkeepers' Guild Hall":"d","Woodworkers' Guild Hall":"d","Makers' Guild Hall":"d","Vintners' Guild Hall":"d","Bankers' Guild Hall":"d","Engineers' Guild Hall":"d","Mariners' Guild Hall":"d","Artists' Guild Hall":"d","Healers' Guild Hall":"d","Officials' Guild Hall":"d","Merchants' Guild Hall":"d","Fishers' Guild Hall":"d","Innkeepers' Guild Hall":"d","Farmers' Guild Hall":"d"};
+const sizeOf=n=>SIZES[SZ[n]||'c'];
+const sizeOfB=b=>b.w?[b.w,b.h,sizeOf(b.name)[2]]:sizeOf(b.name);
+const cntBld=(d,n)=>buildings.reduce((t,b)=>t+(b.dist===d&&b.name===n?1:0),0);
+function streetAngle(x,y){ let bd=80*80, ang=0; for(const r of streets){ if(notStreet(r.cls)||x<r.bb[0]-80||x>r.bb[2]+80||y<r.bb[1]-80||y>r.bb[3]+80) continue;
+  for(let i=0;i<r.pts.length-1;i++){ const d=segNearest(x,y,r.pts[i],r.pts[i+1]).d2; if(d<bd){ bd=d; ang=Math.atan2(r.pts[i+1][1]-r.pts[i][1],r.pts[i+1][0]-r.pts[i][0]) } } } return Math.round(ang*100)/100 }
+function hasBld(dist,name){ return buildings.some(b=>b.dist===dist&&b.name===name) }
+function mandatoryOk(k){ return k==='Residential'?true:buildings.some(b=>b.dist===k&&BLD[k]&&BLD[k][0].includes(b.name)) }
+function buildingTap(m){
+  const hit=buildingAt(m);
+  if(hit){ sel={k:'b',id:hit.id}; bldAt=null; $('bld').hidden=true; ui(); draw(); return }
+  sel=null; const a=isVillage()?null:areaAt(m); bldAt={x:m[0],y:m[1],areaId:a?a.id:null};
+  $('bld').hidden=false; $('allot').hidden=true; $('pat').hidden=true; $('help').hidden=true; $('infoP').hidden=true; ui(); renderBld(); draw();
+}
+function renderBld(){
+  const el=$('bld'); if(el.hidden||!bldAt) return;
+  const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const a=bldAt.areaId!=null&&areas.find(q=>q.id===bldAt.areaId), btn=(d,n)=>{ const c=cntBld(d,n), z=sizeOf(n); return '<button data-d="'+esc(d)+'" data-n="'+esc(n)+'"'+(c?' class="have"':'')+'><span class="bc'+(c?' on':'')+'">'+c+'</span>'+esc(n)+'<span class="bz">'+z[0]+'×'+z[1]+' m</span></button>' };
+  let h='';
+  if(a){
+    const L=BLD[a.type]||[[],[]];
+    h+='<h3><span class="sw" style="background:'+(DIST[a.type]||'#999')+'"></span>'+esc(a.type)+': add a building here</h3>';
+    if(a.type!=='Residential'&&!mandatoryOk(a.type)) h+='<div class="warn">⚠ No mandatory building placed for this district yet</div>';
+    if(a.type==='Residential'&&!a.housing) h+='<div class="warn">⚠ No housing type chosen for this area yet</div>';
+    if(a.type==='Residential'){
+      h+='<h4>Main housing type for this area</h4><select id="bHousing"><option value="">Not chosen</option>'+L[0].map(n=>'<option'+(n===a.housing?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select><h4>Buildings</h4>'+L[1].map(n=>btn(a.type,n)).join('');
+    }else{
+      h+='<h4>Mandatory (at least one)</h4>'+L[0].map(n=>btn(a.type,n)).join('')+'<h4>Optional</h4>'+L[1].map(n=>btn(a.type,n)).join('');
+    }
+    if(place.pieces.length) h+='<h4>This place\'s single pieces</h4>'+place.pieces.map(n=>btn('Piece',n)).join('');
+  }else if(isVillage()){
+    const L=BLD[bldDist]||[[],[]];
+    h+='<h3>'+esc(place.name)+': add a building here</h3><h4>Show buildings from</h4><select id="bDist">'+Object.keys(BLD).map(k=>'<option'+(k===bldDist?' selected':'')+'>'+esc(k)+'</option>').join('')+'</select>';
+    h+='<h4>'+(bldDist==='Residential'?'Housing':'Mandatory in a district')+'</h4>'+L[0].map(n=>btn(bldDist,n)).join('')+'<h4>Optional in a district</h4>'+L[1].map(n=>btn(bldDist,n)).join('');
+  }else{
+    h+='<h3>'+esc(place.name)+': not inside a district</h3>';
+    if(place.pieces.length) h+='<h4>This place\'s single pieces</h4>'+place.pieces.map(n=>btn('Piece',n)).join('');
+    h+='<div style="color:var(--mute);margin-top:8px">Tap inside a drawn district to see that district\'s buildings.</div>';
+  }
+  h+='<div style="margin-top:8px"><button id="bCancel">Cancel</button></div><div style="color:var(--mute);margin-top:6px">The number is how many of that building this place has. Sizes are the footprint drawn on the map.</div>';
+  el.innerHTML=h;
+  el.querySelectorAll('button[data-n]').forEach(b=>b.onclick=()=>{
+    const nb={id:nextId++,name:b.dataset.n,dist:b.dataset.d,x:bldAt.x,y:bldAt.y,a:streetAngle(bldAt.x,bldAt.y)}; bldAt=null; el.hidden=true;
+    commit(streets,areas,buildings.concat([nb])); sel={k:'b',id:nb.id}; ui(); draw(); toast('Added '+nb.name+'. Drag it to move, or drag a corner to resize.');
+  });
+  if($('bDist')) $('bDist').onchange=e=>{ bldDist=e.target.value; renderBld() };
+  $('bCancel').onclick=()=>{ bldAt=null; el.hidden=true; draw() };
+  if($('bHousing')) $('bHousing').onchange=e=>{ const cur=areas.find(q=>q.id===bldAt.areaId); if(cur) commit(streets,areas.map(q=>q===cur?mkArea(cur.type,cur.pts,cur.id,{wealth:cur.wealth,religion:cur.religion,housing:e.target.value}):q)) };
+}
+
+/* ---------- state ---------- */
+function snapshot(){return {streets,areas,buildings}}
+function commit(ns,na,nb){
+  undoStack.push(snapshot()); if(undoStack.length>80) undoStack.shift();
+  redoStack=[]; streets=ns; if(na) areas=na; if(nb) buildings=nb; changed();
+}
+function changed(){
+  dirty=true;
+  if(sel&&((sel.k==='s'&&!streets.some(r=>r.id===sel.id))||(sel.k==='a'&&!areas.some(r=>r.id===sel.id))||(sel.k==='b'&&!buildings.some(r=>r.id===sel.id)))) sel=null;
+  autosave(); ui(); renderAllot(); renderBld(); renderTodo(); renderLegend(); draw();
+}
+function undo(){ if(!undoStack.length)return; redoStack.push(snapshot()); const s=undoStack.pop(); streets=s.streets; areas=s.areas; buildings=s.buildings||[]; changed() }
+function redo(){ if(!redoStack.length)return; undoStack.push(snapshot()); const s=redoStack.pop(); streets=s.streets; areas=s.areas; buildings=s.buildings||[]; changed() }
+
+/* ---------- files: one JSON file per place, coordinates in metres from the centre (x east, y south) ---------- */
+const r1=v=>Math.round(v*10)/10;
+function toFile(){
+  return JSON.stringify({app:'euelia-city-planner',version:3,place:{n:place.n,name:place.name},allot,saved:new Date().toISOString(),
+    note:'Coordinates are metres from the centre of the place: x to the east, y to the south.',
+    streets:streets.map(r=>({id:r.id,cls:r.cls,grp:r.grp,pts:r.pts.map(p=>[r1(p[0]),r1(p[1])])})),
+    buildings:buildings.map(b=>({id:b.id,name:b.name,dist:b.dist,x:r1(b.x),y:r1(b.y),a:b.a||undefined,w:b.w?r1(b.w):undefined,h:b.h?r1(b.h):undefined})),
+    areas:areas.map(a=>({id:a.id,type:a.type,wealth:a.wealth||undefined,religion:a.religion||undefined,housing:a.housing||undefined,pts:a.pts.map(p=>[r1(p[0]),r1(p[1])])}))});
+}
+function fromFile(text){
+  const g=JSON.parse(text); if(!g||g.app!=='euelia-city-planner') throw new Error('not a plan');
+  let mx=0;
+  const st=(g.streets||[]).filter(r=>r.pts&&r.pts.length>1&&CLS[r.cls]).map(r=>{mx=Math.max(mx,r.id||0,r.grp||0);return {id:r.id,cls:r.cls,pts:r.pts,bb:bbox(r.pts),grp:r.grp||0}});
+  const ar=(g.areas||[]).filter(a=>a.pts&&a.pts.length>2).map(a=>{mx=Math.max(mx,a.id||0);return {id:a.id,type:a.type,pts:a.pts,bb:bbox(a.pts),wealth:a.wealth||'',religion:a.religion||'',housing:a.housing||''}});
+  const bl=(g.buildings||[]).filter(b=>b&&b.name).map(b=>{mx=Math.max(mx,b.id||0);const q={id:b.id,name:b.name,dist:b.dist,x:+b.x,y:+b.y,a:+b.a||0}; if(+b.w>0&&+b.h>0){ q.w=+b.w; q.h=+b.h } return q});
+  nextId=Math.max(nextId,mx+1);
+  nextId=Math.max(nextId,mx+1);
+  return {streets:st,areas:ar,buildings:bl,place:g.place,allot:g.allot||{}};
+}
+const storeKey=()=>'euelia-plan-v1-'+place.n;
+let lastAuto=0, autoOK=true;
+function autosave(){ try{localStorage.setItem(storeKey(),toFile()); lastAuto=Date.now(); autoOK=true}catch(e){ autoOK=false } }
+const ago=t=>{ const m=Math.round((Date.now()-t)/60000); return m<1?'just now':m===1?'1 minute ago':m<60?m+' minutes ago':Math.round(m/60)+' h ago' };
+async function saveFile(){
+  const text=toFile();
+  if(window.showSaveFilePicker){
+    try{
+      if(!fileHandle) fileHandle=await window.showSaveFilePicker({suggestedName:place.name+'_plan_v1.json',types:[{description:'City plan',accept:{'application/json':['.json']}}]});
+      const w=await fileHandle.createWritable(); await w.write(text); await w.close();
+      dirty=false; ui(); toast('Saved to '+fileHandle.name); return;
+    }catch(e){ if(e&&e.name==='AbortError') return; fileHandle=null; }
+  }
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));
+  a.download=place.name+'_plan_'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  dirty=false; ui(); toast('Saved to your Downloads folder.');
+}
+function loadText(text,name){
+  let f; try{ f=fromFile(text) }catch(e){ toast('That file could not be read as a city plan.'); return false }
+  if(f.place&&f.place.n!==place.n){
+    const p=PLACES.find(q=>q.n===f.place.n); if(!p){ toast('That plan is for a place this tool does not know.'); return false }
+    setPlace(p,true);
+  }
+  undoStack.push(snapshot()); redoStack=[]; streets=f.streets; areas=f.areas; buildings=f.buildings; allot=f.allot; changed(); dirty=false; ui();
+  toast('Opened '+name+' ('+streets.length+' streets)'); return true;
+}
+async function openFile(){
+  if(window.showOpenFilePicker){
+    try{
+      const [h]=await window.showOpenFilePicker({types:[{description:'City plan',accept:{'application/json':['.json']}}]});
+      const f=await h.getFile(); if(loadText(await f.text(),f.name)) fileHandle=h; return;
+    }catch(e){ if(e&&e.name==='AbortError') return; }
+  }
+  $('fileIn').click();
+}
+$('fileIn').addEventListener('change',async e=>{const f=e.target.files[0]; if(f) loadText(await f.text(),f.name); e.target.value=''});
+
+function setPlace(p,skipLoad){
+  if(place&&dirty) autosave();
+  place=p; fileHandle=null; sel=null; pending=null; $('pat').hidden=true; undoStack=[]; redoStack=[]; streets=[]; areas=[]; buildings=[]; bldAt=null; $('bld').hidden=true; allot={}; dirty=false;
+  R=Math.sqrt(p.pop/(DENS[p.band]||80)*1e4/Math.PI);
+  $('city').value=p.n;
+  if(!skipLoad){ try{ const s=localStorage.getItem(storeKey()); if(s){ const f=fromFile(s); streets=f.streets; areas=f.areas; buildings=f.buildings; allot=f.allot; if(streets.length||areas.length){ dirty=true; toast('Brought back '+p.name+' from this browser\'s backup.') } } }catch(e){} }
+  const v=isVillage(); document.querySelector('#tools button[data-tool="district"]').hidden=v; $('dtype').hidden=v; $('allotBtn').hidden=v; if(v){ $('allot').hidden=true; if(tool==='district') tool='draw' }
+  { const pt=$('patType'), isV=(pt.value||'').slice(0,2)==='v_'; if(isVillage()&&!isV) pt.value='v_line'; else if(!isVillage()&&isV) pt.value='grid'; if(pt.onchange) pt.onchange(); else $('patBlock').value=defBlock(pt.value||'grid') }
+  fillInfo(); fillTypes(); resize(); fit(); ui(); renderAllot(); renderTodo(); renderLegend();
+}
+const WIND=['north','north-northeast','northeast','east-northeast','east','east-southeast','southeast','south-southeast','south','south-southwest','southwest','west-southwest','west','west-northwest','northwest','north-northwest'];
+const wind=d=>WIND[Math.round(((d%360)+360)%360/22.5)%16];
+function fillInfo(){
+  const p=place, ha=p.pop/(DENS[p.band]||80), esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  let h='<h3>'+esc(p.name)+'</h3><ul><li>'+p.band+', about '+p.pop.toLocaleString()+' people</li>';
+  h+='<li>Size guide: about '+Math.round(ha).toLocaleString()+' hectares, roughly '+(2*R/1000).toFixed(1)+' km across</li>';
+  if(p.res) h+='<li>Residential areas: '+p.res+'</li>';
+  if(p.full.length) h+='<li>Districts: '+esc(p.full.join(', '))+'</li>';
+  if(p.pieces.length) h+='<li>Pieces: '+esc(p.pieces.join(', '))+'</li>';
+  if(!p.full.length&&!p.pieces.length) h+='<li>Districts not assigned yet</li>';
+  h+='</ul><h3 style="margin-top:10px">From the Euelia map</h3><ul>';
+  if(p.roads.length) for(const [c,d] of p.roads) h+='<li>'+ROADC[c][0]+' arriving from the '+wind(d)+'</li>'; else h+='<li>No drawn road ends here</li>';
+  if(p.water) h+='<li>'+p.wkind+(p.water[2]?' close by':' about '+p.water[1]+' km away on the map')+', roughly to the '+wind(p.water[0])+'</li>';
+  else h+='<li>No sea or lake found close by on the map</li>';
+  if(p.river) h+='<li>On the main river. The map is too coarse to say where it runs, so sketch it with the River line.</li>';
+  h+='<li>Rail lines are not drawn on the Euelia map yet.</li></ul><div style="color:var(--mute);margin-top:8px">Directions are rough: the Euelia map is about 1 km per pixel.</div>';
+  $('infoP').innerHTML=h;
+}
+
+/* ---------- drawing the screen ---------- */
+let barH=0;
+function resize(){
+  const top=barH=$('bar').offsetHeight; wrap.style.top=top+'px'; for(const id of ['help','infoP','pat','allot','bld','todo']) $(id).style.top=(top+8)+'px'; $('tools').style.top=top+'px'; $('legend').style.top=(top+64)+'px';
+  DPR=window.devicePixelRatio||1; CW=wrap.clientWidth; CH=wrap.clientHeight;
+  cv.width=Math.round(CW*DPR); cv.height=Math.round(CH*DPR); draw();
+}
+function fit(){ const s=Math.min(CW,CH)/(R*4.4); view={s,tx:CW/2,ty:CH/2}; draw() }
+function zoomAt(f,cx,cy){
+  const s=Math.min(8,Math.max(.002,view.s*f)); f=s/view.s;
+  view.tx=cx-(cx-view.tx)*f; view.ty=cy-(cy-view.ty)*f; view.s=s; draw();
+}
+function draw(){ if(!needDraw){needDraw=true;requestAnimationFrame(paint)} }
+const lw=c=>Math.max(CLS[c].px,CLS[c].m*view.s);
+const STY={avenue:['#fdf0bf','#b79a45','#7d7460'],street:['#ffffff','#a59f91','#9a9486'],lane:['#ffffff','#bbb5a8','#b4aea0']};
+const lineCol=c=>STY[c]?(lw(c)>=3.2?STY[c][0]:STY[c][2]):c==='rail'?'#3a3a3a':'#b9d8ee';
+function poly(pts){ ctx.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]) }
+function paint(){
+  needDraw=false; const s=view.s;
+  ctx.setTransform(DPR,0,0,DPR,0,0); ctx.clearRect(0,0,CW,CH);
+  const x0=-view.tx/s,y0=-view.ty/s,x1=x0+CW/s,y1=y0+CH/s;
+  if(showGrid){
+    for(const [step,col] of [[100,'rgba(0,0,0,.05)'],[1000,'rgba(0,0,0,.13)']]){
+      if(step*s<9) continue; ctx.beginPath(); ctx.strokeStyle=col; ctx.lineWidth=1;
+      for(let x=Math.ceil(x0/step)*step;x<=x1;x+=step){const X=Math.round(x*s+view.tx)+.5;ctx.moveTo(X,0);ctx.lineTo(X,CH)}
+      for(let y=Math.ceil(y0/step)*step;y<=y1;y+=step){const Y=Math.round(y*s+view.ty)+.5;ctx.moveTo(0,Y);ctx.lineTo(CW,Y)}
+      ctx.stroke();
+    }
+  }
+  ctx.setTransform(DPR*s,0,0,DPR*s,DPR*view.tx,DPR*view.ty);
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  for(const a of areas){
+    if(a.type==='water'){ ctx.beginPath(); poly(a.pts); ctx.closePath(); ctx.fillStyle='#b9d8ee'; ctx.fill(); ctx.strokeStyle='#93bfe0'; ctx.lineWidth=1.2/s; ctx.stroke() }
+    else if(showDist){ ctx.beginPath(); poly(a.pts); ctx.closePath(); ctx.globalAlpha=.6; ctx.fillStyle=DIST[a.type]||'#999'; ctx.fill(); ctx.globalAlpha=.55; ctx.strokeStyle='#5c564a'; ctx.lineWidth=1/s; ctx.stroke(); ctx.globalAlpha=1 }
+  }
+  const vis=r=>!(r.bb[2]<x0||r.bb[0]>x1||r.bb[3]<y0||r.bb[1]>y1);
+  { const P2={}; for(const k of ORDER) P2[k]=null;
+    for(const r of streets) if(vis(r)){ const q=P2[r.cls]||(P2[r.cls]=new Path2D()); q.moveTo(r.pts[0][0],r.pts[0][1]); for(let i=1;i<r.pts.length;i++) q.lineTo(r.pts[i][0],r.pts[i][1]) }
+    for(const k of ['wriver','river']) if(P2[k]){ ctx.strokeStyle='#b9d8ee'; ctx.lineWidth=lw(k)/s; ctx.stroke(P2[k]) }
+    const ST=['lane','street','avenue'];
+    for(const k of ST) if(P2[k]&&lw(k)>=3.2){ ctx.strokeStyle=STY[k][1]; ctx.lineWidth=(lw(k)+2.2)/s; ctx.stroke(P2[k]) }     // dark edge first, so junctions join up
+    for(const k of ST) if(P2[k]){ ctx.strokeStyle=lw(k)>=3.2?STY[k][0]:STY[k][2]; ctx.lineWidth=lw(k)/s; ctx.stroke(P2[k]) }
+    if(P2.rail){ const u=lw('rail')/s; ctx.strokeStyle='#3a3a3a'; ctx.lineWidth=u; ctx.stroke(P2.rail); ctx.lineCap='butt'; ctx.setLineDash([u*2.2,u*2.2]); ctx.strokeStyle='#fff'; ctx.lineWidth=u*.5; ctx.stroke(P2.rail); ctx.setLineDash([]); ctx.lineCap='round' } }
+  if(sel){
+    if(sel.k==='s'){ const r=streets.find(q=>q.id===sel.id); if(r){
+      if(r.grp){ ctx.beginPath(); for(const q of streets) if(q.grp===r.grp&&vis(q)) poly(q.pts); ctx.strokeStyle='rgba(0,150,255,.28)'; ctx.lineWidth=(lw(r.cls)+5)/s; ctx.stroke() }
+      ctx.beginPath(); poly(r.pts); ctx.strokeStyle='#00a2ff'; ctx.lineWidth=(lw(r.cls)+6)/s; ctx.stroke();
+      ctx.beginPath(); poly(r.pts); ctx.strokeStyle=lineCol(r.cls); ctx.lineWidth=lw(r.cls)/s; ctx.stroke(); } }
+    else { const a=areas.find(q=>q.id===sel.id); if(a){ ctx.beginPath(); poly(a.pts); ctx.closePath(); ctx.strokeStyle='#00a2ff'; ctx.lineWidth=3/s; ctx.stroke() } }
+  }
+  if(pending){ ctx.beginPath(); poly(pending.pts); ctx.closePath(); ctx.fillStyle='rgba(255,170,0,.14)'; ctx.fill(); ctx.setLineDash([8/s,6/s]); ctx.strokeStyle='#d98200'; ctx.lineWidth=2/s; ctx.stroke(); ctx.setLineDash([]) }
+  if(stroke&&stroke.pts.length>1){
+    ctx.beginPath(); poly(stroke.pts);
+    if(stroke.lasso){ ctx.setLineDash([8/s,6/s]); ctx.strokeStyle=stroke.lasso==='water'?'#2f86c4':stroke.lasso==='cut'?'#c0392b':stroke.lasso==='district'?(DIST[$('dtype').value]||'#555'):'#d98200'; ctx.lineWidth=2/s; ctx.stroke(); ctx.setLineDash([]) }
+    else { ctx.strokeStyle=STY[stroke.cls]?STY[stroke.cls][1]:lineCol(stroke.cls); ctx.lineWidth=lw(stroke.cls)/s; ctx.stroke() }
+  }
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  const P=(x,y)=>[x*s+view.tx,y*s+view.ty];
+  ctx.font='12px system-ui,"Segoe UI",sans-serif'; ctx.textBaseline='middle';
+  const taken=[];
+  const label=(t,x,y,al,col,avoid)=>{ if(avoid){ const w=ctx.measureText(t).width+8, lx=al==='center'?x-w/2:al==='right'?x-w:x, r=[lx,y-8,lx+w,y+8]; for(const q of taken) if(r[0]<q[2]&&r[2]>q[0]&&r[1]<q[3]&&r[3]>q[1]) return false; taken.push(r) }
+    ctx.textAlign=al; ctx.lineWidth=4; ctx.strokeStyle='rgba(247,245,239,.95)'; ctx.strokeText(t,x,y); ctx.fillStyle=col||'#26231e'; ctx.fillText(t,x,y); return true };
+  if(showDist&&showNames){
+    const L=[]; for(const a of areas){ if(a.type==='water'||a.bb[2]<x0||a.bb[0]>x1||a.bb[3]<y0||a.bb[1]>y1) continue; L.push([a,areaOf(a.pts)]) }
+    L.sort((p,q)=>q[1]-p[1]);                                    // biggest areas get their names first
+    for(const [a,ar] of L){
+      const w=(a.bb[2]-a.bb[0])*s, bad=a.type==='Residential'?!a.housing:!mandatoryOk(a.type), t=(bad?'⚠ ':'')+a.type, on=sel&&sel.k==='a'&&sel.id===a.id;
+      if(!on&&ctx.measureText(t).width>w*1.25) continue;         // the name must roughly fit inside its area
+      const c=centre(a.pts), [x,y]=P(c[0],c[1]);
+      if(!label(t,x,y-(w>90?7:0),'center',bad?'#b3261e':undefined,!on)) continue;
+      if(w>90) label((ar/1e4).toFixed(ar<1e5?1:0)+' ha'+(a.housing?' · '+a.housing:'')+(a.wealth?' · '+a.wealth:''),x,y+8,'center','#6f6a60',!on);
+    }
+  }
+  { const a=selArea(); if(a){ const H=handlesOf(a), q=H.map(h=>P(h[0],h[1]));
+      ctx.beginPath(); ctx.rect(q[0][0],q[0][1],q[2][0]-q[0][0],q[2][1]-q[0][1]); ctx.setLineDash([5,5]); ctx.strokeStyle='#00a2ff'; ctx.lineWidth=1.4; ctx.stroke(); ctx.setLineDash([]);
+      q.forEach((h,i)=>{ ctx.beginPath(); if(i<4) ctx.rect(h[0]-7,h[1]-7,14,14); else ctx.arc(h[0],h[1],9,0,6.28318); ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle='#00a2ff'; ctx.lineWidth=2.4; ctx.stroke() });
+      label('drag to move',q[4][0],q[4][1]+20,'center','#0a6fb0'); } }
+  if(showBld){
+    const big=s>.045;
+    for(const b of buildings){
+      const [x,y]=P(b.x,b.y); if(x<-150||y<-20||x>CW+20||y>CH+20) continue; const z=sizeOfB(b), k=Math.max(1,(z[2]?12:7)/(z[0]*s)), hw=z[0]*s*k/2, hh=z[1]*s*k/2, h=Math.min(hw,60), on=sel&&sel.k==='b'&&sel.id===b.id;
+      ctx.save(); ctx.translate(x,y); ctx.rotate(b.a||0); ctx.beginPath(); ctx.rect(-hw,-hh,2*hw,2*hh); ctx.fillStyle=DIST[b.dist]||'#444'; ctx.globalAlpha=z[2]?.38:1; ctx.fill(); ctx.globalAlpha=1; if(z[2]&&!on) ctx.setLineDash([6,4]); ctx.lineWidth=on?3:1.3; ctx.strokeStyle=on?'#00a2ff':'#2b2b2b'; ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+      if(big||on){ const nm=b.name+(on?' · '+Math.round(z[0])+'×'+Math.round(z[1])+' m':''); if(z[2]&&hw>50) label(nm,x,y,'center',undefined,!on); else label(nm,x+h+5,y,'left',undefined,!on) }
+      if(on&&selBld()){ ctx.save(); ctx.translate(x,y); ctx.rotate(b.a||0); ctx.fillStyle='#fff'; ctx.strokeStyle='#00a2ff'; ctx.lineWidth=2.2;
+        for(const [qx,qy] of [[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]]){ ctx.beginPath(); ctx.rect(qx-6,qy-6,12,12); ctx.fill(); ctx.stroke() }
+        ctx.beginPath(); ctx.moveTo(0,-hh); ctx.lineTo(0,-hh-26); ctx.stroke(); ctx.beginPath(); ctx.arc(0,-hh-26,7,0,6.28318); ctx.fill(); ctx.stroke(); ctx.restore() }
+    }
+  }
+  if(bldAt){ const [x,y]=P(bldAt.x,bldAt.y); ctx.beginPath(); ctx.moveTo(x-9,y); ctx.lineTo(x+9,y); ctx.moveTo(x,y-9); ctx.lineTo(x,y+9); ctx.strokeStyle='#0a84ff'; ctx.lineWidth=2.4; ctx.stroke() }
+  if(showWalk){
+    const [cx,cy]=P(0,0), far=Math.max(Math.hypot(cx,cy),Math.hypot(CW-cx,cy),Math.hypot(cx,CH-cy),Math.hypot(CW-cx,CH-cy))/s;
+    let stepMin=[1,2,5,10,15,30,60,120].find(v=>v*WALK*s>=75)||240;
+    ctx.setLineDash([2,6]); ctx.strokeStyle='rgba(20,110,90,.6)'; ctx.lineWidth=1.3;
+    for(let k=1;k*stepMin*WALK<=far&&k<60;k++){ const rr=k*stepMin*WALK*s; if(rr<Math.hypot(cx-CW/2,cy-CH/2)-Math.hypot(CW,CH)/2) continue; ctx.beginPath(); ctx.arc(cx,cy,rr,0,6.28318); ctx.stroke() }
+    ctx.setLineDash([]);
+    for(let k=1;k*stepMin*WALK<=far&&k<60;k++){ const rr=k*stepMin*WALK*s, y=cy-rr; if(y>8&&y<CH-8&&cx>20&&cx<CW-20) label(k*stepMin+' min walk',cx,y,'center','#14705a') }
+  }
+  if(showGuide){
+    const [cx,cy]=P(0,0); ctx.beginPath(); ctx.arc(cx,cy,R*s,0,6.28318); ctx.setLineDash([7,6]); ctx.strokeStyle='rgba(60,50,30,.55)'; ctx.lineWidth=1.4; ctx.stroke(); ctx.setLineDash([]);
+    label('Size guide: about '+Math.round(place.pop/(DENS[place.band]||80)).toLocaleString()+' ha, '+(2*R/1000).toFixed(1)+' km across, '+Math.round(2*R/WALK)+' min walk',cx,cy+R*s+13,'center','#6f6a60');
+  }
+  if(showMarks){
+    const RM=R*1.3;
+    if(place.water){
+      const [d,km,on]=place.water, a0=(d-90-48)*Math.PI/180, a1=(d-90+48)*Math.PI/180, [cx,cy]=P(0,0), rr=RM*1.42*s;
+      ctx.beginPath(); ctx.arc(cx,cy,rr,a0,a1); ctx.strokeStyle='rgba(95,170,225,.75)'; ctx.lineWidth=12; ctx.lineCap='butt'; ctx.stroke(); ctx.lineCap='round';
+      const m=(d-90)*Math.PI/180; label(place.wkind+(on?' close by, roughly this side':' about '+km+' km this way'),cx+Math.cos(m)*(rr+16),cy+Math.sin(m)*(rr+16),Math.cos(m)>.3?'left':Math.cos(m)<-.3?'right':'center','#2f6f9f');
+    }
+    for(const [c,d] of place.roads){
+      const t=d*Math.PI/180, vx=Math.sin(t), vy=-Math.cos(t), a=P(vx*RM*1.28,vy*RM*1.28), b=P(vx*RM,vy*RM);
+      ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.strokeStyle=ROADC[c][1]; ctx.lineWidth=ROADC[c][2]; ctx.stroke();
+      const h=9; ctx.beginPath(); ctx.moveTo(b[0],b[1]); ctx.lineTo(b[0]+vx*h-vy*h*.6,b[1]+vy*h+vx*h*.6); ctx.lineTo(b[0]+vx*h+vy*h*.6,b[1]+vy*h-vx*h*.6); ctx.closePath(); ctx.fillStyle=ROADC[c][1]; ctx.fill();
+      label(ROADC[c][0],a[0]+vx*8,a[1]+vy*10,vx>.3?'left':vx<-.3?'right':'center');
+    }
+    const [nx,ny]=[CW-34,34]; ctx.beginPath(); ctx.moveTo(nx,ny+14); ctx.lineTo(nx,ny-12); ctx.lineTo(nx-5,ny-4); ctx.moveTo(nx,ny-12); ctx.lineTo(nx+5,ny-4); ctx.strokeStyle='#26231e'; ctx.lineWidth=1.8; ctx.stroke(); label('N',nx,ny-22,'center');
+  }
+  // scale bar
+  let bar=100; for(const v of [10,20,50,100,200,500,1000,2000,5000,10000]) if(v*s<=150) bar=v;
+  ctx.beginPath(); ctx.moveTo(16,CH-18); ctx.lineTo(16+bar*s,CH-18); ctx.strokeStyle='#26231e'; ctx.lineWidth=2.4; ctx.stroke();
+  label(bar>=1000?(bar/1000)+' km':bar+' m',16+bar*s+8,CH-18,'left');
+  if(snapMark){ const [x,y]=P(snapMark.x,snapMark.y); ctx.beginPath(); ctx.arc(x,y,8,0,6.28318); ctx.strokeStyle='#fff'; ctx.lineWidth=4.5; ctx.stroke(); ctx.strokeStyle='#0a84ff'; ctx.lineWidth=2.2; ctx.stroke() }
+  if(eraseAt){ ctx.beginPath(); ctx.arc(eraseAt.x,eraseAt.y,ERASE_R,0,6.28318); ctx.fillStyle='rgba(255,255,255,.55)'; ctx.fill(); ctx.strokeStyle='#333'; ctx.lineWidth=1.2; ctx.stroke() }
+}
+
+/* ---------- pointer input ---------- */
+let stroke=null, pan=null, pinch=null, eraseDrag=null, eraseAt=null; const touches=new Map();
+const sp=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
+const mp=p=>[(p.x-view.tx)/view.s,(p.y-view.ty)/view.s];
+function startPinch(){
+  const [a,b]=[...touches.values()];
+  pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,v:{...view}}; pan=null; stroke=null; snapMark=null;
+  if(eraseDrag){ streets=eraseDrag.base; eraseDrag=null; eraseAt=null }
+  if(areaDrag) endAreaDrag(true);
+  if(bDrag) endBDrag(true);
+}
+function doErase(p){ const m=mp(p); eraseAt=p; const n=eraseFrom(streets,m[0],m[1],ERASE_R/view.s); if(n!==streets) streets=n; draw() }
+cv.addEventListener('pointerdown',e=>{
+  e.preventDefault(); try{cv.setPointerCapture(e.pointerId)}catch(_){}
+  const p=sp(e), isTouch=e.pointerType==='touch';
+  if(isTouch){
+    touches.set(e.pointerId,p);
+    if(touches.size>=2){ startPinch(); return }
+    if(!fingerDraw||tool==='pan'){ pan={id:e.pointerId,x:p.x,y:p.y}; return }
+  }
+  if(stroke||eraseDrag||areaDrag||bDrag) return;
+  const eraser=e.pointerType==='pen'&&(e.button===5||(e.buttons&32));
+  if(e.button===2){ openCtx(e.clientX,e.clientY,mp(p)); return }
+  if(!eraser&&(tool==='pan'||spaceDown||e.button===1)){ pan={id:e.pointerId,x:p.x,y:p.y}; cv.style.cursor='grabbing'; return }
+  const t=eraser?'erase':tool, m=mp(p);
+  if(!eraser){ const hb=hitBld(m); if(hb){ bDrag={id:e.pointerId,mode:hb.mode,o:hb.b,m0:m,base:buildings,k:bldBox(hb.b).k,moved:false}; return } }
+  if(!eraser){ const hh=hitHandle(m); if(hh){ startAreaDrag(e,hh,m); return } }
+  if(t==='draw'){ const sn=findSnap(streets,m[0],m[1]); stroke={id:e.pointerId,cls,pts:[m],start:sn,shape:$('shape').value,c:sn?[sn.x,sn.y]:m} }
+  else if(t==='pattern'||t==='water'||t==='district'||t==='cut'){ pending=null; $('pat').hidden=true; stroke={id:e.pointerId,lasso:t,pts:[m]} }
+  else if(t==='erase'){ eraseDrag={id:e.pointerId,base:streets}; doErase(p) }
+  else if(t==='building'){ buildingTap(m) }
+  else if(t==='round'){ const sn=findSnap(streets,m[0],m[1]), x=sn?sn.x:m[0], y=sn?sn.y:m[1]; commit(addRound(streets,x,y,roundR(),notStreet(cls)?'street':cls)); toast('Roundabout added.') }
+  else if(t==='select'){
+    const hb=showBld?buildingAt(m):null, n=hb?null:nearestStreet(streets,m[0],m[1],PICK/view.s);
+    if(hb){ sel={k:'b',id:hb.id} }
+    else if(n){ sel={k:'s',id:n.road.id}; cls=n.road.cls }
+    else { const a=[...areas].reverse().find(q=>(q.type==='water'||showDist)&&inPoly(m[0],m[1],q.pts)); sel=a?{k:'a',id:a.id}:null; if(a&&a.type!=='water'){$('allot').hidden=false;$('pat').hidden=true} }
+    ui(); renderAllot(); draw();
+  }
+});
+cv.addEventListener('pointermove',e=>{
+  const p=sp(e);
+  if(e.pointerType==='touch'&&touches.has(e.pointerId)){
+    touches.set(e.pointerId,p);
+    if(pinch&&touches.size>=2){
+      const [a,b]=[...touches.values()], d=Math.hypot(a.x-b.x,a.y-b.y)||1, cx=(a.x+b.x)/2, cy=(a.y+b.y)/2;
+      const s=Math.min(8,Math.max(.002,pinch.v.s*d/pinch.d)), f=s/pinch.v.s;
+      view.s=s; view.tx=cx-(pinch.cx-pinch.v.tx)*f; view.ty=cy-(pinch.cy-pinch.v.ty)*f; draw(); return;
+    }
+  }
+  if(pan&&pan.id===e.pointerId){ view.tx+=p.x-pan.x; view.ty+=p.y-pan.y; pan.x=p.x; pan.y=p.y; draw(); return }
+  const m=mp(p);
+  if(stroke&&stroke.id===e.pointerId){
+    const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];
+    if(stroke.shape==='line'){ stroke.pts=[stroke.c,m] }
+    else if(stroke.shape==='circle'){ const rr=Math.hypot(m[0]-stroke.c[0],m[1]-stroke.c[1]); stroke.r=rr; stroke.pts=circle(stroke.c[0],stroke.c[1],rr,Math.max(28,Math.min(160,Math.round(6.283*rr/15)))) }
+    else for(const ce of (evs.length?evs:[e])) stroke.pts.push(mp(sp(ce)));
+    snapMark=stroke.lasso?null:findSnap(streets,m[0],m[1]); draw(); info(m); return;
+  }
+  if(bDrag&&bDrag.id===e.pointerId){ moveBDrag(m); return }
+  if(areaDrag&&areaDrag.id===e.pointerId){ moveAreaDrag(m); return }
+  if(eraseDrag&&eraseDrag.id===e.pointerId){ doErase(p); return }
+  if(e.pointerType!=='touch'){
+    const sm=tool==='draw'?findSnap(streets,m[0],m[1]):null, ea=tool==='erase'?p:null;
+    if((sm&&sm.x)!==(snapMark&&snapMark.x)||(sm&&sm.y)!==(snapMark&&snapMark.y)||ea||eraseAt){snapMark=sm;eraseAt=ea;draw()}
+    info(m);
+  }
+});
+function endPointer(e){
+  if(e.pointerType==='touch'){ touches.delete(e.pointerId); if(touches.size<2) pinch=null; if(touches.size===1&&!stroke){const [id,q]=[...touches.entries()][0]; pan={id,x:q.x,y:q.y}} }
+  if(pan&&pan.id===e.pointerId){ pan=null; setCursor() }
+  if(bDrag&&bDrag.id===e.pointerId) endBDrag(e.type==='pointercancel');
+  if(areaDrag&&areaDrag.id===e.pointerId) endAreaDrag(e.type==='pointercancel');
+  if(stroke&&stroke.id===e.pointerId) finishStroke(e.type==='pointercancel');
+  if(eraseDrag&&eraseDrag.id===e.pointerId){
+    const base=eraseDrag.base; eraseDrag=null; if(e.pointerType!=='mouse') eraseAt=null;
+    if(streets!==base){ const now=streets; streets=base; commit(now) } else draw();
+  }
+}
+cv.addEventListener('pointerup',endPointer); cv.addEventListener('pointercancel',endPointer);
+cv.addEventListener('pointerleave',()=>{ if(!stroke&&!eraseDrag){snapMark=null;eraseAt=null;draw()} });
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('wheel',e=>{ e.preventDefault(); const p=sp(e); zoomAt(Math.exp(-e.deltaY*(e.ctrlKey?.01:.0016)),p.x,p.y) },{passive:false});
+
+function finishStroke(cancelled){
+  const st=stroke; stroke=null; snapMark=null;
+  if(!cancelled&&st.lasso==='district'&&(st.pts.length<2||lengthOf(st.pts)<6/view.s)){      // a tap: select the district under it
+    const m=st.pts[0], hit=areas.filter(q=>q.type!=='water'&&inPoly(m[0],m[1],q.pts)).sort((x,y)=>areaOf(x.pts)-areaOf(y.pts))[0];
+    if(!hit){ sel=null; fillBlock(m,$('dtype').value); return }
+    sel={k:'a',id:hit.id}; ui(); renderAllot(); draw(); return;
+  }
+  if(cancelled||st.pts.length<2){ draw(); return }
+  if(st.lasso==='water'){ const a=st.pts[0], z=st.pts[st.pts.length-1], len=lengthOf(st.pts);
+    if(len>60/view.s&&Math.hypot(a[0]-z[0],a[1]-z[1])>.4*len){ commit(streets,areas.concat([mkArea('water',seaPoly(rdp(st.pts,2.5/view.s)))])); toast('Filled with water from that shore outwards. Undo if it filled the wrong side.'); return } }
+  if(st.lasso){
+    const pts=rdp(st.pts,2.5/view.s);
+    if(pts.length<3||areaOf(pts)<(30/view.s)*(30/view.s)){ toast('Circle a bigger area.'); draw(); return }
+    if(st.lasso==='water'){ commit(streets,areas.concat([mkArea('water',pts)])); return }
+    if(st.lasso==='cut'){ const r=clearStreets((x,y)=>inPoly(x,y,pts)); if(!r.n){ toast('No streets in that area.'); draw(); return } commit(r.list); toast('Cleared the streets in that area. Rivers and railways are kept.'); return }
+    if(st.lasso==='district'){ const na=mkArea($('dtype').value,pts); joinTouching.n=0; commit(streets,joinTouching(areas.concat([na]),na.id)); if(joinTouching.n) toast('Joined to the '+na.type+' beside it.'); return }
+    { const pt=$('patType'); if(pt.value.slice(0,2)==='c_'){ pt.value='grid'; pt.onchange() } }
+    pending={pts}; $('pat').hidden=false; $('help').hidden=true; draw(); return;
+  }
+  if(st.shape==='circle'){ if(!(st.r>6/view.s)){ draw(); return } commit(streets.concat([mk(st.cls,st.pts)])); return }
+  if(lengthOf(st.pts)<4/view.s){ draw(); return }
+  let pts=autoTidy?tidyDraw(st.pts):tidyStroke(st.pts), work=streets;
+  const s0=st.start; if(s0){ pts[0]=[s0.x,s0.y]; work=applySnap(work,s0) }
+  const e0=pts[pts.length-1], s1=findSnap(work,e0[0],e0[1]);
+  if(s1){ pts[pts.length-1]=[s1.x,s1.y]; work=applySnap(work,s1) }
+  if(pts.length<2||lengthOf(pts)<3/view.s){ draw(); return }
+  commit(work.concat([mk(st.cls,pts)]));
+}
+
+/* ---------- joining districts of the same kind that touch ---------- */
+const JOIN_TOL=9; let autoJoin=true, joinCv=null;
+function nearArea(a,b,tol){
+  if(a.bb[2]<b.bb[0]-tol||a.bb[0]>b.bb[2]+tol||a.bb[3]<b.bb[1]-tol||a.bb[1]>b.bb[3]+tol) return false;
+  for(const q of a.pts) if(inPoly(q[0],q[1],b.pts)) return true;
+  for(const q of b.pts) if(inPoly(q[0],q[1],a.pts)) return true;
+  const t2=tol*tol, A=a.pts, B=b.pts;
+  for(let i=0;i<A.length;i++){ const p=A[i], q=A[(i+1)%A.length], n=Math.max(1,Math.ceil(Math.hypot(q[0]-p[0],q[1]-p[1])/8));
+    for(let k=0;k<n;k++){ const x=p[0]+(q[0]-p[0])*k/n, y=p[1]+(q[1]-p[1])*k/n; if(x<b.bb[0]-tol||x>b.bb[2]+tol||y<b.bb[1]-tol||y>b.bb[3]+tol) continue;
+      for(let j=0;j<B.length;j++) if(segNearest(x,y,B[j],B[(j+1)%B.length]).d2<t2) return true } }
+  return false;
+}
+function unionPts(grp,tol){
+  // paint the pieces onto a hidden picture, close the small gaps between them, and trace the outline of the result
+  let bb=[Infinity,Infinity,-Infinity,-Infinity]; for(const a of grp){ bb=[Math.min(bb[0],a.bb[0]),Math.min(bb[1],a.bb[1]),Math.max(bb[2],a.bb[2]),Math.max(bb[3],a.bb[3])] }
+  const pad=tol+12, w=bb[2]-bb[0]+2*pad, h=bb[3]-bb[1]+2*pad, res=Math.max(.5,Math.max(w,h)/1800), W=Math.ceil(w/res)+2, H=Math.ceil(h/res)+2, ox=bb[0]-pad, oy=bb[1]-pad;
+  const cvs=joinCv||(joinCv=document.createElement('canvas')); cvs.width=W; cvs.height=H; const g=cvs.getContext('2d',{willReadFrequently:true});
+  g.setTransform(1/res,0,0,1/res,-ox/res,-oy/res); g.fillStyle='#000';
+  for(const a of grp){ g.beginPath(); g.moveTo(a.pts[0][0],a.pts[0][1]); for(let i=1;i<a.pts.length;i++) g.lineTo(a.pts[i][0],a.pts[i][1]); g.closePath(); g.fill() }
+  const d=g.getImageData(0,0,W,H).data; let m=new Uint8Array(W*H); for(let i=0;i<W*H;i++) if(d[i*4+3]>100) m[i]=1;
+  const k=Math.ceil(tol/2/res)+1;
+  const pass=grow=>{ const o=m.slice(); for(let y=1;y<H-1;y++){ let i=y*W+1; for(let x=1;x<W-1;x++,i++){ if(grow){ if(!m[i]&&(m[i-1]||m[i+1]||m[i-W]||m[i+W])) o[i]=1 } else if(m[i]&&!(m[i-1]&&m[i+1]&&m[i-W]&&m[i+W])) o[i]=0 } } m=o };
+  for(let t=0;t<k;t++) pass(true); for(let t=0;t<k;t++) pass(false);
+  // a hole means the pieces surround something else: leave them apart, so that district is not swallowed
+  const seen=new Uint8Array(W*H), st=[0]; seen[0]=1; let out=0; while(st.length){ const i=st.pop(); out++; const x=i%W, y=(i/W)|0;
+    if(x>0&&!m[i-1]&&!seen[i-1]){seen[i-1]=1;st.push(i-1)} if(x<W-1&&!m[i+1]&&!seen[i+1]){seen[i+1]=1;st.push(i+1)} if(y>0&&!m[i-W]&&!seen[i-W]){seen[i-W]=1;st.push(i-W)} if(y<H-1&&!m[i+W]&&!seen[i+W]){seen[i+W]=1;st.push(i+W)} }
+  let fill=0; for(let i=0;i<W*H;i++) if(m[i]) fill++;
+  if((W*H-fill-out)*res*res>300) return null;
+  let s0=-1; for(let i=0;i<W*H;i++) if(m[i]){ s0=i; break } if(s0<0) return null;
+  const DX=[1,1,0,-1,-1,-1,0,1], DY=[0,1,1,1,0,-1,-1,-1]; let cx=s0%W, cy=(s0/W)|0, dir=0; const sx=cx, sy=cy, tr=[[cx,cy]];
+  for(let step=0;step<2000000;step++){ let f=false;
+    for(let i=0;i<8;i++){ const dd=(dir+5+i)%8, nx=cx+DX[dd], ny=cy+DY[dd]; if(nx>=0&&ny>=0&&nx<W&&ny<H&&m[ny*W+nx]){ cx=nx; cy=ny; dir=dd; f=true; break } }
+    if(!f||(cx===sx&&cy===sy)) break; tr.push([cx,cy]) }
+  const pts=rdp(tr.map(q=>[ox+(q[0]+.5)*res,oy+(q[1]+.5)*res]),res*1.2);
+  // the outline must hold about as much ground as the painted pieces, or the trace went wrong
+  return pts.length>=3&&areaOf(pts)>fill*res*res*.9?pts:null;
+}
+function joinTouching(list,id,force){
+  if(!autoJoin&&!force) return list;
+  const cur=list.find(a=>a.id===id); if(!cur||cur.type==='water'||cur.type==='Residential') return list;
+  const grp=[cur]; let grew=true;
+  while(grew){ grew=false; for(const a of list){ if(a.type!==cur.type||grp.includes(a)) continue; if(grp.some(q=>nearArea(q,a,JOIN_TOL))){ grp.push(a); grew=true } } }
+  if(grp.length<2) return list;
+  const pts=unionPts(grp,JOIN_TOL); if(!pts) return list;
+  const na=mkArea(cur.type,pts,cur.id,cur); joinTouching.n=grp.length;
+  return list.filter(a=>a===cur||!grp.includes(a)).map(a=>a===cur?na:a);
+}
+function joinAll(){
+  let list=areas, joined=0; const before=list.length;
+  for(const id of areas.map(a=>a.id)){ if(!list.some(a=>a.id===id)) continue; list=joinTouching(list,id,true) }
+  if(list.length===before){ toast('No touching districts of the same kind to join.'); return }
+  commit(streets,list); toast('Joined '+before+' district pieces into '+list.length+'. Undo brings them back.');
+}
+
+/* ---------- fill a block with a district ---------- */
+let blockCv=null;
+function blockAt(m){
+  // draw the streets, water and districts near the tap onto a small hidden picture, flood-fill from the tap, then trace the edge of the filled patch
+  for(const half of [350,1100,3200]){
+    const N=700, res=2*half/N, cvs=blockCv||(blockCv=document.createElement('canvas')); cvs.width=cvs.height=N;
+    const g=cvs.getContext('2d',{willReadFrequently:true}), ox=m[0]-half, oy=m[1]-half, X1=ox+2*half, Y1=oy+2*half;
+    g.setTransform(1/res,0,0,1/res,-ox/res,-oy/res); g.lineJoin='round'; g.lineCap='round'; g.fillStyle='#000'; g.strokeStyle='#000';
+    const path=pts=>{ g.beginPath(); g.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) g.lineTo(pts[i][0],pts[i][1]) };
+    for(const a of areas){ if(a.bb[2]<ox||a.bb[0]>X1||a.bb[3]<oy||a.bb[1]>Y1) continue; path(a.pts); g.closePath(); g.fill() }
+    for(const r of streets){ if(r.bb[2]<ox-200||r.bb[0]>X1+200||r.bb[3]<oy-200||r.bb[1]>Y1+200) continue; path(r.pts); g.lineWidth=Math.max(CLS[r.cls].m,2.4*res); g.stroke() }
+    const d=g.getImageData(0,0,N,N).data, c0=(N>>1)*N+(N>>1); if(d[c0*4+3]>60) return {err:'on'};
+    let mask=new Uint8Array(N*N); const st=[c0]; mask[c0]=1; let open=false, n=0, bx0=N,bx1=0,by0=N,by1=0;
+    while(st.length){ const i=st.pop(), x=i%N, y=(i/N)|0; n++; if(x<=0||y<=0||x>=N-1||y>=N-1){ open=true; break }
+      if(x<bx0)bx0=x; if(x>bx1)bx1=x; if(y<by0)by0=y; if(y>by1)by1=y;
+      for(const j of [i-1,i+1,i-N,i+N]) if(!mask[j]&&d[j*4+3]<=60){ mask[j]=1; st.push(j) } }
+    if(open) continue;
+    if(n<12) return {err:'small'};
+    const k=Math.max(1,Math.min(5,Math.round(4/res)));           // grow the patch so its edge reaches the middle of the streets
+    for(let t=0;t<k;t++){ const nm=mask.slice(); for(let y=Math.max(1,by0-1);y<=Math.min(N-2,by1+1);y++) for(let x=Math.max(1,bx0-1);x<=Math.min(N-2,bx1+1);x++){ const i=y*N+x; if(!mask[i]&&(mask[i-1]||mask[i+1]||mask[i-N]||mask[i+N])) nm[i]=1 } mask=nm; bx0--;bx1++;by0--;by1++ }
+    let s0=-1; for(let i=0;i<N*N;i++) if(mask[i]){ s0=i; break }
+    const DX=[1,1,0,-1,-1,-1,0,1], DY=[0,1,1,1,0,-1,-1,-1]; let cx=s0%N, cy=(s0/N)|0, dir=0; const sx=cx, sy=cy, out=[[cx,cy]];
+    for(let step=0;step<400000;step++){ let f=false;
+      for(let i=0;i<8;i++){ const dd=(dir+5+i)%8, nx=cx+DX[dd], ny=cy+DY[dd]; if(nx>=0&&ny>=0&&nx<N&&ny<N&&mask[ny*N+nx]){ cx=nx; cy=ny; dir=dd; f=true; break } }
+      if(!f||(cx===sx&&cy===sy)) break; out.push([cx,cy]) }
+    const pts=rdp(out.map(q=>[ox+(q[0]+.5)*res,oy+(q[1]+.5)*res]),res*1.3);
+    if(pts.length<3) return {err:'small'};
+    return {pts};
+  }
+  return {err:'open'};
+}
+function fillBlock(m,type){
+  const r=blockAt(m);
+  if(r.err){ toast(r.err==='on'?'That spot is on a street, water or a district already.':r.err==='small'?'That gap is too small to fill.':'That spot is not closed in by streets. Circle the area by hand instead.'); draw(); return false }
+  const na=mkArea(type,r.pts); joinTouching.n=0; commit(streets,joinTouching(areas.concat([na]),na.id)); sel={k:'a',id:na.id}; ui(); draw();
+  toast('Filled this block with '+type+': '+(areaOf(r.pts)/1e4).toFixed(1)+' ha.'+(joinTouching.n?' Joined to the '+type+' beside it.':'')); return true;
+}
+
+/* ---------- to-do list ---------- */
+function zoomTo(bb){ const w=Math.max(60,bb[2]-bb[0]), h=Math.max(60,bb[3]-bb[1]); const sc=Math.min(3,CW/(w*2.2),CH/(h*2.2)); view={s:sc,tx:CW/2-(bb[0]+bb[2])/2*sc,ty:CH/2-(bb[1]+bb[3])/2*sc}; draw() }
+function todoItems(){
+  const it=[], big=k=>areas.filter(a=>a.type===k).sort((x,y)=>areaOf(y.pts)-areaOf(x.pts))[0];
+  const goArea=a=>()=>{ zoomTo(a.bb); setTool('select'); sel={k:'a',id:a.id}; ui(); draw() };
+  if(place.water&&place.water[2]&&!areas.some(a=>a.type==='water')&&!streets.some(r=>r.cls==='river'||r.cls==='wriver')) it.push(['Water','No water drawn yet','The map shows '+String(place.wkind||'water').toLowerCase()+' close by.',()=>setTool('water')]);
+  if(!isVillage()){
+    for(const k of distNames()){
+      const pl=placedOf(k), al=allotOf(k), a=big(k);
+      if(!pl){ it.push(['Districts',k+': not drawn yet','Needs about '+Math.round(al)+' ha.',()=>{ $('dtype').value=k; setTool('district') }]); continue }
+      if(pl<al*.9) it.push(['Districts',k+': '+Math.round(al-pl)+' ha short',Math.round(pl)+' of '+Math.round(al)+' ha placed.',()=>{ $('dtype').value=k; goArea(a)(); setTool('district'); sel={k:'a',id:a.id}; ui(); draw() }]);
+      else if(pl>al*1.1) it.push(['Districts',k+': '+Math.round(pl-al)+' ha over',Math.round(pl)+' of '+Math.round(al)+' ha placed.',goArea(a)]);
+      if(k!=='Residential'&&!mandatoryOk(k)) it.push(['Buildings',k+': no mandatory building yet','Needs at least one of: '+BLD[k][0].slice(0,3).join(', ')+(BLD[k][0].length>3?'…':''),()=>{ zoomTo(a.bb); setTool('building'); const c=centre(a.pts); buildingTap(inPoly(c[0],c[1],a.pts)?c:a.pts[0]) }]);
+    }
+    const res=areas.filter(a=>a.type==='Residential'); if(place.res&&res.length&&res.length!==place.res) it.push(['Districts','Residential: '+res.length+' areas drawn','Your plan for this place says '+place.res+'.',goArea(res[0])]);
+    for(const a of res) if(!a.housing) it.push(['Housing','Residential area, '+(areaOf(a.pts)/1e4).toFixed(0)+' ha: no housing type','Choose its main housing type.',()=>{ zoomTo(a.bb); setTool('building'); const c=centre(a.pts); buildingTap(inPoly(c[0],c[1],a.pts)?c:a.pts[0]) }]);
+    for(const pc of place.pieces) if(!buildings.some(b=>b.dist==='Piece'&&b.name===pc)) it.push(['Buildings','Single piece not placed: '+pc,'Tap anywhere with the Building tool.',()=>setTool('building')]);
+  }
+  if(!buildings.length&&isVillage()) it.push(['Buildings','No buildings placed yet','Tap anywhere with the Building tool.',()=>setTool('building')]);
+  const ord=['Water','Districts','Housing','Buildings']; return it.map((q,i)=>[q,i]).sort((x,y)=>ord.indexOf(x[0][0])-ord.indexOf(y[0][0])||x[1]-y[1]).map(q=>q[0]);
+}
+function renderTodo(){
+  const it=todoItems(), b=$('todoBtn'); b.innerHTML='To do<i'+(it.length?'':' class="ok"')+'>'+(it.length||'✓')+'</i>';
+  const el=$('todo'); if(el.hidden) return;
+  const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  let h='<h3>'+esc(place.name)+': what is left</h3>', last='';
+  if(!it.length) h+='<div>Nothing left on the list for this place.</div>';
+  it.forEach((q,i)=>{ if(q[0]!==last){ h+='<h4>'+q[0]+'</h4>'; last=q[0] } h+='<button class="it" data-i="'+i+'">'+esc(q[1])+'<small>'+esc(q[2])+'</small></button>' });
+  h+='<div style="color:var(--mute);margin-top:8px">Tap a line to jump to it. Districts count as fine within 10% of their allotment.</div>';
+  el.innerHTML=h; el.querySelectorAll('.it').forEach(x=>x.onclick=()=>it[+x.dataset.i][3]());
+}
+
+/* ---------- colour key ---------- */
+function renderLegend(){
+  const el=$('legend'); if(isVillage()||!$('showLegend').checked){ el.hidden=true; return } el.hidden=false;
+  const have=new Set(areas.map(a=>a.type)); el.innerHTML=distNames().map(k=>'<div data-k="'+k.replace(/"/g,'&quot;')+'"'+(have.has(k)?'':' class="off"')+'><i style="background:'+DIST[k]+'"></i>'+k+'</div>').join('');
+  el.querySelectorAll('div').forEach(d=>d.onclick=()=>{ $('dtype').value=d.dataset.k; setTool('district'); toast(d.dataset.k+' chosen. Tap a block or circle an area.') });
+}
+
+/* ---------- right-click and long-press menu ---------- */
+function closeCtx(){ $('ctx').hidden=true }
+function openCtx(cx,cy,m){
+  const el=$('ctx'), items=[]; let head='';
+  const hb=showBld?buildingAt(m):null, n=hb?null:nearestStreet(streets,m[0],m[1],PICK/view.s);
+  const a=(hb||n)?null:areas.filter(q=>q.type!=='water'&&inPoly(m[0],m[1],q.pts)).sort((x,y)=>areaOf(x.pts)-areaOf(y.pts))[0], w=(hb||n||a)?null:areas.find(q=>q.type==='water'&&inPoly(m[0],m[1],q.pts));
+  const pick=(k,id)=>{ sel={k,id}; ui(); draw() };
+  if(hb){ head=hb.name; pick('b',hb.id);
+    items.push(['Move, resize or turn',()=>{ setTool('select'); pick('b',hb.id) }],['Delete this building',()=>{ pick('b',hb.id); deleteSel() },1]);
+  }else if(n){ const r=n.road; head=CLS[r.cls].label; pick('s',r.id);
+    for(const k of KEYS) if(k!==r.cls) items.push(['Change to '+CLS[k].label.toLowerCase(),()=>commit(streets.map(q=>q===r?mk(k,r.pts,r.id,r.grp):q))]);
+    items.push(['Delete this line',()=>{ pick('s',r.id); deleteSel() },1]); if(r.grp) items.push(['Delete the whole pattern',()=>commit(streets.filter(q=>q.grp!==r.grp)),1]);
+  }else if(a){ head=a.type+', '+(areaOf(a.pts)/1e4).toFixed(1)+' ha'; pick('a',a.id);
+    items.push(['__district',a],['Move or resize',()=>{ setTool('select'); pick('a',a.id) }],['Add a building here',()=>{ setTool('building'); buildingTap(m) }],['Delete this district',()=>{ pick('a',a.id); deleteSel() },1]);
+  }else if(w){ head='Water'; items.push(['Delete this water',()=>{ pick('a',w.id); deleteSel() },1]);
+  }else{ head='Empty ground';
+    if(!isVillage()) items.push(['Fill this block with '+$('dtype').value,()=>fillBlock(m,$('dtype').value)]);
+    items.push(['Add a building here',()=>{ setTool('building'); buildingTap(m) }]);
+  }
+  el.innerHTML='<b></b>'; el.firstChild.textContent=head;
+  for(const q of items){
+    if(q[0]==='__district'){ const sl=document.createElement('select'); sl.innerHTML='<option value="">Change district to…</option>'+Object.keys(DIST).map(k=>'<option>'+k+'</option>').join('');
+      sl.onchange=()=>{ if(sl.value){ const cur=q[1]; commit(streets,joinTouching(areas.map(z=>z.id===cur.id?mkArea(sl.value,cur.pts,cur.id,cur):z),cur.id)); closeCtx() } }; el.appendChild(sl); continue }
+    const b=document.createElement('button'); b.textContent=q[0]; if(q[2]) b.className='danger'; b.onclick=()=>{ closeCtx(); q[1]() }; el.appendChild(b) }
+  el.hidden=false; const r=el.getBoundingClientRect(); el.style.left=Math.max(4,Math.min(cx,innerWidth-r.width-6))+'px'; el.style.top=Math.max(4,Math.min(cy,innerHeight-r.height-6))+'px';
+}
+let lp=null;
+function clearLP(){ if(lp){ clearTimeout(lp.t); lp=null } }
+cv.addEventListener('pointerdown',e=>{ clearLP(); if(e.button!==2) closeCtx(); if(e.pointerType==='mouse'||tool==='building'||tool==='round'||tool==='erase') return;
+  const x=e.clientX, y=e.clientY, id=e.pointerId; lp={id,x,y,t:setTimeout(()=>{ lp=null; if(touches.size>=2||pinch) return;
+    pan=null; if(stroke){ stroke=null; snapMark=null } if(bDrag) endBDrag(true); if(areaDrag) endAreaDrag(true);
+    const r=cv.getBoundingClientRect(); openCtx(x,y,mp({x:x-r.left,y:y-r.top})); draw() },620)} });
+cv.addEventListener('pointermove',e=>{ if(lp&&e.pointerId===lp.id&&Math.hypot(e.clientX-lp.x,e.clientY-lp.y)>9) clearLP() });
+cv.addEventListener('pointerup',clearLP); cv.addEventListener('pointercancel',clearLP);
+
+/* ---------- straighten and smooth a drawn line ---------- */
+function tidyDraw(raw){
+  const k=rdp(raw,10/view.s), n=k.length; if(n<=2) return [raw[0],raw[raw.length-1]];
+  const secs=[[k[0]]];
+  for(let i=1;i<n-1;i++){ const a=k[i-1],b=k[i],c=k[i+1]; let t=Math.abs(Math.atan2(c[1]-b[1],c[0]-b[0])-Math.atan2(b[1]-a[1],b[0]-a[0])); if(t>Math.PI) t=2*Math.PI-t;
+    secs[secs.length-1].push(b); if(t>.75) secs.push([b]) }          // a turn sharper than about 43 degrees stays a corner
+  secs[secs.length-1].push(k[n-1]);
+  const out=[k[0]];
+  for(const q of secs){
+    if(q.length<3){ out.push(q[q.length-1]); continue }
+    for(let i=0;i<q.length-1;i++){ const p0=q[Math.max(0,i-1)],p1=q[i],p2=q[i+1],p3=q[Math.min(q.length-1,i+2)];
+      for(let j=1;j<=8;j++){ const t=j/8,t2=t*t,t3=t2*t; out.push([.5*(2*p1[0]+(-p0[0]+p2[0])*t+(2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2+(-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3), .5*(2*p1[1]+(-p0[1]+p2[1])*t+(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2+(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3)]) } }
+  }
+  return out;
+}
+
+/* ---------- toolbar ---------- */
+function setCursor(){ cv.style.cursor=(tool==='pan'||spaceDown)?'grab':tool==='select'?'pointer':tool==='erase'?'none':'crosshair' }
+function setTool(t){ if(t==='district'&&isVillage()){ toast('Villages have no drawn districts. Use streets and buildings.'); return } tool=t; if(t!=='building'){bldAt=null;$('bld').hidden=true} if(t!=='select'&&!(t==='district'&&sel&&sel.k==='a')) sel=null; if(t==='pattern') $('allot').hidden=true; if(t!=='pattern'){pending=null;$('pat').hidden=true} snapMark=null; eraseAt=null; ui(); draw() }
+function setClass(c){
+  cls=c;
+  if(tool==='select'&&sel&&sel.k==='s'){ const r=streets.find(q=>q.id===sel.id); if(r&&r.cls!==c){ commit(streets.map(q=>q===r?mk(c,r.pts,r.id,r.grp):q)); return } }
+  ui();
+}
+function deleteSel(){ if(!sel)return; const s=sel; sel=null; if(s.k==='s') commit(streets.filter(r=>r.id!==s.id)); else if(s.k==='b') commit(streets,areas,buildings.filter(b=>b.id!==s.id)); else commit(streets,areas.filter(a=>a.id!==s.id),buildings) }
+function deleteGroup(){ if(!sel||sel.k!=='s')return; const r=streets.find(q=>q.id===sel.id); if(!r||!r.grp)return; sel=null; commit(streets.filter(q=>q.grp!==r.grp)) }
+KEYS.forEach((k,i)=>{
+  const b=document.createElement('button'); b.className='cls'; b.dataset.cls=k; b.title=CLS[k].label+' ('+(i+1)+')';
+  b.innerHTML='<i style="background:'+CLS[k].color+';height:'+Math.round(CLS[k].px*1.6+1)+'px"></i>'+CLS[k].label;
+  b.onclick=()=>setClass(k); $('classes').appendChild(b);
+});
+for(const band of BANDS){ const og=document.createElement('optgroup'); og.label=band==='City'?'Cities':band+'s';
+  for(const p of PLACES.filter(q=>q.band===band).sort((a,b)=>b.pop-a.pop)){ const o=document.createElement('option'); o.value=p.n; o.textContent=p.name+' ('+p.pop.toLocaleString()+')'; og.appendChild(o) }
+  $('city').appendChild(og) }
+for(const [k,n] of PATTERNS){ const o=document.createElement('option'); o.value=k; o.textContent=n; $('patType').appendChild(o) }
+function roadAngle(){ const r=place.roads&&place.roads[0]; if(!r) return null; const t=r[1]*Math.PI/180; let a=Math.atan2(-Math.cos(t),Math.sin(t))*180/Math.PI; return Math.round(((a%180)+180)%180) }
+$('patType').onchange=()=>{ const t=$('patType').value; $('patBlock').value=defBlock(t); let a=null; if((t.slice(0,2)==='v_'&&t!=='v_shore')||t==='c_road') a=roadAngle(); else if(t==='c_shore'&&place.water){ const d=place.water[0]*Math.PI/180; a=Math.round(((Math.atan2(-Math.cos(d),Math.sin(d))*180/Math.PI)%360+360)%360) } if(a!=null){ $('patAngle').value=a; $('patAngleV').textContent=a+'°' } };
+$('patWhole').onclick=()=>{ const pt=$('patType'); if(!isVillage()&&pt.value.slice(0,2)!=='c_'){ pt.value='c_natural'; pt.onchange() } pending={pts:circle(0,0,R,48)}; $('pat').hidden=false; $('help').hidden=true; $('infoP').hidden=true; $('allot').hidden=true; draw() };
+$('patAlign').onclick=()=>{ const r=alignAngle(pending?pending.pts:[[0,0]]); if(!r){ toast('No avenue, river or water drawn yet to line up with.'); return } $('patAngle').value=r.angle; $('patAngleV').textContent=r.angle+'°'; toast('Lined up with the nearest '+r.what+'.') };
+$('patAngle').oninput=e=>{ $('patAngleV').textContent=e.target.value+'°' };
+$('patGo').onclick=()=>{
+  if(!pending) return; const b=Math.min(1000,Math.max(20,+$('patBlock').value||100));
+  const pt=$('patType').value, made=pt.slice(0,2)==='c_'?layout(pt,pending.pts,b,+$('patAngle').value):generate(pt,pending.pts,b,+$('patAngle').value);
+  pending=null; $('pat').hidden=true;
+  if(!made.length){ toast('Nothing fitted in that area. Try a smaller block size.'); draw(); return }
+  let all=streets.concat(made), j=0;
+  if($('patJoin').checked){ const r=joinEnds(all,new Set(made.map(m=>m.id)),b*.95); all=r.list; j=r.n }
+  let nr=0; if($('patRound').checked) for(const q of made.junctions) if(Math.random()<.5){ all=addRound(all,q[0],q[1],Math.max(14,Math.min(34,.34*b)),'avenue',made.grp); nr++ }
+  commit(all); toast('Added '+made.length+' streets'+(j?' and joined '+j+' ends':'')+(nr?', with '+nr+' roundabouts':'')+'. Undo if it is not what you wanted.');
+};
+$('patCancel').onclick=()=>{ pending=null; $('pat').hidden=true; draw() };
+$('city').onchange=e=>setPlace(PLACES.find(p=>p.n===+e.target.value));
+document.querySelectorAll('#tools button').forEach(b=>b.onclick=()=>setTool(b.dataset.tool));
+$('join').onclick=()=>{ const r=joinEnds(streets,null,90); if(r.n){ commit(r.list); toast('Joined '+r.n+' loose ends.') } else toast('No loose ends close enough to join.') };
+$('clearAll').onclick=()=>{ if(!streets.length&&!areas.length&&!buildings.length){ toast('Nothing to clear.'); return } sel=null; pending=null; bldAt=null; $('pat').hidden=true; $('bld').hidden=true; commit([],[],[]); toast('Cleared '+place.name+'. Press Undo to bring it back.') };
+$('allotBtn').onclick=()=>{ $('allot').hidden=!$('allot').hidden; $('pat').hidden=true; $('todo').hidden=true; renderAllot() };
+$('todoBtn').onclick=()=>{ $('todo').hidden=!$('todo').hidden; $('allot').hidden=true; $('pat').hidden=true; $('bld').hidden=true; renderTodo() };
+$('showLegend').onchange=renderLegend;
+$('autoJoin').onchange=e=>{ autoJoin=e.target.checked };
+$('joinAll').onclick=joinAll;
+$('showDist').onchange=e=>{showDist=e.target.checked;draw()};
+$('showBld').onchange=e=>{showBld=e.target.checked;draw()};
+$('undo').onclick=undo; $('redo').onclick=redo; $('del').onclick=deleteSel; $('delgrp').onclick=deleteGroup;
+$('zin').onclick=()=>zoomAt(1.5,CW/2,CH/2); $('zout').onclick=()=>zoomAt(1/1.5,CW/2,CH/2); $('zfit').onclick=fit;
+$('showGuide').onchange=e=>{showGuide=e.target.checked;draw()};
+$('showMarks').onchange=e=>{showMarks=e.target.checked;draw()};
+$('showGrid').onchange=e=>{showGrid=e.target.checked;draw()};
+$('clearWet').onclick=()=>{ const r=clearStreets(inWater,true); if(!r.n){ toast('No streets or lanes are under water.'); return } commit(r.list); toast('Trimmed '+r.n+' streets and lanes out of the water. Avenues are kept as bridges.') };
+$('showWalk').onchange=e=>{showWalk=e.target.checked;draw()};
+$('showNames').onchange=e=>{showNames=e.target.checked;draw()};
+$('clearBld').onclick=()=>{ if(!buildings.length){ toast('There are no buildings to clear.'); return } const n=buildings.length; sel=null; bldAt=null; $('bld').hidden=true; commit(streets,areas,[]); toast('Removed '+n+' buildings. Undo brings them back.') };
+document.addEventListener('pointerdown',e=>{ document.querySelectorAll('details.menu[open]').forEach(d=>{ if(!d.contains(e.target)) d.open=false }); if(!$('ctx').hidden&&!$('ctx').contains(e.target)&&e.target!==cv) closeCtx() },true);
+document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('.pop button'); if(b){ const d=b.closest('details'); if(d) d.open=false } });
+$('autoTidy').onchange=e=>{autoTidy=e.target.checked};
+$('finger').onchange=e=>{fingerDraw=e.target.checked};
+$('open').onclick=openFile; $('save').onclick=saveFile;
+$('helpBtn').onclick=()=>{$('help').hidden=!$('help').hidden; $('infoP').hidden=true};
+$('infoBtn').onclick=()=>{$('infoP').hidden=!$('infoP').hidden; $('help').hidden=true};
+const HINTS={draw:'Draw a street. Ends snap to other streets.',pattern:'Circle an area to fill it with a street pattern.',water:'Circle a lake or bay. Or draw a shoreline as an open line: the sea fills outwards from it, away from the centre.',cut:'Circle an area to remove every street inside it.',district:'Choose a district, then tap a block to fill it, or circle an area by hand. Tap a district to select it.',building:'Tap inside a district to add one of its buildings. Tap a building to select it, then drag it to move, a corner to resize, or the round handle to turn it.',
+  round:'Tap where streets cross to put a roundabout there. It uses the line type chosen above.',select:'Tap a street or water area. Then change its type or delete it.',erase:'Rub over the part of a street you want to remove.',pan:'Drag to move the map.'};
+function ui(){
+  document.querySelectorAll('#tools button').forEach(b=>b.classList.toggle('on',b.dataset.tool===tool));
+  document.querySelectorAll('#opts [data-for]').forEach(el=>{ el.hidden=!el.dataset.for.split(' ').includes(tool) });
+  $('clsName').textContent=CLS[cls].label;
+  if($('bar').offsetHeight!==barH) resize();
+  document.querySelectorAll('#classes button').forEach(b=>b.classList.toggle('on',b.dataset.cls===cls));
+  $('undo').disabled=!undoStack.length; $('redo').disabled=!redoStack.length; $('del').disabled=!sel;
+  const r=sel&&sel.k==='s'&&streets.find(q=>q.id===sel.id); $('delgrp').disabled=!(r&&r.grp);
+  $('hint').textContent=HINTS[tool]; setCursor(); info();
+}
+let lastM=null;
+function info(m){
+  if(m) lastM=m; let len=0; for(const r of streets) if(!notStreet(r.cls)) len+=lengthOf(r.pts);
+  let h='<b>'+place.name+'</b> · '+place.pop.toLocaleString()+' people · ';
+  if(lastM) h+=Math.abs(Math.round(lastM[0]))+' m '+(lastM[0]>=0?'E':'W')+', '+Math.abs(Math.round(lastM[1]))+' m '+(lastM[1]<=0?'N':'S')+' of centre ('+Math.round(Math.hypot(lastM[0],lastM[1])/WALK)+' min walk) · ';
+  if(stroke&&stroke.shape==='circle'&&stroke.r){ h+='<b>Circle: '+Math.round(2*stroke.r)+' m across, '+Math.max(1,Math.round(2*stroke.r/WALK))+' min walk</b> · ' }
+  else if(stroke&&stroke.pts.length>1){ if(stroke.lasso){ const bq=bbox(stroke.pts), w=Math.max(bq[2]-bq[0],bq[3]-bq[1]); h+='<b>Area: '+Math.round(w)+' m across, '+Math.max(1,Math.round(w/WALK))+' min walk</b> · ' } else { const l=lengthOf(stroke.pts); h+='<b>Line: '+Math.round(l)+' m, '+Math.max(1,Math.round(l/WALK))+' min walk</b> · ' } }
+  let dp=0,da=0; for(const k of distNames()){dp+=placedOf(k);da+=allotOf(k)}
+  h+='Streets: <b>'+(len/1000).toFixed(1)+' km</b> · '+(isVillage()?'Village':'Districts: <b>'+Math.round(dp)+' of '+Math.round(da)+' ha</b>')+' · Buildings: <b>'+buildings.length+'</b>'+(fileHandle?' · '+fileHandle.name:'')+(dirty?' · <span id="dirty">file not saved</span>'+(autoOK&&lastAuto?' (backed up in this browser '+ago(lastAuto)+')':' (browser backup failed: save the file)'):' · file saved');
+  $('info').innerHTML=h;
+}
+let toastT=null;
+setInterval(()=>info(),30000);
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),3800) }
+window.addEventListener('keydown',e=>{
+  const tg=e.target.tagName; if(tg==='SELECT'||(tg==='INPUT'&&e.target.type==='number')) return;
+  const k=e.key.toLowerCase(), c=e.ctrlKey||e.metaKey;
+  if(c&&k==='z'){e.preventDefault(); e.shiftKey?redo():undo()}
+  else if(c&&k==='y'){e.preventDefault();redo()}
+  else if(c&&k==='s'){e.preventDefault();saveFile()}
+  else if(c) return;
+  else if(k===' '){e.preventDefault(); if(!spaceDown){spaceDown=true;setCursor()}}
+  else if(k>='1'&&k<='6') setClass(KEYS[+k-1]);
+  else if(k==='d') setTool('draw'); else if(k==='p') setTool('pattern'); else if(k==='w') setTool('water'); else if(k==='a') setTool('district'); else if(k==='b') setTool('building');
+  else if(k==='s') setTool('select'); else if(k==='e') setTool('erase'); else if(k==='o') setTool('round'); else if(k==='x') setTool('cut'); else if(k==='m') setTool('pan');
+  else if(k==='delete'||k==='backspace'){ if(sel){e.preventDefault();deleteSel()} }
+  else if(k==='escape'){ if(stroke){stroke=null;snapMark=null} pending=null; bldAt=null; $('bld').hidden=true; $('pat').hidden=true; sel=null; $('help').hidden=true; $('infoP').hidden=true; ui(); draw() }
+});
+window.addEventListener('keyup',e=>{ if(e.key===' '){spaceDown=false;setCursor()} });
+window.addEventListener('beforeunload',e=>{ if(dirty&&(streets.length||areas.length||buildings.length)){e.preventDefault();e.returnValue=''} });
+window.addEventListener('resize',resize);
+
+resize();
+let startN=PLACES.filter(p=>p.band==='City').sort((a,b)=>b.pop-a.pop)[0].n;
+try{ const l=+localStorage.getItem('euelia-plan-last'); if(PLACES.some(p=>p.n===l)) startN=l }catch(e){}
+setPlace(PLACES.find(p=>p.n===startN));
+$('city').addEventListener('change',()=>{ try{localStorage.setItem('euelia-plan-last',String(place.n))}catch(e){} });
+</script>
+</body>
+</html>
