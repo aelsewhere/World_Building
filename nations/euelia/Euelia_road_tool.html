@@ -3,89 +3,166 @@
 <head>
 <meta charset="utf-8">
 <title>Euelia road drawing tool</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <style>
-  :root{--bg:#f4f2ee;--panel:#ffffff;--line:#d9d5cc;--ink:#26231e;--mute:#6f6a60;--accent:#2b5d8a}
+  :root{--bg:#f4f2ee;--panel:#ffffff;--line:#d9d5cc;--ink:#26231e;--mute:#6f6a60;--accent:#2f6f57;--rail:72px}
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
-    font:14px/1.3 system-ui,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none}
-  #bar{position:absolute;left:0;right:0;top:0;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;
-    padding:8px 10px;background:var(--panel);border-bottom:1px solid var(--line);z-index:5}
-  .grp{display:flex;gap:4px;align-items:center}
-  .grp>span.lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-right:2px}
-  button{font:inherit;color:inherit;background:#fff;border:1px solid var(--line);border-radius:7px;
-    padding:8px 11px;min-height:38px;cursor:pointer;touch-action:manipulation}
+    font:15px/1.3 system-ui,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+    -webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+  [hidden]{display:none!important}
+  #bar{position:absolute;left:0;right:0;top:0;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;
+    padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--line);z-index:10}
+  .grp{display:flex;gap:6px;align-items:center}
+  .grp.right{margin-left:auto}
+  .lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-right:2px}
+  button{font:inherit;color:inherit;background:#fff;border:1px solid var(--line);border-radius:8px;
+    padding:8px 12px;min-height:44px;cursor:pointer;touch-action:manipulation}
   button:hover{border-color:#b9b3a6}
+  button:active{background:#efece5}
   button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   button:disabled{opacity:.4;cursor:default}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;position:relative}
+  button.primary.dirty::after{content:'';position:absolute;top:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:#d9482b;border:2px solid #fff}
+  button.danger{color:#b3261e}
+  .seg{display:flex;align-items:center}
+  .seg>button{border-radius:0;margin-left:-1px;display:flex;align-items:center;gap:6px}
+  .seg>button:first-of-type{border-radius:8px 0 0 8px;margin-left:0}
+  .seg>button:last-of-type{border-radius:0 8px 8px 0}
   button.cls{display:flex;align-items:center;gap:7px}
-  button.cls i{display:inline-block;width:22px;border-radius:3px}
-  button.cls.on{background:#fff;color:var(--ink);border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
-  input[type=range]{width:110px}
-  label.chk{display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer}
-  #wrap{position:absolute;left:0;right:0;bottom:26px}
+  button.cls i{display:inline-block;width:24px;border-radius:3px;flex:none}
+  button.cls.on{background:#fff;color:var(--ink);border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink);font-weight:600}
+  details.menu{position:relative}
+  details.menu>summary{list-style:none;cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:44px;background:#fff;display:flex;align-items:center;gap:6px}
+  details.menu>summary::-webkit-details-marker{display:none}
+  details.menu>summary::after{content:'▾';color:var(--mute);font-size:11px}
+  details.menu[open]>summary{border-color:var(--ink)}
+  .pop{position:absolute;right:0;top:50px;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px;
+    box-shadow:0 6px 24px rgba(0,0,0,.14);display:flex;flex-direction:column;gap:2px;min-width:250px;max-height:calc(100vh - 80px);overflow:auto}
+  .pop h5{margin:6px 6px 2px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);font-weight:600}
+  .pop hr{border:0;border-top:1px solid var(--line);margin:4px 0;width:100%}
+  .pop button{text-align:left;width:100%;border-color:transparent;display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+  .pop button small,.pop label small{color:var(--mute);font-size:12px;font-weight:400}
+  .pop button:hover{background:#f1eee7;border-color:transparent}
+  label.chk{display:flex;align-items:center;gap:10px;min-height:44px;padding:4px 8px;border-radius:8px;cursor:pointer}
+  label.chk:hover{background:#f1eee7}
+  label.chk input{width:20px;height:20px;flex:none;accent-color:var(--accent)}
+  label.chk span{display:flex;flex-direction:column}
+  .fade{display:flex;align-items:center;gap:10px;padding:4px 8px;min-height:44px}
+  .fade input{flex:1;min-width:0;height:28px;accent-color:var(--accent)}
+  #tools{position:absolute;left:0;bottom:26px;width:var(--rail);background:var(--panel);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;overflow-y:auto;z-index:4}
+  #tools button{width:60px;min-height:58px;padding:7px 0 5px;border-color:transparent;background:transparent;border-radius:10px;
+    display:flex;flex-direction:column;align-items:center;gap:2px;color:#4a463e}
+  #tools button span{font-size:11.5px;line-height:1.1}
+  #tools button:hover{background:#efece5}
+  #tools button.on{background:var(--ink);color:#fff}
+  #wrap{position:absolute;left:var(--rail);right:0;bottom:26px}
   canvas{display:block;width:100%;height:100%;touch-action:none;background:#e9eef2;cursor:crosshair}
+  #zoom{position:absolute;right:12px;bottom:38px;z-index:6;display:flex;flex-direction:column;box-shadow:0 2px 10px rgba(0,0,0,.12);border-radius:10px}
+  #zoom button{border-radius:0;margin-top:-1px;min-width:48px;min-height:48px;padding:6px;font-size:18px}
+  #zoom button:first-child{border-radius:10px 10px 0 0;margin-top:0}
+  #zoom button:last-child{border-radius:0 0 10px 10px;font-size:13px}
+  #selbar{position:absolute;left:calc(var(--rail) + 12px);right:76px;bottom:38px;z-index:7;margin:0 auto;width:fit-content;max-width:calc(100% - var(--rail) - 100px);
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px;box-shadow:0 6px 24px rgba(0,0,0,.18);
+    display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+  #selbar .what{font-weight:600}
+  #selbar .what small{display:block;font-weight:400;color:var(--mute);font-size:12px}
+  #selCls{display:flex;flex-wrap:wrap;gap:4px}
+  #selCls button{padding:6px 9px}
   #status{position:absolute;left:0;right:0;bottom:0;height:26px;display:flex;justify-content:space-between;gap:12px;
     align-items:center;padding:0 10px;background:var(--panel);border-top:1px solid var(--line);font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden}
   #status b{color:var(--ink);font-weight:600}
-  #toast{position:absolute;left:50%;transform:translateX(-50%);bottom:40px;background:var(--ink);color:#fff;
-    padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9;max-width:80%}
-  #toast.show{opacity:.94}
-  #help{position:absolute;right:10px;z-index:8;width:340px;max-width:92%;background:var(--panel);border:1px solid var(--line);
-    border-radius:10px;padding:12px 14px;box-shadow:0 6px 24px rgba(0,0,0,.14);font-size:13px;line-height:1.45;-webkit-user-select:text;user-select:text}
-  #help h3{margin:0 0 6px;font-size:14px}
+  #hint{overflow:hidden;text-overflow:ellipsis}
+  #toast{position:absolute;left:50%;transform:translateX(-50%);top:70px;background:var(--ink);color:#fff;
+    padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:40;max-width:80%;text-align:center}
+  #toast.show{opacity:.95}
+  #help{position:absolute;right:10px;z-index:8;width:380px;max-width:calc(100% - 20px);background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:14px 16px;box-shadow:0 6px 24px rgba(0,0,0,.14);font-size:14px;line-height:1.45;-webkit-user-select:text;user-select:text;
+    max-height:calc(100% - 110px);overflow:auto}
+  #help h3{margin:0 0 6px;font-size:15px;display:flex;justify-content:space-between;align-items:center}
+  #help h4{margin:12px 0 4px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
   #help ul{margin:0;padding-left:18px}
-  #help li{margin:3px 0}
+  #help li{margin:4px 0}
   kbd{font:12px ui-monospace,Consolas,monospace;background:#f1eee8;border:1px solid var(--line);border-radius:4px;padding:0 4px}
   #dirty{color:#b3261e;font-weight:600}
+  @media (max-width:900px){ button.cls b{display:none} button.cls{padding:8px 10px} #selCls button b{display:inline} .seg>button span{display:none} }
+  @media (max-width:560px){ :root{--rail:60px} #tools button{width:52px} #bar .lbl{display:none} #info .long{display:none} }
 </style>
 </head>
 <body>
 <div id="bar">
-  <div class="grp" id="tools"><span class="lbl">Tool</span>
-    <button data-tool="draw" title="Draw roads (D)">Draw</button>
-    <button data-tool="select" title="Select a road to change its type or delete it (S)">Select</button>
-    <button data-tool="erase" title="Rub out part of a road (E)">Erase</button>
-    <button data-tool="pan" title="Move the map (hold Space)">Move</button>
-  </div>
-  <div class="grp" id="classes"><span class="lbl">Road</span></div>
-  <div class="grp">
-    <button id="undo" title="Undo (Ctrl+Z)">Undo</button>
-    <button id="redo" title="Redo (Ctrl+Y)">Redo</button>
-    <button id="del" title="Delete the selected road (Delete)" disabled>Delete</button>
-  </div>
-  <div class="grp"><span class="lbl">Zoom</span>
-    <button id="zout" title="Zoom out">−</button>
-    <button id="zin" title="Zoom in">+</button>
-    <button id="zfit" title="Show all of Euelia">Fit</button>
-  </div>
-  <div class="grp"><span class="lbl">Guide</span>
-    <input type="range" id="guide" min="0" max="100" value="55" title="Fade the guide image">
-    <label class="chk"><input type="checkbox" id="showTowns" checked>Towns</label>
-    <label class="chk"><input type="checkbox" id="showNames">Names</label>
-    <label class="chk"><input type="checkbox" id="showRoads" checked>My roads</label>
-    <label class="chk" title="Turn on to draw with a finger. Off: fingers move and pinch the map, the stylus draws."><input type="checkbox" id="finger">Finger draws</label>
-  </div>
-  <div class="grp"><span class="lbl">File</span>
-    <button id="open" title="Open a saved roads file">Open</button>
-    <button id="save" title="Save the roads file (Ctrl+S)">Save</button>
-    <button id="helpBtn" title="How to use">?</button>
+  <div class="grp" id="classes"><span class="lbl">Road type</span></div>
+  <div class="grp right">
+    <div class="seg">
+      <button id="undo" title="Undo (Ctrl+Z, or tap with two fingers)"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5 M4 9h10a6 6 0 0 1 0 12h-3"/></svg><span>Undo</span></button>
+      <button id="redo" title="Redo (Ctrl+Y)"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5 M20 9H10a6 6 0 0 0 0 12h3"/></svg><span>Redo</span></button>
+    </div>
+    <details class="menu"><summary>View</summary><div class="pop">
+      <h5>Background map</h5>
+      <div class="fade"><span>Faint</span><input type="range" id="guide" min="0" max="100" value="55" aria-label="How strongly the background map shows"><span>Strong</span></div>
+      <hr>
+      <label class="chk"><input type="checkbox" id="showTowns" checked><span>Towns</span></label>
+      <label class="chk"><input type="checkbox" id="showNames"><span>Town names</span></label>
+      <label class="chk"><input type="checkbox" id="showRoads" checked><span>My roads</span></label>
+      <hr>
+      <label class="chk"><input type="checkbox" id="finger"><span>Draw with a finger<small>Off: the pen draws, one finger moves the map</small></span></label>
+    </div></details>
+    <details class="menu"><summary>File</summary><div class="pop">
+      <button id="open">Open a roads file<small>Replaces what is on screen. Undo brings it back.</small></button>
+      <button id="saveAs">Save as a new file<small id="saveAsName"></small></button>
+      <hr>
+      <button id="helpBtn">How to use</button>
+    </div></details>
+    <button id="save" class="primary" title="Save the roads file (Ctrl+S)">Save</button>
   </div>
 </div>
+<div id="tools">
+<button data-tool="draw" title="Draw roads (D)"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16 5l3 3L8 19l-4 1z M14 7l3 3"/></svg><span>Draw</span></button>
+<button data-tool="select" title="Tap a road to change its type or delete it (S)"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 8-6 2-2 6z"/></svg><span>Select</span></button>
+<button data-tool="erase" title="Rub out part of a road (E)"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l9-9 6 6-7 7H8z M11 20h9"/></svg><span>Erase</span></button>
+<button data-tool="pan" title="Move the map (M, or hold Space)"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18 M3 12h18 M12 3l-3 3 M12 3l3 3 M12 21l-3-3 M12 21l3-3 M3 12l3-3 M3 12l3 3 M21 12l-3-3 M21 12l-3 3"/></svg><span>Move</span></button>
+</div>
 <div id="wrap"><canvas id="c"></canvas></div>
+<div id="zoom"><button id="zin" title="Zoom in">+</button><button id="zout" title="Zoom out">−</button><button id="zfit" title="Show all of Euelia">Fit</button></div>
+<div id="selbar" hidden>
+  <div class="what"><span id="selWhat"></span><small>Tap a type to change it</small></div>
+  <div id="selCls"></div>
+  <button id="del" class="danger" title="Delete the selected road (Delete)">Delete</button>
+  <button id="selDone" title="Finish and go back to the tool you were using">Done</button>
+</div>
 <div id="help" hidden>
-  <h3>How to use</h3>
+  <h3>How to use <button id="helpClose">Close</button></h3>
+  <h4>Drawing</h4>
   <ul>
-    <li><b>Stylus or mouse draws.</b> Fingers move the map; pinch to zoom. Mouse wheel zooms; hold <kbd>Space</kbd> or right-drag to move.</li>
-    <li>Pick a road type, then draw. Start or end near a town or another road and the line <b>snaps</b> to it (a ring shows where).</li>
-    <li>Zoom in before drawing for finer bends. Lines get a very slight smoothing.</li>
-    <li><b>Select</b>: tap a road, then tap a road type to change it, or Delete.</li>
-    <li><b>Erase</b>: rub over the part of a road to remove.</li>
-    <li><b>Save</b> writes a .geojson file (pick your Story\maps folder the first time). The page also keeps a backup in this browser.</li>
-    <li>Keys: <kbd>1</kbd>–<kbd>5</kbd> road type, <kbd>D</kbd> <kbd>S</kbd> <kbd>E</kbd> tools, <kbd>Ctrl+Z</kbd> undo, <kbd>Ctrl+Y</kbd> redo, <kbd>Ctrl+S</kbd> save.</li>
+    <li>Pick a <b>road type</b> at the top, then draw with the pen.</li>
+    <li>Start or end near a town or another road and the line <b>snaps</b> to it. A blue ring shows where.</li>
+    <li>Zoom in before drawing for finer bends.</li>
     <li><b>Rail</b> lines snap to towns and to other rail lines, not to roads.</li>
-    <li>Towns are locked and cannot be moved here.</li>
   </ul>
+  <h4>Moving around</h4>
+  <ul>
+    <li><b>One finger</b> moves the map. <b>Pinch</b> to zoom. <b>Fit</b> shows all of Euelia.</li>
+    <li>No pen? Turn on <b>Draw with a finger</b> in the View menu; two fingers still move and zoom.</li>
+  </ul>
+  <h4>Fixing things</h4>
+  <ul>
+    <li><b>Tap with two fingers</b> to undo.</li>
+    <li><b>Press and hold</b> on a road to select it, with any tool. Then tap a type to change it, or Delete.</li>
+    <li><b>Erase</b>: rub over the part of a road to remove. A pen's eraser end also works.</li>
+  </ul>
+  <h4>Saving</h4>
+  <ul>
+    <li>A red dot on <b>Save</b> means there are changes not yet saved to a file.</li>
+    <li><b>Save</b> writes a .geojson file. If the browser cannot write to a folder directly, the file goes to Downloads; move it into Story\maps.</li>
+    <li>The page also keeps a backup in this browser after every change.</li>
+  </ul>
+  <h4>With a keyboard or mouse</h4>
+  <ul>
+    <li><kbd>1</kbd>–<kbd>5</kbd> road type, <kbd>D</kbd> <kbd>S</kbd> <kbd>E</kbd> <kbd>M</kbd> tools, <kbd>Ctrl+Z</kbd> undo, <kbd>Ctrl+Y</kbd> redo, <kbd>Ctrl+S</kbd> save, <kbd>Delete</kbd>.</li>
+    <li>Mouse wheel zooms; hold <kbd>Space</kbd> or right-drag to move.</li>
+  </ul>
+  <p style="color:var(--mute);margin:10px 0 0">Towns are locked and cannot be moved here.</p>
 </div>
 <div id="toast"></div>
 <div id="status"><span id="hint"></span><span id="info"></span></div>
@@ -105,12 +182,13 @@ const CLS={
 const KEYS=['main','big','small','side','rail'], ORDER=['side','small','big','main','rail'];
 const TOWN_SNAP=16, ROAD_SNAP=11, PICK=11, ERASE_R=9;      // screen pixels
 const STORE='euelia-roads-autosave-v1';
+let K=1;                                                   // hit areas grow for a finger
 
 const toXY=(lon,lat)=>[FIT.ax*lon+FIT.bx, FIT.ay*lat+FIT.by];
 const toLonLat=(x,y)=>[(x-FIT.bx)/FIT.ax, (y-FIT.by)/FIT.ay];
 TOWNS.forEach(t=>{[t.x,t.y]=toXY(t.lon,t.lat)});
 
-let roads=[], undoStack=[], redoStack=[], nextId=1, dirty=false, fileHandle=null;
+let roads=[], undoStack=[], redoStack=[], nextId=1, dirty=false, fileHandle=null, lastName='', prevTool='draw', drawCls='main';
 let view={s:1,tx:0,ty:0}, tool='draw', cls='main', selId=null, hover=null, snapMark=null;
 let showTowns=true, showNames=false, showRoads=true, fingerDraw=false, guideAlpha=.55, spaceDown=false;
 
@@ -146,9 +224,9 @@ function nearestTown(x,y,maxD){
 /* where would a line end snap to? town first, then an existing road */
 function findSnap(list,x,y,c){
   list=list.filter(r=>(c==='rail')===(r.cls==='rail'));   // rail joins rail; roads join roads
-  const t=nearestTown(x,y,TOWN_SNAP/view.s);
+  const t=nearestTown(x,y,TOWN_SNAP*K/view.s);
   if(t) return {x:t.x,y:t.y,town:t};
-  const n=nearestRoad(list,x,y,ROAD_SNAP/view.s);
+  const n=nearestRoad(list,x,y,ROAD_SNAP*K/view.s);
   if(!n) return null;
   const a=n.road.pts[n.seg], b=n.road.pts[n.seg+1], vr=4/view.s;
   if(Math.hypot(n.x-a[0],n.y-a[1])<vr) return {x:a[0],y:a[1],road:n.road,vertex:true};
@@ -185,6 +263,12 @@ function tidyStroke(raw){
     pts=o;
   }
   return rdp(pts,.45/view.s);
+}
+function kmText(pts){                       // length on the ground, on a 6,371 km sphere
+  let km=0;
+  for(let i=1;i<pts.length;i++){ const a=toLonLat(pts[i-1][0],pts[i-1][1]), b=toLonLat(pts[i][0],pts[i][1]);
+    km+=Math.hypot((b[1]-a[1])*111.19,(b[0]-a[0])*111.19*Math.cos((a[1]+b[1])/2*Math.PI/180)) }
+  return km<10?km.toFixed(1)+' km':Math.round(km)+' km';
 }
 function lengthOf(pts){let l=0;for(let i=1;i<pts.length;i++)l+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);return l}
 function eraseFrom(list,x,y,r){
@@ -252,24 +336,31 @@ function fromGeoJSON(text){
   return out;
 }
 function autosave(){ try{localStorage.setItem(STORE,toGeoJSON())}catch(e){} }
+/* the next version after the file last opened or saved: Euelia_roads_v3 -> Euelia_roads_v4 */
+function nextName(){
+  const m=/^(.*_v)(\d+)(\.[a-z]+)?$/i.exec(lastName);
+  return m?m[1]+(+m[2]+1)+'.geojson':'Euelia_roads_v4.geojson';
+}
+function saveAsNew(){ fileHandle=null; if(!lastName) lastName='Euelia_roads_v3.geojson'; return saveFile() }
 async function saveFile(){
   const text=toGeoJSON();
   if(window.showSaveFilePicker){
     try{
-      if(!fileHandle) fileHandle=await window.showSaveFilePicker({suggestedName:'Euelia_roads_v4.geojson',
+      if(!fileHandle) fileHandle=await window.showSaveFilePicker({suggestedName:nextName(),
         types:[{description:'Roads file',accept:{'application/json':['.geojson','.json']}}]});
       const w=await fileHandle.createWritable(); await w.write(text); await w.close();
-      dirty=false; ui(); toast('Saved to '+fileHandle.name); return;
+      dirty=false; lastName=fileHandle.name; ui(); toast('Saved to '+fileHandle.name); return;
     }catch(e){ if(e&&e.name==='AbortError') return; fileHandle=null; }
   }
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));
-  a.download='Euelia_roads_'+new Date().toISOString().slice(0,10)+'.geojson';
+  a.download=lastName?nextName():'Euelia_roads_'+new Date().toISOString().slice(0,10)+'.geojson';
+  const savedAs=a.download;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-  dirty=false; ui(); toast('Saved to your Downloads folder. Move it into Story\\maps.');
+  dirty=false; lastName=savedAs; ui(); toast('Saved '+savedAs+' to your Downloads folder. Move it into Story\\maps.');
 }
 function loadText(text,name){
-  try{ const next=fromGeoJSON(text); commit(next); dirty=false; ui(); toast('Opened '+name+' ('+next.length+' roads)'); }
+  try{ const next=fromGeoJSON(text); commit(next); dirty=false; lastName=name; ui(); toast('Opened '+name+' ('+next.length+' roads)'); }
   catch(e){ toast('That file could not be read as a roads file.') }
 }
 async function openFile(){
@@ -285,8 +376,10 @@ $('fileIn').addEventListener('change',async e=>{const f=e.target.files[0]; if(f)
 
 /* ---------- drawing the screen ---------- */
 function resize(){
-  const top=$('bar').offsetHeight; wrap.style.top=top+'px'; $('help').style.top=(top+8)+'px';
+  const top=$('bar').offsetHeight; wrap.style.top=top+'px'; $('tools').style.top=top+'px'; $('help').style.top=(top+8)+'px'; $('toast').style.top=(top+12)+'px';
+  const ow=CW, oh=CH;
   DPR=window.devicePixelRatio||1; CW=wrap.clientWidth; CH=wrap.clientHeight;
+  if(ow&&oh){ view.tx+=(CW-ow)/2; view.ty+=(CH-oh)/2 }      // keep the same spot in the middle when the screen turns
   cv.width=Math.round(CW*DPR); cv.height=Math.round(CH*DPR); draw();
 }
 function fit(){
@@ -339,7 +432,7 @@ function paint(){
     ctx.strokeStyle='#fff'; ctx.lineWidth=4.5; ctx.stroke(); ctx.strokeStyle='#0a84ff'; ctx.lineWidth=2.2; ctx.stroke();
   }
   if(eraseAt){
-    ctx.beginPath(); ctx.arc(eraseAt.x,eraseAt.y,ERASE_R,0,6.2832);
+    ctx.beginPath(); ctx.arc(eraseAt.x,eraseAt.y,ERASE_R*K,0,6.2832);
     ctx.fillStyle='rgba(255,255,255,.55)'; ctx.fill(); ctx.strokeStyle='#333'; ctx.lineWidth=1.2; ctx.stroke();
   }
 }
@@ -368,44 +461,65 @@ function paintTowns(){
 }
 
 /* ---------- pointer input ---------- */
-let stroke=null, pan=null, pinch=null, eraseDrag=null, eraseAt=null; const touches=new Map();
+let stroke=null, pan=null, pinch=null, eraseDrag=null, eraseAt=null, hold=null, twoTap=null; const touches=new Map();
+const HOLD_MS=550, HOLD_MOVE=9;
+function endHold(){ if(hold){clearTimeout(hold.t);hold=null} }
+function startHold(e,p){
+  endHold(); const id=e.pointerId;
+  hold={id,x:p.x,y:p.y,t:setTimeout(()=>{
+    if(!hold||hold.id!==id) return; const q=hold; hold=null;
+    const m=mp(q), n=nearestRoad(roads,m[0],m[1],PICK*K/view.s); if(!n) return;
+    stroke=null; pan=null; snapMark=null;
+    if(eraseDrag){ roads=eraseDrag.base; eraseDrag=null; eraseAt=null }
+    selectRoad(n.road);
+  },HOLD_MS)};
+}
+function selectRoad(r){
+  if(tool!=='select'){ prevTool=tool; drawCls=cls; tool='select' }
+  selId=r.id; cls=r.cls; ui(); draw();
+}
 const sp=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
 const mp=p=>[(p.x-view.tx)/view.s,(p.y-view.ty)/view.s];
 function startPinch(){
   const [a,b]=[...touches.values()];
   pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,v:{...view}}; pan=null; stroke=null; snapMark=null;
+  endHold(); twoTap=touches.size===2?{t:performance.now(),moved:false}:null;
   if(eraseDrag){ roads=eraseDrag.base; eraseDrag=null; eraseAt=null }
 }
 function doErase(p){
-  const m=mp(p); eraseAt=p; const next=eraseFrom(roads,m[0],m[1],ERASE_R/view.s);
+  const m=mp(p); eraseAt=p; const next=eraseFrom(roads,m[0],m[1],ERASE_R*K/view.s);
   if(next!==roads){roads=next; if(selId!=null&&!roads.some(r=>r.id===selId)) selId=null}
   draw();
 }
 cv.addEventListener('pointerdown',e=>{
   e.preventDefault(); try{cv.setPointerCapture(e.pointerId)}catch(_){}
   const p=sp(e), isTouch=e.pointerType==='touch';
+  K=isTouch?1.8:1; closeMenus();
   if(isTouch){
     touches.set(e.pointerId,p);
     if(touches.size>=2){ startPinch(); return }
-    if(!fingerDraw||tool==='pan'){ pan={id:e.pointerId,x:p.x,y:p.y}; return }
+    if(!fingerDraw||tool==='pan'){ pan={id:e.pointerId,x:p.x,y:p.y}; startHold(e,p); return }
   }
   if(stroke||eraseDrag) return;                       // a second pointer while drawing: ignore
   const eraser=e.pointerType==='pen'&&(e.button===5||(e.buttons&32));
-  if(!eraser&&(tool==='pan'||spaceDown||e.button===1||e.button===2)){ pan={id:e.pointerId,x:p.x,y:p.y}; cv.style.cursor='grabbing'; return }
+  if(!eraser&&(tool==='pan'||spaceDown||e.button===1||e.button===2)){ pan={id:e.pointerId,x:p.x,y:p.y}; cv.style.cursor='grabbing'; if(e.button===0&&!spaceDown) startHold(e,p); return }
   const t=eraser?'erase':tool, m=mp(p);
+  if(t==='draw'&&e.button===0) startHold(e,p);
   if(t==='draw'){ stroke={id:e.pointerId,cls,pts:[m],start:findSnap(roads,m[0],m[1],cls)}; }
   else if(t==='erase'){ eraseDrag={id:e.pointerId,base:roads}; doErase(p); }
   else if(t==='select'){
-    const n=nearestRoad(roads,m[0],m[1],PICK/view.s); selId=n?n.road.id:null;
+    const n=nearestRoad(roads,m[0],m[1],PICK*K/view.s); selId=n?n.road.id:null;
     if(n){cls=n.road.cls} ui(); draw();
   }
 });
 cv.addEventListener('pointermove',e=>{
   const p=sp(e);
+  if(hold&&hold.id===e.pointerId&&Math.hypot(p.x-hold.x,p.y-hold.y)>HOLD_MOVE) endHold();
   if(e.pointerType==='touch'&&touches.has(e.pointerId)){
     touches.set(e.pointerId,p);
     if(pinch&&touches.size>=2){
       const [a,b]=[...touches.values()], d=Math.hypot(a.x-b.x,a.y-b.y)||1, cx=(a.x+b.x)/2, cy=(a.y+b.y)/2;
+      if(twoTap&&(Math.abs(d-pinch.d)>12||Math.hypot(cx-pinch.cx,cy-pinch.cy)>12)) twoTap.moved=true;
       const s=Math.min(60,Math.max(.08,pinch.v.s*d/pinch.d)), f=s/pinch.v.s;
       view.s=s; view.tx=cx-(pinch.cx-pinch.v.tx)*f; view.ty=cy-(pinch.cy-pinch.v.ty)*f; draw(); return;
     }
@@ -419,14 +533,19 @@ cv.addEventListener('pointermove',e=>{
   }
   if(eraseDrag&&eraseDrag.id===e.pointerId){ doErase(p); return }
   if(e.pointerType!=='touch'){
-    const t=nearestTown(m[0],m[1],TOWN_SNAP/view.s), sm=tool==='draw'?findSnap(roads,m[0],m[1],cls):null;
+    const t=nearestTown(m[0],m[1],TOWN_SNAP*K/view.s), sm=tool==='draw'?findSnap(roads,m[0],m[1],cls):null;
     const ea=tool==='erase'?p:null;
     if(t!==hover||(sm&&sm.x)!==(snapMark&&snapMark.x)||(sm&&sm.y)!==(snapMark&&snapMark.y)||ea||eraseAt){hover=t;snapMark=sm;eraseAt=ea;draw()}
     info(m);
   }
 });
 function endPointer(e){
-  if(e.pointerType==='touch'){ touches.delete(e.pointerId); if(touches.size<2) pinch=null; if(touches.size===1&&!stroke){const [id,q]=[...touches.entries()][0]; pan={id,x:q.x,y:q.y}} }
+  if(hold&&hold.id===e.pointerId) endHold();
+  if(e.pointerType==='touch'){ touches.delete(e.pointerId); if(touches.size<2) pinch=null;
+    if(twoTap&&twoTap.moved) twoTap=null;
+    if(twoTap&&touches.size===0){ const tt=twoTap; twoTap=null;
+      if(e.type==='pointerup'&&!tt.moved&&performance.now()-tt.t<350&&undoStack.length){ undo(); toast('Undone'); return } }
+    if(twoTap) return; if(touches.size===1&&!stroke&&!twoTap){const [id,q]=[...touches.entries()][0]; pan={id,x:q.x,y:q.y}} }
   if(pan&&pan.id===e.pointerId){ pan=null; setCursor() }
   if(stroke&&stroke.id===e.pointerId){ finishStroke(e.type==='pointercancel'); }
   if(eraseDrag&&eraseDrag.id===e.pointerId){
@@ -452,7 +571,8 @@ function finishStroke(cancelled){
 
 /* ---------- toolbar ---------- */
 function setCursor(){ cv.style.cursor=(tool==='pan'||spaceDown)?'grab':tool==='select'?'pointer':tool==='erase'?'none':'crosshair' }
-function setTool(t){ tool=t; if(t!=='select') selId=null; snapMark=null; eraseAt=null; ui(); draw() }
+function setTool(t){ if(t!=='select'){ selId=null; if(tool==='select') cls=drawCls } else if(tool!=='select'){ prevTool=tool; drawCls=cls } tool=t; snapMark=null; eraseAt=null; ui(); draw() }
+function closeMenus(except){ document.querySelectorAll('details.menu[open]').forEach(d=>{ if(d!==except) d.open=false }) }
 function setClass(c){
   cls=c;
   if(tool==='select'&&selId!=null){
@@ -464,8 +584,9 @@ function setClass(c){
 function deleteSel(){ if(selId==null)return; const id=selId; selId=null; commit(roads.filter(r=>r.id!==id)) }
 KEYS.forEach((k,i)=>{
   const b=document.createElement('button'); b.className='cls'; b.dataset.cls=k; b.title=CLS[k].label+' ('+(i+1)+')';
-  b.innerHTML='<i style="background:'+CLS[k].color+';height:'+Math.round(CLS[k].w+1)+'px"></i>'+CLS[k].label;
+  b.innerHTML='<i style="background:'+CLS[k].color+';height:'+Math.round(CLS[k].w+2)+'px"></i><b style="font-weight:inherit">'+CLS[k].label+'</b>';
   b.onclick=()=>setClass(k); $('classes').appendChild(b);
+  const c=b.cloneNode(true); c.onclick=()=>setClass(k); $('selCls').appendChild(c);
 });
 document.querySelectorAll('#tools button').forEach(b=>b.onclick=()=>setTool(b.dataset.tool));
 $('undo').onclick=undo; $('redo').onclick=redo; $('del').onclick=deleteSel;
@@ -475,13 +596,21 @@ $('showTowns').onchange=e=>{showTowns=e.target.checked;draw()};
 $('showNames').onchange=e=>{showNames=e.target.checked;draw()};
 $('showRoads').onchange=e=>{showRoads=e.target.checked;draw()};
 $('finger').onchange=e=>{fingerDraw=e.target.checked};
-$('open').onclick=openFile; $('save').onclick=saveFile;
-$('helpBtn').onclick=()=>{$('help').hidden=!$('help').hidden};
-const HINTS={draw:'Draw a road. Start or end near a town or road to snap to it.',select:'Tap a road, then tap a road type to change it, or Delete.',
+$('open').onclick=()=>{closeMenus();openFile()}; $('save').onclick=saveFile; $('saveAs').onclick=()=>{closeMenus();saveAsNew()};
+$('selDone').onclick=()=>setTool(prevTool==='select'?'draw':prevTool);
+$('helpClose').onclick=()=>{$('help').hidden=true};
+document.addEventListener('pointerdown',e=>{ closeMenus(e.target.closest&&e.target.closest('details.menu')) });
+$('helpBtn').onclick=()=>{closeMenus();$('help').hidden=!$('help').hidden};
+const HINTS={draw:'Draw a road. Start or end near a town or road to snap to it. Press and hold a road to select it.',select:'Tap a road, then tap a road type to change it, or Delete.',
   erase:'Rub over the part of a road you want to remove.',pan:'Drag to move the map.'};
 function ui(){
   document.querySelectorAll('#tools button').forEach(b=>b.classList.toggle('on',b.dataset.tool===tool));
-  document.querySelectorAll('#classes button').forEach(b=>b.classList.toggle('on',b.dataset.cls===cls));
+  document.querySelectorAll('#classes button,#selCls button').forEach(b=>b.classList.toggle('on',b.dataset.cls===cls));
+  const sel=selId==null?null:roads.find(r=>r.id===selId);
+  $('selbar').hidden=!sel;
+  if(sel) $('selWhat').textContent=CLS[sel.cls].label+(sel.cls==='rail'?' line':sel.cls==='side'?'':' road')+' · '+kmText(sel.pts);
+  $('save').classList.toggle('dirty',dirty&&roads.length>0);
+  $('saveAsName').textContent='Suggested name: '+(lastName?nextName():'Euelia_roads_v4.geojson');
   $('undo').disabled=!undoStack.length; $('redo').disabled=!redoStack.length; $('del').disabled=selId==null;
   $('hint').textContent=HINTS[tool]; setCursor(); info();
 }
@@ -490,8 +619,8 @@ function info(m){
   if(m) lastM=m; const n={main:0,big:0,small:0,side:0,rail:0}; for(const r of roads) n[r.cls]++;
   let h=''; if(hover) h='<b>#'+hover.n+' '+(hover.name||'')+'</b> ('+hover.size+(hover.capital?', capital':'')+') · ';
   if(lastM){const q=toLonLat(lastM[0],lastM[1]); h+=Math.abs(q[1]).toFixed(2)+'°'+(q[1]>=0?'N':'S')+' '+q[0].toFixed(2)+'°E · '}
-  h+='Lines: <b>'+roads.length+'</b> ('+n.main+' main, '+n.big+' big, '+n.small+' small, '+n.side+' path, '+n.rail+' rail)';
-  if(fileHandle) h+=' · '+fileHandle.name;
+  h+='Lines: <b>'+roads.length+'</b><span class="long"> ('+n.main+' main, '+n.big+' big, '+n.small+' small, '+n.side+' path, '+n.rail+' rail)</span>';
+  if(lastName) h+=' · '+lastName;
   h+=dirty?' · <span id="dirty">not saved</span>':' · saved';
   $('info').innerHTML=h;
 }
@@ -508,11 +637,12 @@ window.addEventListener('keydown',e=>{
   else if(k>='1'&&k<='5') setClass(KEYS[+k-1]);
   else if(k==='d') setTool('draw'); else if(k==='s') setTool('select'); else if(k==='e') setTool('erase'); else if(k==='m') setTool('pan');
   else if(k==='delete'||k==='backspace'){ if(selId!=null){e.preventDefault();deleteSel()} }
-  else if(k==='escape'){ if(stroke){stroke=null;snapMark=null;draw()} else {selId=null;$('help').hidden=true;ui();draw()} }
+  else if(k==='escape'){ if(stroke){stroke=null;snapMark=null;draw()} else {selId=null;$('help').hidden=true;closeMenus();ui();draw()} }
 });
 window.addEventListener('keyup',e=>{ if(e.key===' '){spaceDown=false;setCursor()} });
 window.addEventListener('beforeunload',e=>{ if(dirty&&roads.length){e.preventDefault();e.returnValue=''} });
 window.addEventListener('resize',resize);
+if(window.ResizeObserver) new ResizeObserver(resize).observe($('bar'));
 guideImg.addEventListener('load',draw);
 
 /* ---------- start ---------- */
