@@ -12,7 +12,7 @@
     -webkit-tap-highlight-color:transparent;overscroll-behavior:none}
   [hidden]{display:none!important}
   #bar{position:absolute;left:0;right:0;top:0;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;
-    padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--line);z-index:5}
+    padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--line);z-index:10}
   .grp{display:flex;gap:6px;align-items:center}
   .grp.right{margin-left:auto}
   .lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-right:2px}
@@ -376,7 +376,7 @@ $('fileIn').addEventListener('change',async e=>{const f=e.target.files[0]; if(f)
 
 /* ---------- drawing the screen ---------- */
 function resize(){
-  const top=$('bar').offsetHeight; wrap.style.top=top+'px'; $('tools').style.top=top+'px'; $('help').style.top=(top+8)+'px';
+  const top=$('bar').offsetHeight; wrap.style.top=top+'px'; $('tools').style.top=top+'px'; $('help').style.top=(top+8)+'px'; $('toast').style.top=(top+12)+'px';
   const ow=CW, oh=CH;
   DPR=window.devicePixelRatio||1; CW=wrap.clientWidth; CH=wrap.clientHeight;
   if(ow&&oh){ view.tx+=(CW-ow)/2; view.ty+=(CH-oh)/2 }      // keep the same spot in the middle when the screen turns

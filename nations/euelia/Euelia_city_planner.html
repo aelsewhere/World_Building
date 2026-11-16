@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Euelia city planner</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <style>
   :root{--bg:#f4f2ee;--panel:#ffffff;--line:#d9d5cc;--ink:#26231e;--mute:#6f6a60}
   *{box-sizing:border-box}
@@ -125,6 +125,36 @@
   .over{color:#b3261e;font-weight:600}
   kbd{font:12px ui-monospace,Consolas,monospace;background:#f1eee8;border:1px solid var(--line);border-radius:4px;padding:0 4px}
   #dirty{color:#b3261e;font-weight:600}
+  /* sized for pen and finger */
+  html,body{-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+  button,select,input[type=number],details.menu>summary{min-height:44px}
+  button:active{background:#efece5}
+  button.on:active{background:var(--ink)}
+  button.primary{position:relative;font-weight:600}
+  button.primary:active{background:#2f6f57}
+  button.primary.dirty::after{content:'';position:absolute;top:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:#d9482b;border:2px solid #fff}
+  .pop{top:50px;min-width:240px}
+  .pop button{min-height:44px;flex-wrap:wrap}
+  .pop button small{flex-basis:100%;color:var(--mute);font-size:12px}
+  .pop label.chk{min-height:42px;padding:4px 6px;gap:10px;border-radius:8px}
+  label.chk input{width:20px;height:20px;flex:none;accent-color:#2f6f57}
+  #tools{width:72px}
+  #tools button{width:60px;min-height:56px;padding:6px 0 4px}
+  #tools button svg{width:24px;height:24px}
+  #tools button span{font-size:11.5px}
+  #wrap{left:72px}
+  #todo,#pat,#allot,#bld{left:82px}
+  #ctx button,#ctx select{min-height:44px}
+  #legend{font-size:13px}
+  #legend div{padding:5px 4px}
+  #zoom button{min-width:48px;min-height:48px;font-size:18px}
+  #zoom button:last-child{font-size:13px}
+  #bld button,#todo .it{min-height:44px}
+  #allot input[type=number]{min-height:40px;width:80px}
+  .panel{max-width:calc(100% - 92px)}
+  .panel .x{float:right;margin:-4px -4px 4px 8px;min-height:36px;padding:4px 12px}
+  #bar{z-index:10}
+  #toast{bottom:auto;top:70px;z-index:40;font-size:14px;padding:10px 16px;text-align:center}
 </style>
 </head>
 <body>
@@ -140,7 +170,7 @@
     <button id="delgrp" data-for="select" title="Delete the whole pattern this street came from" disabled>Delete pattern</button>
   </div>
   <div class="grp right">
-    <div class="seg"><button id="undo" title="Undo (Ctrl+Z)">Undo</button><button id="redo" title="Redo (Ctrl+Y)">Redo</button></div>
+    <div class="seg"><button id="undo" title="Undo (Ctrl+Z, or tap with two fingers)">Undo</button><button id="redo" title="Redo (Ctrl+Y)">Redo</button></div>
     <button id="todoBtn" title="What is still missing from this plan">To do</button>
     <button id="allotBtn" title="How much of each district is placed">Allotments</button>
     <details class="menu"><summary>View</summary><div class="pop">
@@ -164,8 +194,10 @@
       <button id="clearBld" class="danger" title="Remove every building from this place. Streets and districts stay.">Clear all buildings</button>
       <button id="clearAll" class="danger" title="Remove every street, water area, district and building from this place, to start over">Clear everything</button>
     </div></details>
-    <details class="menu"><summary>More</summary><div class="pop">
+    <details class="menu"><summary>File</summary><div class="pop">
       <button id="open">Open a saved plan</button>
+      <button id="saveAs">Save as a new file<small id="saveAsName"></small></button>
+      <hr>
       <button id="infoBtn" title="What is known about this place">About this place</button>
       <button id="helpBtn">How to use the planner</button>
     </div></details>
@@ -193,8 +225,11 @@
 <div id="allot" class="panel" hidden></div>
 <div id="bld" class="panel" hidden></div>
 <div id="help" class="panel" hidden>
+  <button class="x" id="helpClose">Close</button>
   <h3>How to use</h3>
   <ul>
+    <li><b>On a tablet</b>: the pen draws; one finger moves the map and two pinch to zoom. <b>Tap with two fingers</b> to undo. <b>Press and hold</b> for a short menu. No pen? Turn on <b>Finger draws</b> in the View menu.</li>
+    <li>A red dot on <b>Save</b> means there are changes not yet saved to a file. <b>Save as a new file</b> (File menu) suggests the next version number.</li>
     <li>Pick a <b>place</b>. The dashed circle is only a guide to how big it should be for its population. The markers round the edge show which way roads arrive and roughly where the water is.</li>
     <li><b>Water</b>: circle an area for a lake or bay. For a coast, draw the shoreline as one open line: the sea fills outwards from it, on the side away from the centre. For rivers use the <b>River</b> line (about 45 m wide) or the <b>Wide river</b> line (about 250 m) with Draw.</li>
     <li><b>Clear area</b>: circle an area to remove every street in it. <b>Clear streets in water</b> (in the Clean up menu) trims streets and lanes that lie under water or under a river. Avenues are kept: an avenue over water is a bridge.</li>
@@ -247,6 +282,7 @@ const DIST={Residential:'#e3d3ab',Government:'#8f86c9',Financial:'#5f9e83',Enter
 const WEIGHT={Residential:45,Industrial:7,Harbour:6,Park:6,Trade:5,Shopping:4,Military:4,Farming:4,Wine:4,Timber:4,Government:3,Education:3,Healing:3,
   Religious:3,'Public Works':3,Entertainment:3,Arts:2,"Traveller's":2,Financial:2,Fishing:2};
 const BLD={"Wine":[["Winery","Vineyard"],["Cellars","Cooperage","Bottle/Glass Works","Wine Merchants' Hall","Tasting Houses","Wine Warehouse","Vintners' Guild Hall"]],"Fishing":[["Fishing Docks/Landing","Fish Market"],["Smokehouse","Salt House","Net Loft","Boat Builders","Ice House","Cannery","Fishers' Guild Hall"]],"Farming":[["Fields/Farmland","Barns and Stables","Pasture","Dairy","Stockyard"],["Granary","Mill","Olive Grove","Olive Press","Cotton Gin House","Produce Market","Seed Store","Irrigation Works","Plantation House","Farmers' Guild Hall","Butcher","Wool Shed","Poultry Yard","Apiary"]],"Timber":[["Managed Forest/Logging Camp","Lumber Yard","Paper Mill","Tree Nursery"],["Sawmill","Carpenters' Workshops","Charcoal Kilns","Timber Warehouse","Cart and Wagon Works","Foresters' Lodge","Woodworkers' Guild Hall"]],"Harbour":[["Fishing Docks","Piers and Quays","Ferry Landing"],["Harbourmaster's Office","Lighthouse","Shipyard/Dry Dock","Customs House","Cargo Warehouses","Chandlery","Sailmakers and Rope Walk","Sailors' Lodgings","Breakwater/Seawall","Mariners' Guild Hall"]],"Traveller's":[["Inns","Hostels/Boarding Houses"],["Coaching Station","Stables and Coach House","Eating Houses and Taverns","Travellers' Bathhouse","Guides' and Porters' Office","Goods and Luggage Storage","Supply and Map Shop","Post and Message Office","Money Changer","Innkeepers' Guild Hall"]],"Healing":[["Hospital/Infirmary","Apothecary","Bathhouse","Hot Springs/Spa","Hospice"],["Healers' Houses","Herb Garden","Herb Drying House","Rest House","Midwives' House","Healers' School","Healers' Guild Hall"]],"Education":[["University","Library"],["Children's School","Archive/Records Hall","Lecture Halls","Student Lodgings","Printers and Bookbinders","Museum","Observatory","Botanical Garden","Laboratories and Workshops","Healers' School","Religious School","Art School","Scholars' Guild Hall"]],"Religious":[["Temple","Shrines","Sacred Grove","Monastery/Convent","Burial Ground","Bell or Prayer Tower","Sacred Spring/Ritual Bath"],["Pilgrims' Lodging","Priests' Residences","Religious School","Almshouse/Charity Kitchen","Procession Square","Relic House"]],"Shopping":[["Shop Streets/Arcades","Covered Market Hall","Open-air Market Square"],["Booksellers","Jewellers","Tea/Coffee Houses","Second-hand Shops","Shopkeepers' Guild Hall","Grocers/Bakers","Tailors/Cloth Shops","General Store","Street Food Stalls","Art Supply Shop","Butcher"]],"Trade":[["Merchants' Exchange","Wholesale Warehouses","Auction House","Craft Workshops","Foreign Merchants' Quarter"],["Caravan Yard/Wagon Depot","Weigh House","Rail Goods Yard","Merchants' Offices","Trade Inspectors' Office","Packing Yard","Merchants' Guild Hall"]],"Arts":[["Artists' Studios","Gallery","Theatre","Music Hall","Artisan Studios","Public Art Square"],["Sculpture Yard","Art School","Art Supply Shops","Poets' and Writers' House","Instrument Makers","Artists' Guild Hall"]],"Entertainment":[["Taverns and Alehouses","Festival Ground","Fairground/Circus","Gambling House","Restaurants","Brewery"],["Games Hall","Sports Ground/Arena","Racecourse","Dance Hall","Pleasure Garden","Street Performers' Square"]],"Government":[["City/Town Hall","Council Chamber","Courthouse","Public Square/Forum"],["Records Office","Tax Office","Jail","Watch House","Ruler's Residence","Envoys' Houses","Ministry Offices","Fire Watch Station","Mint","Officials' Guild Hall"]],"Financial":[["Bank","Mint","Treasury/Vault"],["Counting House","Money Changer","Loan Office","Insurance House","Assay Office","Pawnbroker","Tax Office","Notaries' and Accountants' Offices","Bankers' Guild Hall"]],"Military":[["Barracks","Fortress/Citadel","Naval Yard","Armoury","Drill Ground","Border Post/Gatehouse"],["Walls and Watchtowers","Officers' Quarters","Military Academy","Military Stables","Military Hospital","Supply Depot","Signal Station","Stockade"]],"Park":[["Public Park/Green","Formal Gardens","Pond/Boating Lake","Playground","Woodland/Nature Reserve","Monuments and Memorials","Greenhouse/Conservatory","Community Gardens"],["Bandstand","Tree-lined Promenade","Picnic Lawn","Aviary/Menagerie","Gardeners' Lodge","Gardeners' Guild Hall"]],"Residential":[["Cottages/Detached Houses","Row Houses","Apartment Buildings","Courtyard Houses","Manor Houses"],["Bathhouse","Communal Well/Fountain","Wash House","Communal Oven/Kitchen","Neighbourhood Square","Community Hall","Corner Shop","Children's School"]],"Industrial":[["Factory","Textile Mill","Foundry/Ironworks","Brickworks and Kilns","Glassworks","Tannery","Machine Shops","Mine/Quarry","Dye Works"],["Goods Warehouses","Workers' Canteen","Makers' Guild Hall"]],"Public Works":[["Power House","Waterworks/Pumping Station","Reservoir/Water Tower","Sewer Works","Engineers' Yard","Road and Bridge Depot"],["Public Cemetery","Waste and Recycling Yard","Fire Station","Railway Station","Surveyors' Office","Public Works Office","Engineers' Guild Hall"]]};
+let K=1;   // hit areas grow for a finger
 const SNAP=10, PICK=11, ERASE_R=9, DENS={City:120,'Large town':80,'Middle town':80,'Small town':80,'Large village':40,'Small village':40};
 const BANDS=['City','Large town','Middle town','Small town','Large village','Small village'];
 const $=id=>document.getElementById(id);
@@ -285,7 +321,7 @@ function nearestStreet(list,x,y,maxD){
   return best;
 }
 function findSnap(list,x,y){
-  const n=nearestStreet(list,x,y,SNAP/view.s); if(!n) return null;
+  const n=nearestStreet(list,x,y,SNAP*K/view.s); if(!n) return null;
   const a=n.road.pts[n.seg], b=n.road.pts[n.seg+1], vr=4/view.s;
   if(Math.hypot(n.x-a[0],n.y-a[1])<vr) return {x:a[0],y:a[1],road:n.road,vertex:true};
   if(Math.hypot(n.x-b[0],n.y-b[1])<vr) return {x:b[0],y:b[1],road:n.road,vertex:true};
@@ -658,7 +694,7 @@ function renderAllot(){
 /* ---------- resize and move areas ---------- */
 function selArea(){ return (tool==='select'||tool==='district')&&sel&&sel.k==='a'?areas.find(q=>q.id===sel.id):null }
 function handlesOf(a){ const b=a.bb; return [[b[0],b[1]],[b[2],b[1]],[b[2],b[3]],[b[0],b[3]],[(b[0]+b[2])/2,(b[1]+b[3])/2]] }
-function hitHandle(m){ const a=selArea(); if(!a) return null; const H=handlesOf(a), r=16/view.s; let best=null,bd=r*r;
+function hitHandle(m){ const a=selArea(); if(!a) return null; const H=handlesOf(a), r=16*K/view.s; let best=null,bd=r*r;
   H.forEach((h,i)=>{ const d=(h[0]-m[0])*(h[0]-m[0])+(h[1]-m[1])*(h[1]-m[1]); if(d<bd){bd=d;best=i} }); return best==null?null:{a,i:best} }
 function startAreaDrag(e,h,m){ const a=h.a, H=handlesOf(a); areaDrag={id:e.pointerId,areaId:a.id,i:h.i,pts:a.pts,m0:m,anchor:h.i<4?H[(h.i+2)%4]:null,corner:H[h.i],baseA:areas,baseB:buildings,moved:false} }
 function moveAreaDrag(m){ const d=areaDrag; let f;
@@ -676,7 +712,7 @@ let bDrag=null;
 function selBld(){ return (tool==='select'||tool==='building')&&sel&&sel.k==='b'?buildings.find(q=>q.id===sel.id):null }
 function bldBox(b){ const z=sizeOfB(b), k=Math.max(1,(z[2]?12:7)/(z[0]*view.s)); return {hw:z[0]*k/2,hh:z[1]*k/2,k} }
 function bldLocal(b,m){ const dx=m[0]-b.x, dy=m[1]-b.y, c=Math.cos(b.a||0), sn=Math.sin(b.a||0); return [dx*c+dy*sn,-dx*sn+dy*c] }
-function hitBld(m){ const b=selBld(); if(!b) return null; const B=bldBox(b), l=bldLocal(b,m), r=14/view.s;
+function hitBld(m){ const b=selBld(); if(!b) return null; const B=bldBox(b), l=bldLocal(b,m), r=14*K/view.s;
   if(Math.hypot(l[0],l[1]+B.hh+26/view.s)<r) return {b,mode:'turn'};
   if(Math.abs(Math.abs(l[0])-B.hw)<r&&Math.abs(Math.abs(l[1])-B.hh)<r) return {b,mode:'size'};
   if(Math.abs(l[0])<=B.hw+r*.3&&Math.abs(l[1])<=B.hh+r*.3) return {b,mode:'move'};
@@ -690,7 +726,7 @@ function endBDrag(cancel){ const d=bDrag; bDrag=null; const nb=buildings; buildi
 
 /* ---------- buildings ---------- */
 function areaAt(m){ return areas.filter(q=>q.type!=='water'&&inPoly(m[0],m[1],q.pts)).sort((x,y)=>areaOf(x.pts)-areaOf(y.pts))[0]||null }
-function buildingAt(m){ let best=null,d2=Infinity; const pk=(PICK/view.s)*(PICK/view.s); for(const b of buildings){ const dx=m[0]-b.x, dy=m[1]-b.y, d=dx*dx+dy*dy, z=sizeOfB(b), c=Math.cos(b.a||0), sn=Math.sin(b.a||0), lx=dx*c+dy*sn, ly=-dx*sn+dy*c, f=z[2]?.3:.5;
+function buildingAt(m){ let best=null,d2=Infinity; const pk=(PICK*K/view.s)*(PICK*K/view.s); for(const b of buildings){ const dx=m[0]-b.x, dy=m[1]-b.y, d=dx*dx+dy*dy, z=sizeOfB(b), c=Math.cos(b.a||0), sn=Math.sin(b.a||0), lx=dx*c+dy*sn, ly=-dx*sn+dy*c, f=z[2]?.3:.5;
     if((d<pk||(Math.abs(lx)<z[0]*f&&Math.abs(ly)<z[1]*f))&&d<d2){d2=d;best=b} } return best }
 const SIZES={a:[8,6],b:[12,9],c:[20,14],d:[40,25],e:[80,50],y:[50,35,1],f:[100,70,1],g:[200,140,1],h:[400,300,1]};   // metres; third value marks open ground
 const SZ={"Shrines":"a","Bell or Prayer Tower":"a","Street Food Stalls":"a","Monuments and Memorials":"a","Bandstand":"a","Communal Well/Fountain":"a","Tasting Houses":"b","Smokehouse":"b","Seed Store":"b","Butcher":"b","Lighthouse":"b","Chandlery":"b","Guides' and Porters' Office":"b","Supply and Map Shop":"b","Money Changer":"b","Apothecary":"b","Healers' Houses":"b","Herb Drying House":"b","Midwives' House":"b","Priests' Residences":"b","Relic House":"b","Booksellers":"b","Jewellers":"b","Tea/Coffee Houses":"b","Second-hand Shops":"b","Grocers/Bakers":"b","Tailors/Cloth Shops":"b","General Store":"b","Art Supply Shop":"b","Art Supply Shops":"b","Weigh House":"b","Poets' and Writers' House":"b","Instrument Makers":"b","Watch House":"b","Fire Watch Station":"b","Loan Office":"b","Assay Office":"b","Pawnbroker":"b","Signal Station":"b","Gardeners' Lodge":"b","Cottages/Detached Houses":"b","Row Houses":"b","Wash House":"b","Communal Oven/Kitchen":"b","Corner Shop":"b","Surveyors' Office":"b","Cellars":"c","Cooperage":"c","Salt House":"c","Net Loft":"c","Ice House":"c","Dairy":"c","Mill":"c","Olive Press":"c","Wool Shed":"c","Carpenters' Workshops":"c","Foresters' Lodge":"c","Harbourmaster's Office":"c","Sailors' Lodgings":"c","Inns":"c","Hostels/Boarding Houses":"c","Eating Houses and Taverns":"c","Travellers' Bathhouse":"c","Goods and Luggage Storage":"c","Post and Message Office":"c","Rest House":"c","Printers and Bookbinders":"c","Observatory":"c","Sacred Spring/Ritual Bath":"c","Sacred Spring":"c","Pilgrims' Lodging":"c","Almshouse/Charity Kitchen":"c","Craft Workshops":"c","Merchants' Offices":"c","Trade Inspectors' Office":"c","Artists' Studios":"c","Artisan Studios":"c","Taverns and Alehouses":"c","Taverns":"c","Gambling House":"c","Restaurants":"c","Records Office":"c","Tax Office":"c","Envoys' Houses":"c","Counting House":"c","Insurance House":"c","Notaries' and Accountants' Offices":"c","Border Post/Gatehouse":"c","Walls and Watchtowers":"c","Officers' Quarters":"c","Courtyard Houses":"c","Community Hall":"c","Workers' Canteen":"c","Fire Station":"c","Public Works Office":"c","Winery":"d","Bottle/Glass Works":"d","Wine Merchants' Hall":"d","Wine Warehouse":"d","Fish Market":"d","Boat Builders":"d","Cannery":"d","Barns and Stables":"d","Granary":"d","Cotton Gin House":"d","Plantation House":"d","Sawmill":"d","Timber Warehouse":"d","Cart and Wagon Works":"d","Customs House":"d","Coaching Station":"d","Stables and Coach House":"d","Bathhouse":"d","Hospice":"d","Healers' School":"d","Library":"d","Children's School":"d","Archive/Records Hall":"d","Lecture Halls":"d","Student Lodgings":"d","Museum":"d","Laboratories and Workshops":"d","Religious School":"d","Art School":"d","Temple":"d","Merchants' Exchange":"d","Auction House":"d","Gallery":"d","Theatre":"d","Music Hall":"d","Brewery":"d","Games Hall":"d","Dance Hall":"d","City/Town Hall":"d","Town Hall":"d","Council Chamber":"d","Courthouse":"d","Jail":"d","Ministry Offices":"d","Mint":"d","Bank":"d","Treasury/Vault":"d","Armoury":"d","Military Stables":"d","Military Hospital":"d","Supply Depot":"d","Stockade":"d","Greenhouse/Conservatory":"d","Apartment Buildings":"d","Manor Houses":"d","Glassworks":"d","Tannery":"d","Machine Shops":"d","Dye Works":"d","Power House":"d","Waterworks/Pumping Station":"d","Waterworks":"d","Paper Mill":"e","Cargo Warehouses":"e","Sailmakers and Rope Walk":"e","Hospital/Infirmary":"e","Monastery/Convent":"e","Covered Market Hall":"e","Wholesale Warehouses":"e","Ruler's Residence":"e","Barracks":"e","Military Academy":"e","Factory":"e","Textile Mill":"e","Foundry/Ironworks":"e","Goods Warehouses":"e","Railway Station":"e","Poultry Yard":"y","Apiary":"y","Charcoal Kilns":"y","Ferry Landing":"y","Herb Garden":"y","Packing Yard":"y","Sculpture Yard":"y","Street Performers' Square":"y","Playground":"y","Picnic Lawn":"y","Neighbourhood Square":"y","Fishing Docks/Landing":"f","Fishing Docks":"f","Produce Market":"f","Irrigation Works":"f","Lumber Yard":"f","Hot Springs/Spa":"f","Sacred Grove":"f","Burial Ground":"f","Procession Square":"f","Shop Streets/Arcades":"f","Open-air Market Square":"f","Foreign Merchants' Quarter":"f","Caravan Yard/Wagon Depot":"f","Public Art Square":"f","Public Square/Forum":"f","Formal Gardens":"f","Pond/Boating Lake":"f","Community Gardens":"f","Tree-lined Promenade":"f","Aviary/Menagerie":"f","Brickworks and Kilns":"f","Reservoir/Water Tower":"f","Sewer Works":"f","Engineers' Yard":"f","Road and Bridge Depot":"f","Waste and Recycling Yard":"f","Stockyard":"g","Olive Grove":"g","Tree Nursery":"g","Piers and Quays":"g","Shipyard/Dry Dock":"g","Breakwater/Seawall":"g","University":"g","Botanical Garden":"g","Rail Goods Yard":"g","Festival Ground":"g","Fairground/Circus":"g","Sports Ground/Arena":"g","Pleasure Garden":"g","Fortress/Citadel":"g","Naval Yard":"g","Drill Ground":"g","Public Park/Green":"g","Public Cemetery":"g","Vineyard":"h","Fields/Farmland":"h","Pasture":"h","Managed Forest/Logging Camp":"h","Racecourse":"h","Woodland/Nature Reserve":"h","Mine/Quarry":"h","Scholars' Guild Hall":"d","Gardeners' Guild Hall":"d","Shopkeepers' Guild Hall":"d","Woodworkers' Guild Hall":"d","Makers' Guild Hall":"d","Vintners' Guild Hall":"d","Bankers' Guild Hall":"d","Engineers' Guild Hall":"d","Mariners' Guild Hall":"d","Artists' Guild Hall":"d","Healers' Guild Hall":"d","Officials' Guild Hall":"d","Merchants' Guild Hall":"d","Fishers' Guild Hall":"d","Innkeepers' Guild Hall":"d","Farmers' Guild Hall":"d"};
@@ -777,23 +813,30 @@ function fromFile(text){
   return {streets:st,areas:ar,buildings:bl,place:g.place,allot:g.allot||{}};
 }
 const storeKey=()=>'euelia-plan-v1-'+place.n;
-let lastAuto=0, autoOK=true;
+let lastAuto=0, autoOK=true, lastName='';
+/* the next version after the file last opened or saved: Stoma_plan_v2 -> Stoma_plan_v3 */
+function nextName(){
+  const m=/^(.*_v)(\d+)(\.[a-z]+)?$/i.exec(lastName);
+  return m?m[1]+(+m[2]+1)+'.json':place.name+'_plan_v1.json';
+}
+function saveAsNew(){ fileHandle=null; return saveFile() }
 function autosave(){ try{localStorage.setItem(storeKey(),toFile()); lastAuto=Date.now(); autoOK=true}catch(e){ autoOK=false } }
 const ago=t=>{ const m=Math.round((Date.now()-t)/60000); return m<1?'just now':m===1?'1 minute ago':m<60?m+' minutes ago':Math.round(m/60)+' h ago' };
 async function saveFile(){
   const text=toFile();
   if(window.showSaveFilePicker){
     try{
-      if(!fileHandle) fileHandle=await window.showSaveFilePicker({suggestedName:place.name+'_plan_v1.json',types:[{description:'City plan',accept:{'application/json':['.json']}}]});
+      if(!fileHandle) fileHandle=await window.showSaveFilePicker({suggestedName:nextName(),types:[{description:'City plan',accept:{'application/json':['.json']}}]});
       const w=await fileHandle.createWritable(); await w.write(text); await w.close();
-      dirty=false; ui(); toast('Saved to '+fileHandle.name); return;
+      dirty=false; lastName=fileHandle.name; ui(); toast('Saved to '+fileHandle.name); return;
     }catch(e){ if(e&&e.name==='AbortError') return; fileHandle=null; }
   }
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));
-  a.download=place.name+'_plan_'+new Date().toISOString().slice(0,10)+'.json';
+  a.download=lastName?nextName():place.name+'_plan_'+new Date().toISOString().slice(0,10)+'.json';
+  const savedAs=a.download;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-  dirty=false; ui(); toast('Saved to your Downloads folder.');
+  dirty=false; lastName=savedAs; ui(); toast('Saved '+savedAs+' to your Downloads folder.');
 }
 function loadText(text,name){
   let f; try{ f=fromFile(text) }catch(e){ toast('That file could not be read as a city plan.'); return false }
@@ -801,7 +844,7 @@ function loadText(text,name){
     const p=PLACES.find(q=>q.n===f.place.n); if(!p){ toast('That plan is for a place this tool does not know.'); return false }
     setPlace(p,true);
   }
-  undoStack.push(snapshot()); redoStack=[]; streets=f.streets; areas=f.areas; buildings=f.buildings; allot=f.allot; changed(); dirty=false; ui();
+  undoStack.push(snapshot()); redoStack=[]; streets=f.streets; areas=f.areas; buildings=f.buildings; allot=f.allot; changed(); dirty=false; lastName=name; ui();
   toast('Opened '+name+' ('+streets.length+' streets)'); return true;
 }
 async function openFile(){
@@ -817,7 +860,7 @@ $('fileIn').addEventListener('change',async e=>{const f=e.target.files[0]; if(f)
 
 function setPlace(p,skipLoad){
   if(place&&dirty) autosave();
-  place=p; fileHandle=null; sel=null; pending=null; $('pat').hidden=true; undoStack=[]; redoStack=[]; streets=[]; areas=[]; buildings=[]; bldAt=null; $('bld').hidden=true; allot={}; dirty=false;
+  place=p; fileHandle=null; lastName=''; sel=null; pending=null; $('pat').hidden=true; undoStack=[]; redoStack=[]; streets=[]; areas=[]; buildings=[]; bldAt=null; $('bld').hidden=true; allot={}; dirty=false;
   R=Math.sqrt(p.pop/(DENS[p.band]||80)*1e4/Math.PI);
   $('city').value=p.n;
   if(!skipLoad){ try{ const s=localStorage.getItem(storeKey()); if(s){ const f=fromFile(s); streets=f.streets; areas=f.areas; buildings=f.buildings; allot=f.allot; if(streets.length||areas.length){ dirty=true; toast('Brought back '+p.name+' from this browser\'s backup.') } } }catch(e){} }
@@ -841,14 +884,16 @@ function fillInfo(){
   else h+='<li>No sea or lake found close by on the map</li>';
   if(p.river) h+='<li>On the main river. The map is too coarse to say where it runs, so sketch it with the River line.</li>';
   h+='<li>Rail lines are not drawn on the Euelia map yet.</li></ul><div style="color:var(--mute);margin-top:8px">Directions are rough: the Euelia map is about 1 km per pixel.</div>';
-  $('infoP').innerHTML=h;
+  $('infoP').innerHTML='<button class="x" id="infoClose">Close</button>'+h; $('infoClose').onclick=()=>{$('infoP').hidden=true};
 }
 
 /* ---------- drawing the screen ---------- */
 let barH=0;
 function resize(){
-  const top=barH=$('bar').offsetHeight; wrap.style.top=top+'px'; for(const id of ['help','infoP','pat','allot','bld','todo']) $(id).style.top=(top+8)+'px'; $('tools').style.top=top+'px'; $('legend').style.top=(top+64)+'px';
+  const top=barH=$('bar').offsetHeight; wrap.style.top=top+'px'; for(const id of ['help','infoP','pat','allot','bld','todo']) $(id).style.top=(top+8)+'px'; $('tools').style.top=top+'px'; $('legend').style.top=(top+64)+'px'; $('toast').style.top=(top+12)+'px';
+  const ow=CW, oh=CH;
   DPR=window.devicePixelRatio||1; CW=wrap.clientWidth; CH=wrap.clientHeight;
+  if(ow&&oh){ view.tx+=(CW-ow)/2; view.ty+=(CH-oh)/2 }      // keep the same spot in the middle when the screen turns
   cv.width=Math.round(CW*DPR); cv.height=Math.round(CH*DPR); draw();
 }
 function fit(){ const s=Math.min(CW,CH)/(R*4.4); view={s,tx:CW/2,ty:CH/2}; draw() }
@@ -965,11 +1010,11 @@ function paint(){
   ctx.beginPath(); ctx.moveTo(16,CH-18); ctx.lineTo(16+bar*s,CH-18); ctx.strokeStyle='#26231e'; ctx.lineWidth=2.4; ctx.stroke();
   label(bar>=1000?(bar/1000)+' km':bar+' m',16+bar*s+8,CH-18,'left');
   if(snapMark){ const [x,y]=P(snapMark.x,snapMark.y); ctx.beginPath(); ctx.arc(x,y,8,0,6.28318); ctx.strokeStyle='#fff'; ctx.lineWidth=4.5; ctx.stroke(); ctx.strokeStyle='#0a84ff'; ctx.lineWidth=2.2; ctx.stroke() }
-  if(eraseAt){ ctx.beginPath(); ctx.arc(eraseAt.x,eraseAt.y,ERASE_R,0,6.28318); ctx.fillStyle='rgba(255,255,255,.55)'; ctx.fill(); ctx.strokeStyle='#333'; ctx.lineWidth=1.2; ctx.stroke() }
+  if(eraseAt){ ctx.beginPath(); ctx.arc(eraseAt.x,eraseAt.y,ERASE_R*K,0,6.28318); ctx.fillStyle='rgba(255,255,255,.55)'; ctx.fill(); ctx.strokeStyle='#333'; ctx.lineWidth=1.2; ctx.stroke() }
 }
 
 /* ---------- pointer input ---------- */
-let stroke=null, pan=null, pinch=null, eraseDrag=null, eraseAt=null; const touches=new Map();
+let stroke=null, pan=null, pinch=null, eraseDrag=null, eraseAt=null, twoTap=null; const touches=new Map();
 const sp=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
 const mp=p=>[(p.x-view.tx)/view.s,(p.y-view.ty)/view.s];
 function startPinch(){
@@ -978,11 +1023,13 @@ function startPinch(){
   if(eraseDrag){ streets=eraseDrag.base; eraseDrag=null; eraseAt=null }
   if(areaDrag) endAreaDrag(true);
   if(bDrag) endBDrag(true);
+  twoTap=touches.size===2?{t:performance.now(),moved:false}:null;
 }
-function doErase(p){ const m=mp(p); eraseAt=p; const n=eraseFrom(streets,m[0],m[1],ERASE_R/view.s); if(n!==streets) streets=n; draw() }
+function doErase(p){ const m=mp(p); eraseAt=p; const n=eraseFrom(streets,m[0],m[1],ERASE_R*K/view.s); if(n!==streets) streets=n; draw() }
 cv.addEventListener('pointerdown',e=>{
   e.preventDefault(); try{cv.setPointerCapture(e.pointerId)}catch(_){}
   const p=sp(e), isTouch=e.pointerType==='touch';
+  K=isTouch?1.8:1;
   if(isTouch){
     touches.set(e.pointerId,p);
     if(touches.size>=2){ startPinch(); return }
@@ -1001,7 +1048,7 @@ cv.addEventListener('pointerdown',e=>{
   else if(t==='building'){ buildingTap(m) }
   else if(t==='round'){ const sn=findSnap(streets,m[0],m[1]), x=sn?sn.x:m[0], y=sn?sn.y:m[1]; commit(addRound(streets,x,y,roundR(),notStreet(cls)?'street':cls)); toast('Roundabout added.') }
   else if(t==='select'){
-    const hb=showBld?buildingAt(m):null, n=hb?null:nearestStreet(streets,m[0],m[1],PICK/view.s);
+    const hb=showBld?buildingAt(m):null, n=hb?null:nearestStreet(streets,m[0],m[1],PICK*K/view.s);
     if(hb){ sel={k:'b',id:hb.id} }
     else if(n){ sel={k:'s',id:n.road.id}; cls=n.road.cls }
     else { const a=[...areas].reverse().find(q=>(q.type==='water'||showDist)&&inPoly(m[0],m[1],q.pts)); sel=a?{k:'a',id:a.id}:null; if(a&&a.type!=='water'){$('allot').hidden=false;$('pat').hidden=true} }
@@ -1014,6 +1061,7 @@ cv.addEventListener('pointermove',e=>{
     touches.set(e.pointerId,p);
     if(pinch&&touches.size>=2){
       const [a,b]=[...touches.values()], d=Math.hypot(a.x-b.x,a.y-b.y)||1, cx=(a.x+b.x)/2, cy=(a.y+b.y)/2;
+      if(twoTap&&(Math.abs(d-pinch.d)>12||Math.hypot(cx-pinch.cx,cy-pinch.cy)>12)) twoTap.moved=true;
       const s=Math.min(8,Math.max(.002,pinch.v.s*d/pinch.d)), f=s/pinch.v.s;
       view.s=s; view.tx=cx-(pinch.cx-pinch.v.tx)*f; view.ty=cy-(pinch.cy-pinch.v.ty)*f; draw(); return;
     }
@@ -1037,7 +1085,12 @@ cv.addEventListener('pointermove',e=>{
   }
 });
 function endPointer(e){
-  if(e.pointerType==='touch'){ touches.delete(e.pointerId); if(touches.size<2) pinch=null; if(touches.size===1&&!stroke){const [id,q]=[...touches.entries()][0]; pan={id,x:q.x,y:q.y}} }
+  if(e.pointerType==='touch'){ touches.delete(e.pointerId); if(touches.size<2) pinch=null;
+    if(twoTap&&twoTap.moved) twoTap=null;
+    if(twoTap&&touches.size===0){ const tt=twoTap; twoTap=null;
+      if(e.type==='pointerup'&&!tt.moved&&performance.now()-tt.t<350&&undoStack.length){ undo(); toast('Undone'); return } }
+    if(twoTap) return;
+    if(touches.size===1&&!stroke){const [id,q]=[...touches.entries()][0]; pan={id,x:q.x,y:q.y}} }
   if(pan&&pan.id===e.pointerId){ pan=null; setCursor() }
   if(bDrag&&bDrag.id===e.pointerId) endBDrag(e.type==='pointercancel');
   if(areaDrag&&areaDrag.id===e.pointerId) endAreaDrag(e.type==='pointercancel');
@@ -1216,7 +1269,7 @@ function renderLegend(){
 function closeCtx(){ $('ctx').hidden=true }
 function openCtx(cx,cy,m){
   const el=$('ctx'), items=[]; let head='';
-  const hb=showBld?buildingAt(m):null, n=hb?null:nearestStreet(streets,m[0],m[1],PICK/view.s);
+  const hb=showBld?buildingAt(m):null, n=hb?null:nearestStreet(streets,m[0],m[1],PICK*K/view.s);
   const a=(hb||n)?null:areas.filter(q=>q.type!=='water'&&inPoly(m[0],m[1],q.pts)).sort((x,y)=>areaOf(x.pts)-areaOf(y.pts))[0], w=(hb||n||a)?null:areas.find(q=>q.type==='water'&&inPoly(m[0],m[1],q.pts));
   const pick=(k,id)=>{ sel={k,id}; ui(); draw() };
   if(hb){ head=hb.name; pick('b',hb.id);
@@ -1322,7 +1375,7 @@ document.addEventListener('pointerdown',e=>{ document.querySelectorAll('details.
 document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('.pop button'); if(b){ const d=b.closest('details'); if(d) d.open=false } });
 $('autoTidy').onchange=e=>{autoTidy=e.target.checked};
 $('finger').onchange=e=>{fingerDraw=e.target.checked};
-$('open').onclick=openFile; $('save').onclick=saveFile;
+$('open').onclick=openFile; $('save').onclick=saveFile; $('saveAs').onclick=saveAsNew; $('helpClose').onclick=()=>{$('help').hidden=true};
 $('helpBtn').onclick=()=>{$('help').hidden=!$('help').hidden; $('infoP').hidden=true};
 $('infoBtn').onclick=()=>{$('infoP').hidden=!$('infoP').hidden; $('help').hidden=true};
 const HINTS={draw:'Draw a street. Ends snap to other streets.',pattern:'Circle an area to fill it with a street pattern.',water:'Circle a lake or bay. Or draw a shoreline as an open line: the sea fills outwards from it, away from the centre.',cut:'Circle an area to remove every street inside it.',district:'Choose a district, then tap a block to fill it, or circle an area by hand. Tap a district to select it.',building:'Tap inside a district to add one of its buildings. Tap a building to select it, then drag it to move, a corner to resize, or the round handle to turn it.',
@@ -1335,6 +1388,8 @@ function ui(){
   document.querySelectorAll('#classes button').forEach(b=>b.classList.toggle('on',b.dataset.cls===cls));
   $('undo').disabled=!undoStack.length; $('redo').disabled=!redoStack.length; $('del').disabled=!sel;
   const r=sel&&sel.k==='s'&&streets.find(q=>q.id===sel.id); $('delgrp').disabled=!(r&&r.grp);
+  $('save').classList.toggle('dirty',!!(dirty&&(streets.length||areas.length||buildings.length)));
+  $('saveAsName').textContent='Suggested name: '+nextName();
   $('hint').textContent=HINTS[tool]; setCursor(); info();
 }
 let lastM=null;
@@ -1345,7 +1400,7 @@ function info(m){
   if(stroke&&stroke.shape==='circle'&&stroke.r){ h+='<b>Circle: '+Math.round(2*stroke.r)+' m across, '+Math.max(1,Math.round(2*stroke.r/WALK))+' min walk</b> · ' }
   else if(stroke&&stroke.pts.length>1){ if(stroke.lasso){ const bq=bbox(stroke.pts), w=Math.max(bq[2]-bq[0],bq[3]-bq[1]); h+='<b>Area: '+Math.round(w)+' m across, '+Math.max(1,Math.round(w/WALK))+' min walk</b> · ' } else { const l=lengthOf(stroke.pts); h+='<b>Line: '+Math.round(l)+' m, '+Math.max(1,Math.round(l/WALK))+' min walk</b> · ' } }
   let dp=0,da=0; for(const k of distNames()){dp+=placedOf(k);da+=allotOf(k)}
-  h+='Streets: <b>'+(len/1000).toFixed(1)+' km</b> · '+(isVillage()?'Village':'Districts: <b>'+Math.round(dp)+' of '+Math.round(da)+' ha</b>')+' · Buildings: <b>'+buildings.length+'</b>'+(fileHandle?' · '+fileHandle.name:'')+(dirty?' · <span id="dirty">file not saved</span>'+(autoOK&&lastAuto?' (backed up in this browser '+ago(lastAuto)+')':' (browser backup failed: save the file)'):' · file saved');
+  h+='Streets: <b>'+(len/1000).toFixed(1)+' km</b> · '+(isVillage()?'Village':'Districts: <b>'+Math.round(dp)+' of '+Math.round(da)+' ha</b>')+' · Buildings: <b>'+buildings.length+'</b>'+(lastName?' · '+lastName:'')+(dirty?' · <span id="dirty">file not saved</span>'+(autoOK&&lastAuto?' (backed up in this browser '+ago(lastAuto)+')':' (browser backup failed: save the file)'):' · file saved');
   $('info').innerHTML=h;
 }
 let toastT=null;
