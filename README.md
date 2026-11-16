@@ -21,7 +21,7 @@ Maps, data and tools for the world.
 - Scripts take their input folders as arguments, except `tools/make_nation_map.py`, which reads the maps from a fixed folder set at the top of the file (`M`).
 
 
-# Globe roadmap: fill-in checklist
+# Globe roadmap: TO-DO
 
 Goal: a detailed, explorable world: a Google-Maps-style view of the whole globe, maybe a 3D globe and street view later. No fixed finish line.
 Scale: 128 nations, 6 continents, max 200 towns/cities per nation (most under 100).
