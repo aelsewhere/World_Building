@@ -1,5 +1,5 @@
 """Render single-nation maps for one continent from the world data layers.
-Usage: python3 -I make_nation_map.py <ContinentName> <outdir> [nation# ...]
+Usage: python3 -I tools/make_nation_map.py <ContinentName> <outdir> [nation# ...]
 Currently only Kamon's grid box is configured."""
 import sys, csv, os
 import numpy as np

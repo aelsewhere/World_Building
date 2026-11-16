@@ -66,6 +66,6 @@ The page needs a web server (it loads its files with fetch), so double-clicking 
 `tools/bake_extras.py` runs after `bake_globe.py` and adds, without re-making the map pictures:
 - trade route layers traced from the route pictures by their legend colours (`routes_world.png`, `routes_continents.png`). Each continent picture covers its relief_v2 box from the build reference at 3x or 4x; the world sea-lane picture is the world map at 1/12 degree from relief row 160 (checked against the land: 99.5-100% of each picture's sea falls on sea);
 - the nation maps and route maps as pictures for the Atlas (`nations/`, `routes/`);
-- the capitals from the data pack's capital tables, and the cities from `cities_v7.csv`.
+- the capitals from the data pack's capital tables, and the cities from `data/cities_v7.csv`.
 
-    python tools/bake_extras.py PATH/TO/maps globe/world PATH/TO/trade_routes PATH/TO/nations cities_v7.csv globe/data-pack.md
+    python tools/bake_extras.py PATH/TO/maps globe/world PATH/TO/trade_routes PATH/TO/nations data/cities_v7.csv globe/data-pack.md
