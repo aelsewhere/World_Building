@@ -12,6 +12,7 @@ Maps, data and tools for the world.
 | `data/source-archives/` | Zipped source maps: continent and world map layers (`maps_for_claude_pt1.zip`, `pt2`), single-nation maps (`nations.zip`) and trade route maps (`trade_routes.zip`). |
 | `nations/euelia/` | Work on the nation of Euelia: the road drawing tool and city planner (open the `.html` files in a browser), the towns list and the roads file. |
 | `nations/euelia/city-plans/` | Saved city plans from the city planner (Hodos, Stoma). |
+| `nations/euelia/tools/` | `bake_planner_map.py` puts the map data (water grid, rivers, roads near towns) into the city planner. Re-run it when the world maps, the towns list or the roads file change; its header says how. |
 | `tools/` | Stand-alone scripts. `make_nation_map.py` draws single-nation maps for a continent. |
 
 ## Conventions
