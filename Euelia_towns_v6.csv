@@ -1,0 +1,129 @@
+﻿Town #,Name,Meaning,Size,Size band,Population,Function,Export (main),Export (other),Latitude,Longitude (deg east of map seam),Land cover nearby,Map features
+1,Kymodia,Wave-song,Village,Large village,970,Fishing,Sea fishing,Timber,45.44,101.52,temperate rainforest,coast; on a sea lane
+2,Gamosa,Wedding,Village,Small village,500,Fishing,Timber,Medicinal herbs,44.85,100.60,temperate rainforest,
+3,Oistos,Arrow,Village,Small village,850,To decide (was Naval Base),Timber,Medicinal herbs,44.56,103.27,"temperate rainforest, conifer forest",
+4,Nausonia,Ships,Village,Large village,1080,Fishing,Sea fishing,Timber,43.56,99.77,temperate rainforest,coast
+5,Hiereia,Priestess,Village,Small village,550,Sacred Grove,Timber,,43.40,104.19,conifer forest,near old city #62
+6,Xenon,Guesthouse,Town,Small town,4400,Border,Timber,,43.48,107.65,conifer forest,near the border
+7,Xylona,Timber,Town,Middle town,10500,Timber,Timber,,42.52,105.44,conifer forest,
+8,Kormaia,Place of logs,Town,Small town,5800,Timber,Timber,Medicinal herbs,42.02,99.60,temperate rainforest,coast
+9,Tektonia,Builder town,Town,Middle town,19500,Timber,Timber,Medicinal herbs,42.06,100.56,temperate rainforest,
+10,Philomathes,Eagerness to learn,Village,Small village,570,Library,Timber,Medicinal herbs,41.94,104.31,"conifer forest, temperate rainforest",
+11,Neorion,Dockyard,Town,Small town,6000,Fishing,Sea fishing,Timber,41.40,99.15,"temperate rainforest, marsh",coast
+12,Polymelos,Many melodies,Town,Small town,9000,Library,Timber,Medicinal herbs,41.40,103.60,"temperate rainforest, conifer forest",
+13,Naupegosa,Shipbuilders,Village,Small village,360,Timber,Timber,,40.77,107.65,"temperate forest, conifer forest",
+14,Sepion,Little cuttlefish,Village,Large village,1190,Fishing,Sea fishing,Timber,40.31,97.81,temperate rainforest,coast
+15,Paisa,Child,Village,Small village,280,Timber,Timber,Medicinal herbs,39.98,101.35,temperate rainforest,
+16,Adelphe,Sister,Village,Small village,400,Timber,Timber,Medicinal herbs,39.73,100.35,temperate rainforest,
+17,Drymonia,Oak-wood place,Village,Small village,690,Timber,Timber,,39.73,108.90,temperate forest,
+18,Thynnaia,Tuna place,Town,Small town,6400,Fishing,Sea fishing,Timber,39.19,96.31,temperate rainforest,coast
+19,Chloros,Pale Green,Town,Small town,9600,Timber,Timber,Medicinal herbs,39.27,98.06,temperate rainforest,
+20,Melion,Little ash tree,Village,Large village,1370,Timber,Timber,,39.19,105.90,temperate forest,
+21,Ostreona,Oysters,Town,Small town,9200,Fishing,Sea fishing,Timber,38.77,95.52,temperate rainforest,coast
+22,Agathos,Good,Village,Small village,600,To decide (was Naval Base),Lake fishing,Timber,38.69,109.15,"temperate forest, marsh",lake shore
+23,Kalamia,Reed village,Village,Small village,650,Lakeside,Lake fishing,Timber,38.65,110.48,"temperate forest, farmland",lake shore
+24,Alsos,Sacred Grove,Village,Small village,660,Sacred Grove,Timber,Medicinal herbs,38.15,96.02,temperate rainforest,
+25,Genesis,Origin,Village,Small village,350,Timber,Timber,Medicinal herbs,38.15,104.56,"temperate forest, temperate rainforest",
+26,Daphne,Laurel,Village,Small village,590,Holy Site,Timber,Medicinal herbs,37.98,96.90,temperate rainforest,
+27,Pissaia,Pitch town,Town,Small town,8000,Timber,Timber,Grain,37.69,105.90,"temperate forest, farmland",
+28,Phylax,Guardian,City,City,50000,Naval Base,Timber,Medicinal herbs,37.44,93.73,temperate rainforest,coast
+29,Lakhi,Fate,Village,Small village,240,Healing Centre,Medicinal herbs,Timber,37.27,105.02,"Mediterranean scrub, temperate forest",
+30,Geranion,Crane village,Village,Small village,520,River Village,Timber,Grain,37.44,106.94,"temperate forest, farmland",
+31,Archaios,Ancient,Village,Small village,450,To decide (was Naval Base),Lake fishing,Timber,37.56,108.15,"temperate forest, marsh",lake shore
+32,Phrourion,Fort,Town,Middle town,11500,Garrison,Timber,Grain,37.35,112.35,"temperate forest, farmland",
+33,Sophosa,Wisdom,Town,Middle town,23000,Library,Lake fishing,Grain,36.77,107.56,"farmland, marsh",lake shore
+34,Hygieia,Health,Village,Large village,1640,Spa/Resort,Medicinal herbs,Wine,36.40,95.85,"Mediterranean scrub, temperate rainforest",wine country
+35,Tettix,Cicada,Village,Small village,490,Lakeside,Lake fishing,Olives,36.15,107.15,"Mediterranean scrub, marsh",lake shore
+36,Panacea,Cure-all,Town,Small town,5600,Healing Centre,Medicinal herbs,Timber,35.85,98.65,"temperate rainforest, Mediterranean scrub",
+37,Aspis,Shield,Town,Small town,10000,Naval Base,Olives,Medicinal herbs,35.73,106.48,"Mediterranean scrub, marsh",
+38,Anatolia,Sunrise,Village,Small village,740,Lakeside,Timber,Grain,35.90,112.15,"temperate forest, marsh",lake shore
+39,Ampelonia,Vineyard,Town,Large town,35000,Vineyard,Wine,Medicinal herbs,35.35,92.90,"Mediterranean scrub, temperate rainforest",wine country
+40,Oinopedon,Vineyard land,Village,Large village,2470,Vineyard,Wine,Grapes,35.35,94.27,Mediterranean scrub,wine country
+41,Lethaia,Land of forgetting,Village,Small village,560,Vineyard,Wine,Grapes,35.52,96.73,Mediterranean scrub,wine country
+42,Pyrgos,Tower,City,City,220000,Wine Market,Wine,Grapes,35.40,97.94,"Mediterranean scrub, farmland",on the main river; wine country
+43,Chryseosia,Golden,Town,Large town,38000,Festival/Market,Wine,Grapes,35.19,98.44,"Mediterranean scrub, farmland",wine country
+44,Basilissa,Queen,Village,Large village,2670,Vineyard,Wine,Grapes,35.31,99.56,"Mediterranean scrub, conifer forest",wine country
+45,Trygaia,Grape harvest,Town,Large town,32000,Vineyard,Wine,Grapes,35.10,95.65,Mediterranean scrub,wine country
+46,Aedonia,Nightingale,Town,Middle town,13000,Library,Grain,Vegetables,34.94,103.06,farmland,
+47,Doxa,Glory,Village,Small village,420,Lakeside,Olives,Medicinal herbs,34.90,105.69,"Mediterranean scrub, marsh",lake shore
+48,Kolpos,Gulf,Town,Middle town,20000,Fishing,Sea fishing,Medicinal herbs,34.60,91.02,"temperate rainforest, Mediterranean scrub",coast
+49,Amethystos,Amethyst,Village,Small village,770,Vineyard,Wine,Grapes,34.60,94.77,"Mediterranean scrub, farmland",wine country
+50,Nomisma,Coin,Town,Large town,39000,Festival/Market,Grain,Vegetables,34.69,98.10,"farmland, Mediterranean scrub",on the main river
+51,Ampela,Vineyard,Town,Large town,41000,Vineyard,Wine,Grapes,34.65,100.27,"Mediterranean scrub, conifer forest",wine country
+52,Eosia,Dawn,Town,Large town,28000,Healing Centre,Medicinal herbs,Wine,34.69,101.35,Mediterranean scrub,wine country
+53,Lamprosia,Brilliant,Town,Middle town,22000,Healing Centre,Medicinal herbs,Grain,34.10,91.90,"farmland, Mediterranean scrub",wine country; near old city #4
+54,Georgia,Farming,Town,Middle town,17500,Farm,Grain,Vegetables,34.02,95.65,"farmland, Mediterranean scrub",on the main river
+55,Kyamites,Bean man,Town,Small town,7000,Farm,Grain,Vegetables,34.19,96.73,"farmland, Mediterranean scrub",
+56,Agora,Market,Town,Middle town,13500,Festival/Market,Grain,Vegetables,34.19,97.56,"farmland, Mediterranean scrub",
+57,Emporia,Trade,Town,Middle town,24000,Festival/Market,Grain,Wine,34.15,98.15,"farmland, Mediterranean scrub",wine country
+58,Gaia,Earth,Town,Small town,9900,Farm,Grain,Vegetables,33.98,98.56,"farmland, Mediterranean scrub",
+59,Dionia,Dionysus,Town,Large town,27000,Vineyard,Wine,Grapes,34.02,101.15,"Mediterranean scrub, farmland",wine country
+60,Thyra,Door,Town,Small town,8700,Farm,Grain,Vegetables,34.15,104.90,"farmland, marsh",
+61,Keleutha,Track,Village,Large village,1320,Lakeside,Timber,Grain,34.19,110.06,"temperate forest, marsh",lake shore
+62,Stoma,River mouth,City,City,350000,Port City,Olives,Grain,33.52,91.31,"Mediterranean scrub, farmland",coast; on the main river
+63,Propylaia,Grand entrance,City,City,120000,River Port,Grain,Vegetables,33.56,92.27,"farmland, Mediterranean scrub",on the main river; on the river trade route
+64,Porthmos,Ferry,Village,Large village,1770,River Port,Grain,Vegetables,33.85,93.06,farmland,on the main river; on the river trade route
+65,Eleutheros,Freedom,Village,Large village,2090,River Port,Grain,Vegetables,33.69,93.73,"farmland, Mediterranean scrub",on the main river; on the river trade route
+66,Kallilimena,Beautiful Harbor,Village,Large village,1680,River Port,Grain,Vegetables,33.90,94.31,farmland,on the main river; on the river trade route
+67,Thalassa,To decide (was Klotha: Fate),Village,Large village,2840,River Port,Grain,Vegetables,33.77,95.40,farmland,on the main river; on the river trade route
+68,Thronos,Throne,Town,Large town,37000,River Port,Grain,Vegetables,33.73,97.48,"farmland, Mediterranean scrub",on the main river; on the river trade route
+69,Kallirrhoe,Fair-flowing,Town,Large town,30000,River Port,Grain,Vegetables,33.69,99.98,farmland,on the main river; on the river trade route
+70,Komarosa,Strawberry tree,Town,Middle town,18000,Farm,Grain,Vegetables,33.52,100.81,"farmland, Mediterranean scrub",on the main river
+71,Syke,Fig tree,Town,Middle town,24500,Farm,Grain,Vegetables,33.65,101.52,farmland,on the main river
+72,Rhaphanos,Radish,Town,Large town,31000,Farm,Grain,Vegetables,33.69,102.31,"farmland, Mediterranean scrub",on the main river
+73,Soya,Soybean,Town,Small town,8300,Farm,Grain,Vegetables,33.69,103.65,"farmland, Mediterranean scrub",on the main river
+74,Orthrosa,First light,Town,Small town,4100,Border,Timber,,33.65,111.31,temperate forest,near the border
+75,Iatrosa,Doctor,Village,Large village,1240,Healing Centre,Olives,Medicinal herbs,33.10,91.31,"Mediterranean scrub, farmland",coast
+76,Demetera,Demeter,Town,Large town,36000,Farm,Grain,Vegetables,33.48,97.15,"farmland, Mediterranean scrub",on the main river; on the river trade route
+77,Ainigma,Riddle,Town,Large town,43000,University,Cotton,Grain,33.27,102.85,"farmland, Mediterranean scrub",on the main river; on the river trade route
+78,Kalyptra,Veil,City,City,280000,Trade,Lake fishing,Grain,33.48,104.85,"farmland, marsh",lake shore; on the main river; on the river trade route
+79,Chloe,Young green shoot,Town,Middle town,12000,Inns,Lake fishing,Timber,33.23,109.52,"temperate forest, marsh",lake shore
+80,Koria,Persephone,Village,Large village,910,Farm,Cotton,Grain,32.98,94.10,"farmland, Mediterranean scrub",
+81,Soteria,Safety,Town,Middle town,25000,Garrison,Cotton,Grain,33.06,102.02,"farmland, Mediterranean scrub",on the main river; on the river trade route
+82,Zephyria,Land of the west wind,City,City,300000,Capital,Cotton,Grain,32.77,104.98,"farmland, Mediterranean scrub",capital; near old city #11
+83,Marmarosa,Marble,City,City,160000,Trade,Timber,,32.85,110.31,"temperate forest, marsh",on the river trade route; near old city #9
+84,Iasis,Healing,Village,Small village,880,Spa/Resort,Olives,Medicinal herbs,32.56,101.44,"Mediterranean scrub, farmland",
+85,Atra,Fate,Village,Small village,630,Lakeside,Timber,Cotton,32.52,108.85,"marsh, farmland",lake shore
+86,Tyche,City fortune,City,City,75000,Trade,Timber,,32.52,110.23,"temperate forest, marsh",near old city #9
+87,Moirai,Fate,Town,Large town,25000,Crafts,Olives,Medicinal herbs,32.06,92.94,Mediterranean scrub,coast
+88,Omma,Eye,Village,Large village,1550,Seaside,Olives,Medicinal herbs,31.94,95.48,Mediterranean scrub,coast
+89,Elaia,Olive tree,Town,Large town,33000,Spa/Resort,Olives,Medicinal herbs,31.81,105.15,Mediterranean scrub,
+90,Haliesis,Fishermen,Town,Middle town,23500,Fishing,Lake fishing,Timber,31.48,109.06,"marsh, temperate forest",lake shore
+91,Halikyma,Salt-wave,Town,Middle town,10000,Fishing,Sea fishing,Olives,31.40,97.35,Mediterranean scrub,
+92,Kardia,Center,Village,Large village,1480,Lakeside,Olives,Medicinal herbs,31.23,106.60,"Mediterranean scrub, marsh",lake shore
+93,Kometes,Comet,Village,Large village,2110,Gatherer,Olives,Medicinal herbs,30.65,104.44,Mediterranean scrub,
+94,Helonia,Marsh,Village,Large village,1710,Lakeside,Olives,Medicinal herbs,30.44,106.85,"farmland, Mediterranean scrub",lake shore
+95,Aphroessa,Sea foam,Village,Large village,1400,Seaside,Olives,Medicinal herbs,30.06,98.98,Mediterranean scrub,coast
+96,Hydrousa,Watery,Village,Large village,1960,Lakeside,Olives,Medicinal herbs,30.02,107.98,"farmland, marsh",lake shore
+97,Limnion,Little lake,Village,Large village,1810,Lakeside,Olives,Medicinal herbs,30.02,109.31,"marsh, farmland",lake shore
+98,Kantharosa,Beetle,Village,Small village,820,Gatherer,Olives,Medicinal herbs,29.23,101.73,"Mediterranean scrub, farmland",
+99,Bomosa,Altar,Town,Middle town,21500,Plantation,Cotton,Grain,28.98,104.31,"farmland, Mediterranean scrub",
+100,Arachia,Weaving,Town,Small town,4900,Crafts,Cotton,Timber,29.19,107.27,"marsh, temperate forest",
+101,Phosphoria,Light-bringer,Town,Middle town,25000,Plantation,Cotton,Grain,28.23,103.10,"farmland, Mediterranean scrub",
+102,Kairos,Right moment,Town,Large town,45000,Plantation,Cotton,Grain,28.10,103.90,"farmland, Mediterranean scrub",
+103,Adyton,Inner sanctum,Village,Small village,330,Gatherer,Olives,Medicinal herbs,28.15,104.94,"Mediterranean scrub, farmland",
+104,Helia,Sun,Town,Small town,6800,University,,,28.10,109.94,"steppe, dry scrub",
+105,Peribolos,Walled enclosure,Village,Small village,460,Seaside,Olives,Medicinal herbs,28.02,99.94,Mediterranean scrub,coast
+106,Eudaimonia,Happiness,Village,Small village,300,Farm,Cotton,Grain,27.81,100.98,"farmland, Mediterranean scrub",near old city #17
+107,Lachania,Vegetable land,Village,Small village,710,Farm,Cotton,Grain,27.81,107.98,"steppe, farmland",
+108,Kyklos,Circle,Town,Middle town,16500,Farm,Cotton,Grain,27.35,100.56,"farmland, Mediterranean scrub",coast
+109,Anthologia,Flower-gathering,Town,Small town,3000,Gatherer,Olives,Medicinal herbs,27.35,105.10,Mediterranean scrub,
+110,Nyxia,Night,Village,Small village,370,Library,Timber,,27.40,110.77,"steppe, dry scrub",
+111,Thyella,Storm,Village,Large village,1890,Seaside,Olives,Cotton,26.85,101.77,"Mediterranean scrub, farmland",coast
+112,Aletheia,Truth,Town,Middle town,14000,University,,,26.65,109.35,"steppe, dry scrub",
+113,Nomos,Law,Town,Small town,3200,Border,,,26.23,112.98,"steppe, hot desert",near the border
+114,Aristaeus,Olives,Village,Small village,610,Gatherer,Olives,Medicinal herbs,25.77,104.06,"fog desert, Mediterranean scrub",
+115,Sozoa,Saving,Village,Small village,320,Library,,,25.94,110.19,"steppe, fog desert",
+116,Pandocheion,Inn,Town,Small town,7600,Inns,Olives,Medicinal herbs,25.40,107.23,"Mediterranean scrub, steppe",
+117,Panta Rhei,Everything flows,Town,Middle town,16000,Library,,,25.19,108.90,"steppe, dry scrub",
+118,Rhodonia,Rose,Town,Middle town,11000,Gatherer,Olives,Medicinal herbs,24.94,106.90,"Mediterranean scrub, fog desert",
+119,Peristera,Dove,Village,Large village,2520,To decide (was Naval Base),Olives,Medicinal herbs,24.35,103.73,"fog desert, Mediterranean scrub",coast
+120,Aetheria,Sky,Town,Small town,4700,Border,Timber,,24.23,113.06,"temperate forest, dry scrub",hills/mountains (1135 m nearby)
+121,Heron,Hera,Village,Large village,1210,Inns,,,22.90,104.98,fog desert,coast
+122,Oros,Mountain,Village,Small village,260,Mountain Sanctuary,Timber,,23.02,110.77,temperate forest,hills/mountains (1066 m nearby)
+123,Hodos,Road,City,City,100000,Market,,,22.40,106.10,fog desert,on the land trade route; near old city #21
+124,Atrapos,Footpath,Village,Small village,210,Garrison,,,21.98,107.73,"steppe, fog desert",
+125,Mesembria,South,Town,Small town,5000,Border,Timber,,21.90,112.73,"dry scrub, temperate forest",
+126,Chorosa,Dance,Town,Middle town,15000,Market,,,18.77,109.52,fog desert,coast
+127,Naos,Temple,Village,Small village,200,Holy Site,,,18.65,111.27,fog desert,
+128,Anaklasis,Reflection,Town,Small town,3900,University,,,17.44,113.94,fog desert,
