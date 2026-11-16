@@ -61,7 +61,7 @@ Format: nation, copied from, status.
 Per copy: [ ] pick source nation, [ ] Claude copies and adapts the plan (terrain, water, town sizes, roads in), [ ] you review and fix in the tools.
 
 ## D. Whole-world data (all 128 nations)
-- [ ] Land data finished
+- [ x ] Land data finished
 - [ ] All cities/towns placed in every nation
 - [ ] Travel routes mapped for every nation
 - [ ] Water drawn everywhere
